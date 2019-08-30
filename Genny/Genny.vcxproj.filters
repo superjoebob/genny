@@ -1,0 +1,572 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\GennyVST.cpp" />
+    <ClCompile Include="src\VST\VirtualInstrument.cpp">
+      <Filter>VST</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\YM2612Processor.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\resampler\Fir_Resampler.cpp">
+      <Filter>YM2612\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\base\VSTBase.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Genny2612.cpp" />
+    <ClCompile Include="src\IndexBaron.cpp" />
+    <ClCompile Include="src\Interface\GennyInterface.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIOperator.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIInstrument.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIBitmap.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIFeedbackControl.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIImage.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UICheckBoxNum.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIAlgorithmSelector.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIChannelStatus.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIDigitDisplay.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIDigitSlider.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIDigitKnob.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIPESelectedInstrument.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIReverseKnob.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GennyLoaders.cpp" />
+    <ClCompile Include="src\Interface\UILetterDisplay.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIMidiChannel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_cplug.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_plugclass.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\sn76489.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\SN76489Chip.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\VGMLogger.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\WaveData.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\DrumSet.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIPanSlider.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UISpinner.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIContextMenu.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIKnob.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UISlider.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UICheckbox.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIRangeSlider.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIDigitSlider2.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIPresetsAndInstrumentsPanel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIInstrumentsPanel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIPresetsPanel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIImportPanel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\GennyInterfaceObject.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\resampler\filterkit.c">
+      <Filter>YM2612\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\resampler\resample.c">
+      <Filter>YM2612\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\resampler\resamplesubs.c">
+      <Filter>YM2612\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Bessel.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Biquad.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Butterworth.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Cascade.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\ChebyshevI.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\ChebyshevII.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Custom.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Design.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Documentation.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Elliptic.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Filter.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Legendre.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\Param.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\PoleFilter.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\RBJ.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\RootFinder.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\filters\source\State.cpp">
+      <Filter>YM2612\filters</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIWaveForm.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UISampleRangeSlider.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\ym2612_new.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\YM2612.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIInstrumentElement.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIPresetElement.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\GennyVST.h" />
+    <ClInclude Include="src\VST\VirtualInstrument.h">
+      <Filter>VST</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\ym2612_plusgx.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\YM2612Enum.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\YM2612Processor.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\resampler\Fir_Resampler.h">
+      <Filter>YM2612\resampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\base\VSTBase.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Genny2612.h" />
+    <ClInclude Include="src\IndexBaron.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="src\gmnames.h" />
+    <ClInclude Include="src\Interface\GennyInterface.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIInstrument.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIOperator.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIBitmap.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIFeedbackControl.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIImage.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UICheckBoxNum.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIAlgorithmSelector.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIChannelStatus.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIDigitDisplay.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIDigitSlider.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIDigitKnob.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIPESelectedInstrument.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIReverseKnob.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GennyLoaders.h" />
+    <ClInclude Include="src\Interface\UILetterDisplay.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIMidiChannel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\sn76489.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\SN76489Chip.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\VGMLogger.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\WaveData.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\DrumSet.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIPanSlider.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UISpinner.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIContextMenu.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIKnob.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UISlider.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UICheckbox.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIRangeSlider.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIDigitSlider2.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIPresetsAndInstrumentsPanel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIInstrumentsPanel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIPresetsPanel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIImportPanel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\GennyInterfaceObject.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\resampler\configtemplate.h">
+      <Filter>YM2612\resampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\resampler\filterkit.h">
+      <Filter>YM2612\resampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\resampler\libresample.h">
+      <Filter>YM2612\resampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\resampler\resample_defs.h">
+      <Filter>YM2612\resampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Cascade.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevI.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevII.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Common.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Custom.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Design.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Dsp.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Elliptic.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Filter.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Layout.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Legendre.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\MathSupplement.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Params.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\PoleFilter.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RBJ.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RootFinder.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\SmoothedFilter.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\State.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Types.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Utilities.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Bessel.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Biquad.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Butterworth.h">
+      <Filter>YM2612\filters\include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIWaveForm.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UISampleRangeSlider.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\ym2612_new.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\YM2612.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIInstrumentElement.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIPresetElement.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="VST">
+      <UniqueIdentifier>{f4933b3d-6c2d-43e2-a6f3-8a3635aa11dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="YM2612">
+      <UniqueIdentifier>{92a54555-80ca-4a69-9d65-89832a63fd38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="YM2612\resampler">
+      <UniqueIdentifier>{8c52d787-5775-4fd6-97b1-0869dca5e189}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base">
+      <UniqueIdentifier>{0319c6f9-4e02-4ace-989b-b57ecb17e9ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface">
+      <UniqueIdentifier>{f62d1ffc-6738-4656-b920-4b26215710f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="YM2612\filters">
+      <UniqueIdentifier>{a453a073-13a8-4a05-aeeb-e592840524c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="YM2612\filters\include">
+      <UniqueIdentifier>{0398d662-a3ea-4b45-a60e-bf7d0bc47ec6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\vstplug.def" />
+    <None Include="bitmap1.bmp" />
+    <None Include="res\vst.png" />
+    <None Include="res\vst_back.png" />
+    <None Include="res\knob.png" />
+    <None Include="res\feedbackValue.png" />
+    <None Include="res\algValue.png" />
+    <None Include="res\littleButton.png" />
+    <None Include="res\buttonNumbers.png" />
+    <None Include="res\littleLight.png" />
+    <None Include="res\channelLight.png" />
+    <None Include="bitmap2.bmp" />
+    <None Include="res\bigLight.png" />
+    <None Include="res\digits.png" />
+    <None Include="res\sliderKnob.png" />
+    <None Include="res\pitchHandle.png" />
+    <None Include="res\instrumentTab.png" />
+    <None Include="res\instrumentElement.png" />
+    <None Include="res\presetsTab.png" />
+    <None Include="res\presetElement.png" />
+    <None Include="res\scrollHandle.png" />
+    <None Include="res\upButton.png" />
+    <None Include="res\downButton.png" />
+    <None Include="res\copyButton.png" />
+    <None Include="res\pasteButton.png" />
+    <None Include="res\instrumentElementClosed.png" />
+    <None Include="res\thunderGuitar01.tfi" />
+    <None Include="res\thunderGuitar02.tfi" />
+    <None Include="res\thunderGuitar01.tyi" />
+    <None Include="res\thunderGuitar03.vgi" />
+    <None Include="res\presets.set" />
+    <None Include="res\instrumentCheckbox.png" />
+    <None Include="res\instrumentNumbers.png" />
+    <None Include="res\letters.png" />
+    <None Include="res\vst_back.bmp" />
+    <None Include="res\knob.bmp" />
+    <None Include="res\littleUpArrow.png" />
+    <None Include="res\littleDownArrow.png" />
+    <None Include="res\plusButton.png" />
+    <None Include="res\minusButton.png" />
+    <None Include="src\flplug.def" />
+    <None Include="res\door01.png" />
+    <None Include="res\radioButton.png" />
+    <None Include="res\door02.png" />
+    <None Include="res\door03.png" />
+    <None Include="res\door04.png" />
+    <None Include="res\door05.png" />
+    <None Include="res\noiseCheckbox.png" />
+    <None Include="res\channelRadio.png" />
+    <None Include="res\channelLightOrange.png" />
+    <None Include="res\drums\alienSnare01.wav" />
+    <None Include="res\drums\alienKick01.wav" />
+    <None Include="res\longButton.png" />
+    <None Include="res\copyDialog.png" />
+    <None Include="res\copyOKButton.png" />
+    <None Include="res\copyCancelButton.png" />
+    <None Include="res\bigScreenShine.png" />
+    <None Include="res\loggingDialog.png" />
+    <None Include="res\fmButton.png" />
+    <None Include="res\psgButton.png" />
+    <None Include="res\lcdSlider.png" />
+    <None Include="res\typeIcon.png" />
+    <None Include="res\sliderKnobLeft.png" />
+    <None Include="res\sliderKnobRight.png" />
+    <None Include="res\channel6.png" />
+    <None Include="res\drumPanel.png" />
+    <None Include="res\drumButton.png" />
+    <None Include="res\bitmap2.bmp" />
+    <None Include="res\drumNoteButtons.png" />
+    <None Include="res\drumLight.png" />
+    <None Include="res\drumNoteButtonsGray.png" />
+    <None Include="res\sampleRangeLeft.png" />
+    <None Include="res\sampleRangeRight.png" />
+    <None Include="res\samplerButtons.png" />
+    <None Include="res\samplerPanL.png" />
+    <None Include="res\samplerPanR.png" />
+    <None Include="res\samplerRepeat.png" />
+    <None Include="res\samplerNormalize.png" />
+    <None Include="res\tinyChannelLight.png" />
+    <None Include="res\bitmap3.bmp" />
+    <None Include="res\tinyChannelLightShort.png" />
+    <None Include="res\bitmap4.bmp" />
+    <None Include="res\instrumentEnableCheckbox.png" />
+    <None Include="res\set2.bin" />
+    <None Include="res\presets.gnb" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\op1.png" />
+    <Image Include="res\op2.png" />
+    <Image Include="res\op3.png" />
+    <Image Include="res\op4.png" />
+    <Image Include="res\halfButton.png" />
+  </ItemGroup>
+</Project>

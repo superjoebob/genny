@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="vst2.x">
+      <UniqueIdentifier>{e40b8f76-f646-498e-b548-c4225a99525d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.cpp">
+      <Filter>vst2.x</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.cpp">
+      <Filter>vst2.x</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vstgui\vstgui_win32.cpp" />
+    <ClCompile Include="src\vstgui\vstgui.cpp" />
+    <ClCompile Include="lib\vstsdk2.4\public.sdk\source\vst2.x\vstplugmain.cpp">
+      <Filter>vst2.x</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.h">
+      <Filter>vst2.x</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\vstsdk2.4\public.sdk\source\vst2.x\aeffeditor.h">
+      <Filter>vst2.x</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.h">
+      <Filter>vst2.x</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vstgui\vstgui.h" />
+    <ClInclude Include="lib\vstsdk2.4\pluginterfaces\vst2.x\aeffectx.h">
+      <Filter>vst2.x</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\vstsdk2.4\pluginterfaces\vst2.x\aeffect.h">
+      <Filter>vst2.x</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
