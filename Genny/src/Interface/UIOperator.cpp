@@ -30,6 +30,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	CRect knobSize = CRect(0, 0, 26, 26);
 	knobSize.offset(26 + offset, 352);
 	UIReverseKnob* levelKnob = new UIReverseKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	levelKnob->directParent = this;
 	frame->addView(levelKnob);
 	_owner->mapControl(levelKnob, index);
 	levelKnob->setMin(0);
@@ -41,6 +42,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(32 + offset, 404);
 	UIKnob* attackKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	attackKnob->directParent = this;
 	frame->addView(attackKnob);
 	_owner->mapControl(attackKnob, index);
 	attackKnob->setMin(0);
@@ -53,6 +55,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(74 + offset, 404);
 	UIKnob* decay1Knob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	decay1Knob->directParent = this;
 	frame->addView(decay1Knob);
 	_owner->mapControl(decay1Knob, index);
 	decay1Knob->setMin(0);
@@ -65,6 +68,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(116 + offset, 404);
 	UIKnob* sustainKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	sustainKnob->directParent = this;
 	frame->addView(sustainKnob);
 	_owner->mapControl(sustainKnob, index);
 	sustainKnob->setMin(0);
@@ -77,6 +81,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(158 + offset, 404);
 	UIKnob* decay2Knob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	decay2Knob->directParent = this;
 	frame->addView(decay2Knob);
 	_owner->mapControl(decay2Knob, index);
 	decay2Knob->setMin(0);
@@ -89,6 +94,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(200 + offset, 404);
 	UIKnob* releaseKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	releaseKnob->directParent = this;
 	frame->addView(releaseKnob);
 	_owner->mapControl(releaseKnob, index);
 	releaseKnob->setMin(0);
@@ -217,7 +223,9 @@ void UIOperator::draw (CDrawContext* pContext)
 	float d1r = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_DR, _operator))) / (float)YM2612Param_getRange(YM_DR);
 	float sus = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, _operator))) / (float)YM2612Param_getRange(YM_SL);
 	float d2r = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SR, _operator))) / (float)YM2612Param_getRange(YM_SR);
-	float rr = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, _operator))) / (float)YM2612Param_getRange(YM_RR);
+	float rr = 1.0f - getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, _operator))) / (float)YM2612Param_getRange(YM_RR);
+	rr = rr * rr;
+
 
 	float width = 162;
 	float height = 60;

@@ -33,6 +33,8 @@ public:
 	virtual bool getProductString (char* text);
 	virtual bool getVendorString (char* text);
 
+	virtual void MidiLearn(int paramTag);
+	virtual void MidiForget(int paramTag);
 	virtual VstInt32 getNumMidiInputChannels();
 	virtual VstInt32 getNumMidiOutputChannels();
 	virtual VstInt32 getMidiProgramName (VstInt32 channel, MidiProgramName* midiProgramName);
@@ -46,6 +48,8 @@ public:
 	virtual VstInt32 canDo (char* text);
 
 	float getTempo() { return _tempo; }
+	int _midiLearnParameter;
+	int _midiForgetParameter;
 
 protected:
 	void FillProgram (VstInt32 channel, VstInt32 prg, MidiProgramName* mpn);
@@ -95,7 +99,7 @@ public:
 	virtual int _stdcall Voice_ProcessEvent(TVoiceHandle Handle, int EventID, int EventValue, int Flags);
 	virtual int _stdcall Voice_Render(TVoiceHandle Handle, PWAV32FS DestBuffer, int &Length){return 0;}
 
-	virtual int _stdcall Dispatcher(intptr_t ID, intptr_t Index, intptr_t Value);
+	virtual intptr_t _stdcall Dispatcher(intptr_t ID, intptr_t Index, intptr_t Value);
 	virtual void _stdcall GetName(int Section, int Index, int Value, char *Name);
 	virtual int _stdcall ProcessEvent(int EventID, int EventValue, int Flags);
 	virtual int _stdcall ProcessParam(int Index, int Value, int RECFlags);

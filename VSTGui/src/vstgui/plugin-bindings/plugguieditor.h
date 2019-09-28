@@ -33,14 +33,14 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //-----------------------------------------------------------------------------
-
+#ifndef BUILD_VST
 #ifndef __plugguieditor__
 #define __plugguieditor__
 
 #include "../vstgui.h"
 
 //----------------------------------------------------------------------
-#ifndef BUILD_VST
+
 struct ERect
 {
 	int16_t top;
@@ -48,7 +48,6 @@ struct ERect
 	int16_t bottom;
 	int16_t right;
 };
-#endif
 
 
 
@@ -112,5 +111,6 @@ private:
 
 	static int32_t knobMode;
 };
+#endif
 
 #endif

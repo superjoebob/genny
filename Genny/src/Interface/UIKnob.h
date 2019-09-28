@@ -13,6 +13,8 @@ public:
 	~UIKnob();
 	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
 	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
+
+	virtual void setValue(float val);
 	CLASS_METHODS(UIKnob, CAnimKnob)
 
 private:

@@ -15,10 +15,12 @@ public:
 	GennyPatch* getCurrentPatch();
 	int getPatchIndex(VSTPatch* patch);
 	IndexBaron* getIndexBaron();
+	virtual void childValueChanged() {}
 
 	int getInstrumentIndex(int index);
 
 	GennyInterface* getInterface() { return _interface; }
+	GennyInterfaceObject* directParent;
 
 protected:
 	GennyInterfaceObject* _parent;

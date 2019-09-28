@@ -57,11 +57,13 @@ void GennyVST::initialize()
 long kVersionIndicator1 = 593829658389673; //February 17, 2019 - Version 1.0
 long kVersionIndicator2 = 1127443247; //February 20, 2019 - Version 1.01
 long kVersionIndicator3 = 1127443248; //June21, 2019 - Version 1.02
+long kVersionIndicator4 = 1127443249; //Sept 16, 2019 - Version 1.03 (Added VST automation)
 bool isVersionNumber(long kVersion)
 {
 	if(	kVersion == kVersionIndicator1 ||
 		kVersion == kVersionIndicator2 ||
-		kVersion == kVersionIndicator3)
+		kVersion == kVersionIndicator3 ||
+		kVersion == kVersionIndicator4)
 		return true;
 
 	return false;
@@ -104,7 +106,7 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 	stream.write((char*)(&written), sizeof(int));
 	written += sizeof(int);
 	
-	stream.write((char*)(&kVersionIndicator3), sizeof(long));
+	stream.write((char*)(&kVersionIndicator4), sizeof(long));
 	written += sizeof(long);
 
 	int hasFrequencyTable = getFrequencyTable() != getDefaultFrequencyTable() ? 1 : 0;
@@ -176,6 +178,26 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 			float param = getParameter(j);	
 			stream.write((char*)(&param), sizeof(float));
 			written += sizeof(float);
+		}
+	}
+
+	int numMidiLearn = _midiLearn.size();
+	stream.write((char*)(&numMidiLearn), sizeof(int));
+	written += sizeof(int);
+
+	for (std::map<int, std::vector<int>>::iterator it = _midiLearn.begin(); it != _midiLearn.end(); ++it)
+	{
+		stream.write((char*)(&it->first), sizeof(int));
+		written += sizeof(int);
+
+		int len = it->second.size();
+		stream.write((char*)(&len), sizeof(int));
+		written += sizeof(int);
+		for (std::vector<int>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
+		{
+			int val = *it2;
+			stream.write((char*)(&val), sizeof(int));
+			written += sizeof(int);
 		}
 	}
 
@@ -322,6 +344,34 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		GennyInstrument::loadingOldPanning = false;
 		delete[] name;
 	}
+
+	//Version 4 stores VST automation info
+	if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator4))
+	{
+		_midiLearn = std::map<int, std::vector<int>>();
+
+		int numMidiLearn = (((unsigned char*)data)[readPos + 3] << 24) + (((unsigned char*)data)[readPos + 2] << 16) + (((unsigned char*)data)[readPos + 1] << 8) + ((unsigned char*)data)[readPos];
+		readPos += sizeof(int);
+		for (int i = 0; i < numMidiLearn; i++)
+		{
+			int first = (((unsigned char*)data)[readPos + 3] << 24) + (((unsigned char*)data)[readPos + 2] << 16) + (((unsigned char*)data)[readPos + 1] << 8) + ((unsigned char*)data)[readPos];
+			readPos += sizeof(int);
+
+			_midiLearn[first] = std::vector<int>();
+
+			int numElements = (((unsigned char*)data)[readPos + 3] << 24) + (((unsigned char*)data)[readPos + 2] << 16) + (((unsigned char*)data)[readPos + 1] << 8) + ((unsigned char*)data)[readPos];
+			readPos += sizeof(int);
+
+			for (int j = 0; j < numElements; j++)
+			{
+				int element = (((unsigned char*)data)[readPos + 3] << 24) + (((unsigned char*)data)[readPos + 2] << 16) + (((unsigned char*)data)[readPos + 1] << 8) + ((unsigned char*)data)[readPos];
+				readPos += sizeof(int);
+				_midiLearn[first].push_back(element);
+			}
+		}
+	}
+
+
 
 	_saving = false;
 
@@ -880,6 +930,82 @@ void GennyVST::loggingComplete()
 
 void GennyVST::onMidiMessage(int channel, int message, int value)
 {
+
+#if BUILD_VST
+	int learnParameter = _base->_midiLearnParameter;
+	int forgetParameter = _base->_midiForgetParameter;
+	_base->_midiForgetParameter = -1;
+	_base->_midiLearnParameter = -1;
+
+	std::map<int, std::vector<int>>::iterator existing = _midiLearn.end();
+	//Erase existing parameter maps
+	for (std::map<int, std::vector<int>>::iterator it = _midiLearn.begin(); it != _midiLearn.end(); ++it)
+	{
+		if (it->first == message)
+			existing = it;
+
+
+		if (learnParameter >= 0)
+		{
+			for (std::vector<int>::iterator it2 = it->second.begin(); it2 != it->second.end();)
+			{
+				if (*it2 == learnParameter)
+					it->second.erase(++it2);
+				else
+					++it2;
+			}
+		}
+
+		if (forgetParameter >= 0)
+		{
+			for (std::vector<int>::iterator it2 = it->second.begin(); it2 != it->second.end();)
+			{
+				if (*it2 == forgetParameter)
+					it2 = it->second.erase(it2);
+				else
+					++it2;
+			}
+		}
+	}
+	if (forgetParameter > 0)
+		return;
+
+	if (learnParameter >= 0)
+	{
+		//Push in the new learned parameter
+		if (existing == _midiLearn.end())
+			existing = _midiLearn.insert(std::pair<int, std::vector<int>>(message, std::vector<int>())).first;
+		existing->second.push_back(learnParameter);
+	}
+
+	//Apply midi values
+	if (existing != _midiLearn.end())
+	{
+		for (std::vector<int>::iterator it2 = existing->second.begin(); it2 != existing->second.end(); it2++)
+		{
+			int parameter = *it2;
+			int patchNum = (int)(parameter / GennyPatch::getNumParameters());
+
+			int paramNumber = parameter - (patchNum * GennyPatch::getNumParameters());
+			IBIndex* idx = _core->getIndexBaron()->getIndex(paramNumber);
+			if (idx->getType() == IB_YMParam)
+			{
+				IBYMParam* parm = (IBYMParam*)idx;
+				int range = YM2612Param_getRange(parm->getParameter());
+				int setValue = min(((value / 127.0f) * range) + 0.5f, range);
+
+				setParameter(paramNumber, setValue, getPatch(patchNum));
+
+
+				if (_currentPatch == getPatch(patchNum) && _editor != nullptr)
+					_editor->setParameter(paramNumber, setValue);
+			}
+		}
+	}
+#endif
+
+/*
+
 	IBIndex* index = _core->getIndexBaron()->getIndexFromMidi(message);
 	if(index != nullptr)
 	{
@@ -902,7 +1028,7 @@ void GennyVST::onMidiMessage(int channel, int message, int value)
 				}
 			}
 		}
-	}
+	}*/
 }
 
 void GennyVST::midiTick()

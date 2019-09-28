@@ -38,6 +38,8 @@
 #include "plugguieditor.h"
 #endif
 
+#ifndef BUILD_VST
+
 #define kIdleRate    100 // host idle rate in ms
 #define kIdleRate2    50
 #define kIdleRateMin   4 // minimum time between 2 idles in ms
@@ -223,4 +225,5 @@ void ExitMachOLibrary ()
 		CFRelease (VSTGUI::gBundleRef);
 }
 
+#endif
 #endif

@@ -27,7 +27,6 @@ UIKnob::~UIKnob()
 
 CMouseEventResult UIKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
 {
-#if !BUILD_VST
 	if(buttons.isRightButton())
 	{
 		VSTBase* b = getVst()->getBase();
@@ -44,6 +43,8 @@ CMouseEventResult UIKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
 		int patchNum = patch0->SelectedInstrument;
 		int paramTag = (numParams * patchNum) + tag;
 
+
+#if !BUILD_VST
 		b->AdjustParamPopup(ContextMenu, paramTag, 0, DefaultMenuID);
 		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow() , NULL);
 		if (r)
@@ -51,12 +52,28 @@ CMouseEventResult UIKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
 			int val = b->PlugHost->Dispatcher(b->HostTag, FHD_ParamMenu, paramTag, r-DefaultMenuID);
 			int qq = 1;
 		}
+#else
+		
+		int count = GetMenuItemCount(ContextMenu);
+		while (count > 0) {
+			DeleteMenu(ContextMenu, count - 1, MF_BYPOSITION);
+			count--;
+		}
+
+		unsigned int flags = MF_STRING;
+		AppendMenuA(ContextMenu, flags, 1, "MIDI Learn");
+		AppendMenuA(ContextMenu, flags, 2, "MIDI Forget");
+		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow(), NULL);
+		if (r == 1)
+			b->MidiLearn(paramTag);		
+		else if (r == 2)
+			b->MidiForget(paramTag);
+#endif
 
 		return kMouseEventHandled;
 	}
-	else
-#endif
-		return CKnob::onMouseUp(where, buttons);
+	//else
+	//	return CKnob::onMouseUp(where, buttons);
 }
 
 CMouseEventResult UIKnob::onMouseDown (CPoint& where, const CButtonState& buttons)
@@ -65,4 +82,12 @@ CMouseEventResult UIKnob::onMouseDown (CPoint& where, const CButtonState& button
 		return kMouseEventHandled;
 	else 
 		return CKnob::onMouseDown(where, buttons);
+}
+
+void UIKnob::setValue(float val)
+{
+	//if (directParent != nullptr)
+	//	directParent->childValueChanged();
+
+	CAnimKnob::setValue(val);
 }

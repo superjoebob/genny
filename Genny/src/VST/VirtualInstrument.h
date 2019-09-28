@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include "base\VSTBase.h"
 
 class VSTBase;
@@ -73,6 +74,7 @@ public:
 	VSTBase* getBase() { return _base;}
 	
 	std::vector<VSTPatch*> _patches;
+	std::map<int, std::vector<int>> _midiLearn;
 protected:
 	VSTPatch* _currentPatch;
 	VSTBase* _base;

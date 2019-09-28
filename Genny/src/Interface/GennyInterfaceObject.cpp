@@ -6,6 +6,7 @@
 GennyInterfaceObject::GennyInterfaceObject(GennyInterfaceObject* parent)
 {
 	_parent = parent;
+	directParent = nullptr;
 
 	if(_parent != nullptr)
 	{

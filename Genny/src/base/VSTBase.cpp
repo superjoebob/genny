@@ -21,6 +21,7 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	}
 	_parent = parent;
 	_tempo = 0.0f;
+	_midiLearnParameter = -1;
 }
 
 VSTBase::~VSTBase(void)
@@ -96,23 +97,23 @@ VstInt32 VSTBase::processEvents (VstEvents* ev)
 			else
 			{
 				_parent->onMidiMessage(status & 15, midiData[1], midiData[2]);
-				/*int num = midiData[1];
-				int value = midiData[2];
-				YM2612Value* learn = _stateData.GetMidiLearn();
-				if( learn != nullptr )
-				{
-					learn->SetMidiLearn(false);
-					learn->SetMidiHookup(num);
-				}
 
-				_parmAdjust = true;
-				std::vector<YM2612Value*> hooks;
-				_stateData.GetMidiHookups(num, hooks);
-				for( int i = 0; i < (int)hooks.size(); i++ )
-				{
-					setParameter( hooks[i]->GetIndex(), (float)value / (float)127 );
-				}
-				_parmAdjust = false;*/
+
+				//YM2612Value* learn = _stateData.GetMidiLearn();
+				//if( learn != nullptr )
+				//{
+				//	learn->SetMidiLearn(false);
+				//	learn->SetMidiHookup(num);
+				//}
+
+				//_parmAdjust = true;
+				//std::vector<YM2612Value*> hooks;
+				//_stateData.GetMidiHookups(num, hooks);
+				//for( int i = 0; i < (int)hooks.size(); i++ )
+				//{
+				//	setParameter( hooks[i]->GetIndex(), (float)value / (float)127 );
+				//}
+				//_parmAdjust = false;
 			}
 		}
 		else if( status >= 0xE0 && status <= 0xE5 )
@@ -207,6 +208,16 @@ bool VSTBase::getVendorString (char* text)
 	std::string sname = _parent->getAuthorName();
 	strcpy (text, sname.c_str());
 	return true;
+}
+
+
+void VSTBase::MidiLearn(int paramTag)
+{
+	_midiLearnParameter = paramTag;
+}
+void VSTBase::MidiForget(int paramTag)
+{
+	_midiForgetParameter = paramTag;
 }
 
 VstInt32 VSTBase::getNumMidiInputChannels()
@@ -431,7 +442,7 @@ void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 	_parent->getSamples((float**)DestBuffer, Length);
 }
 
-int _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Value)
+intptr_t _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Value)
 {	
 	intptr_t r = TCPPFruityPlug::Dispatcher(ID, Index, Value);
 	if (r != 0)
@@ -511,10 +522,8 @@ void _stdcall VSTBase::SaveRestoreState(IStream *Stream, BOOL Save)
 
 
 
-TVoiceHandle _stdcall VSTBase::TriggerVoice(PVoiceParams VoiceParams, int SetTag)
+TVoiceHandle _stdcall VSTBase::TriggerVoice(PVoiceParams VoiceParams, intptr_t SetTag)
 {
-	PlugVoice Voice;
-
 	// create & init
 	PlugVoice* voice = new PlugVoice();
 	voice->HostTag = SetTag;
@@ -530,10 +539,6 @@ TVoiceHandle _stdcall VSTBase::TriggerVoice(PVoiceParams VoiceParams, int SetTag
 
 	// add to the list
 	_voices.push_back(voice);
-
-
-	
-
 
 	return (TVoiceHandle)voice;
 }

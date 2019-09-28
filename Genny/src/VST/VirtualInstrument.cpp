@@ -79,4 +79,3 @@ void VirtualInstrument::setEditor(VSTEditor* editor)
 {
 	_base->setEditor(editor);
 }
-

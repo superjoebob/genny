@@ -89,5 +89,6 @@ private:
 	bool _first;
 	bool _saving;
 	bool _switchingPreset;
+	std::map<int, std::vector<int>> _midiLearn;
 };
 

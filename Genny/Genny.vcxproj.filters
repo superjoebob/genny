@@ -68,15 +68,6 @@
     <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.cpp">
       <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_cplug.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_plugclass.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
     <ClCompile Include="src\YM2612\sn76489.cpp">
       <Filter>YM2612</Filter>
     </ClCompile>
@@ -209,6 +200,15 @@
     <ClCompile Include="src\Interface\UIPresetElement.cpp">
       <Filter>Interface</Filter>
     </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_cplug.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\fpsdk\fp_plugclass.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -284,15 +284,6 @@
       <Filter>Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="src\YM2612\sn76489.h">
@@ -447,6 +438,15 @@
     </ClInclude>
     <ClInclude Include="src\Interface\UIPresetElement.h">
       <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.h">
+      <Filter>base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

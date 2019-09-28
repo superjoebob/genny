@@ -13,6 +13,7 @@ public:
 	IndexBaron* getIndexBaron() { return _owner->getIndexBaron(); }
 	UIInstrument* getOwner() { return _owner; }
 	void reconnect(bool drumMode);
+	virtual void childValueChanged() { reconnect(false); }
 
 	CLASS_METHODS(UIOperator, CControl)
 
