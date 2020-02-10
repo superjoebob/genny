@@ -59,8 +59,8 @@ public:
 	virtual void noteOff(int note, unsigned char channel, void* noteData = nullptr);
 	virtual void clearNotes();
 
-	virtual std::string getEffectName() { return "Genny Dev"; }
-	virtual std::string getProductName() { return "Genny Dev"; }
+	virtual std::string getEffectName() { return "Genny"; }
+	virtual std::string getProductName() { return "Genny"; }
 	virtual std::string getAuthorName() { return "Landon Podbielski"; }
 
 	virtual int getTotalPatchCount();
@@ -82,6 +82,9 @@ public:
 	double* getDefaultFrequencyTable();
 	Genny2612* getCore() { return _core; }
 
+	unsigned char megaMidiPort;
+	bool megaMidiVSTMute;
+	bool accurateEmulationMode;
 private:
 	Genny2612* _core;
 	GennyInterface* _editor;

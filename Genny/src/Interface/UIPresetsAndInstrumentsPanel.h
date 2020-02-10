@@ -5,6 +5,7 @@
 class UIInstrumentsPanel;
 class UIPresetsPanel;
 class UIImportPanel;
+class UIMegaMidiPanel;
 class UIPresetsAndInstrumentsPanel : public CView, public CControlListener, public GennyInterfaceObject
 {
 public:
@@ -35,11 +36,15 @@ private:
 	GennyInterface* _owner;
 	UIPresetsPanel* _presetsView;
 	UIImportPanel* _importView;
+	UIMegaMidiPanel* _megaMidiView;
 	std::map<int, CControl*> _controls;	
 
 	CKickButton* _presetsTabButton;
 	CKickButton* _importTabButton;
+	CKickButton* _megamidiTabButton;
 	UIInstrumentsPanel* _instrumentView;
+
+
 
 	int _tab;
 

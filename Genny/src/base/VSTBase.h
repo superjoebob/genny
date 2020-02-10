@@ -16,6 +16,7 @@ public:
 	virtual void process (float** inputs, float** outputs, VstInt32 sampleFrames);
 	virtual void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames);
 	virtual VstInt32 processEvents (VstEvents* events);
+	virtual VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
 
 	virtual VstInt32 getChunk (void** data, bool isPreset = false);
 	virtual VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false);
@@ -35,6 +36,9 @@ public:
 
 	virtual void MidiLearn(int paramTag);
 	virtual void MidiForget(int paramTag);
+	virtual void MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort);
+	virtual void MidiFlush();
+
 	virtual VstInt32 getNumMidiInputChannels();
 	virtual VstInt32 getNumMidiOutputChannels();
 	virtual VstInt32 getMidiProgramName (VstInt32 channel, MidiProgramName* midiProgramName);
@@ -56,8 +60,12 @@ protected:
 	VirtualInstrument* _parent;
 	VstInt32 _channelPrograms[16];
 	float _tempo;
+
+	VstEvents* _currentEvents;
 };
 #else
+
+
 #include "fp_cplug.h"
 #include <vector>
 typedef void* VSTEditor;
@@ -110,6 +118,8 @@ public:
 	virtual void _stdcall MIDITick() {}
 	virtual void _stdcall MIDIIn(int &Msg);
 	virtual void _stdcall MsgIn(int Msg);
+	virtual void MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort);
+	virtual void MidiFlush();
 
 
 	virtual void setEditor(void* editor);

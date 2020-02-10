@@ -1,14 +1,17 @@
 #ifndef _SN76489_CHIP_
 #define _SN76489_CHIP_
 #include <vector>
+#include <mutex>
+
 //=======================================================================================================
 // SN76489Chip
 // Author: Landon Podbielski
-// Description:
+// Description: What a mess
 //-------------------------------------------------------------------------------------------------------
 
 enum SN76489Clock
 {
+	SN76489_MEGAMIDI = 4000000,
 	SN76489_NTSC = 3579545,
 	SN76489_PAL = 7600482
 };
@@ -80,11 +83,15 @@ struct SN76489CommandCluster
 class I76489Impl;
 struct GennyPatch;
 class VGMLogger;
+class GennyData;
+class YM2612;
+class GennyVST;
 class SN76489Chip
 {
 public:
-	SN76489Chip();
+	SN76489Chip(GennyVST* pVST);
 	~SN76489Chip();
+	YM2612* _2612;
 
 	void Initialize( SN76489Clock clock = SN76489_NTSC, int soundRate = 44100 );
 	void Terminate();
@@ -109,13 +116,18 @@ public:
 	void tick();
 	SimpleEnvelope* getChannel(int c) { return &_channels[c]; }
 
+	bool _hardwareMode;
+	bool _emulationMute;
+	void clearCache();
+
 private:
 	I76489Impl* _impl;
 	SN76489Clock _clock;
 	int _soundRate;
 	float _freqs[12];
-	volatile bool _commandLock;
+	std::mutex _mutex;
 	std::vector<SN76489CommandCluster> _commands;
+	GennyVST* _vst;
 
 	SimpleEnvelope _channels[4];
 	unsigned char _channelVolumes[4];

@@ -1,0 +1,991 @@
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(367,5): warning MSB8004: Intermediate Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Intermediate Directory.
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(368,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
+  Genny2612.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+C:\gamedev\genny_git\Genny\src\YM2612\sn76489.h(607): warning C4244: '+=': conversion from 'float' to 'int16_t', possible loss of data
+C:\gamedev\genny_git\Genny\src\YM2612\sn76489.h(608): warning C4244: '+=': conversion from 'float' to 'int16_t', possible loss of data
+src\Genny2612.cpp(127): warning C4244: '=': conversion from 'float' to 'unsigned int', possible loss of data
+src\Genny2612.cpp(198): warning C4244: 'return': conversion from 'unsigned int' to 'float', possible loss of data
+src\Genny2612.cpp(251): warning C4800: 'int': forcing value to bool 'true' or 'false' (performance warning)
+src\Genny2612.cpp(410): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(459): warning C4018: '<': signed/unsigned mismatch
+src\Genny2612.cpp(511): warning C4244: '+=': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(548): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(578): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(615): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(667): warning C4244: 'initializing': conversion from 'std::streamoff' to 'unsigned int', possible loss of data
+src\Genny2612.cpp(676): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+src\Genny2612.cpp(695): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(714): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(849): warning C4244: '+=': conversion from 'float' to 'int', possible loss of data
+src\Genny2612.cpp(854): warning C4018: '<': signed/unsigned mismatch
+  GennyLoaders.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\GennyLoaders.cpp(433): warning C4060: switch statement contains no 'case' or 'default' labels
+src\GennyLoaders.cpp(519): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(520): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(558): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(559): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(560): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(561): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(739): warning C4305: 'initializing': truncation from '__int64' to 'long'
+src\GennyLoaders.cpp(739): warning C4309: 'initializing': truncation of constant value
+src\GennyLoaders.cpp(767): warning C4800: 'unsigned char': forcing value to bool 'true' or 'false' (performance warning)
+src\GennyLoaders.cpp(785): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+  GennyVST.cpp
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\GennyVST.h(34): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+c:\gamedev\genny_git\genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\GennyVST.cpp(46): warning C4018: '<': signed/unsigned mismatch
+src\GennyVST.cpp(60): warning C4305: 'initializing': truncation from '__int64' to 'long'
+src\GennyVST.cpp(60): warning C4309: 'initializing': truncation of constant value
+src\GennyVST.cpp(338): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\GennyVST.cpp(501): warning C4018: '>=': signed/unsigned mismatch
+src\GennyVST.cpp(543): warning C4244: 'argument': conversion from 'float' to 'VstInt32', possible loss of data
+src\GennyVST.cpp(778): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\GennyVST.cpp(783): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\GennyVST.cpp(835): warning C4018: '<': signed/unsigned mismatch
+src\GennyVST.cpp(913): warning C4018: '>=': signed/unsigned mismatch
+src\GennyVST.cpp(928): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\GennyVST.cpp(1112): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\GennyVST.cpp(1114): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\GennyVST.cpp(1118): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+  IndexBaron.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+src\IndexBaron.cpp(10): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\IndexBaron.cpp(218): warning C4018: '<': signed/unsigned mismatch
+  GennyInterface.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+C:\gamedev\genny_git\Genny\src\gzip/compress.hpp(67): warning C4068: unknown pragma
+C:\gamedev\genny_git\Genny\src\gzip/compress.hpp(68): warning C4068: unknown pragma
+C:\gamedev\genny_git\Genny\src\gzip/compress.hpp(73): warning C4068: unknown pragma
+C:\gamedev\genny_git\Genny\src\gzip/decompress.hpp(46): warning C4068: unknown pragma
+C:\gamedev\genny_git\Genny\src\gzip/decompress.hpp(47): warning C4068: unknown pragma
+C:\gamedev\genny_git\Genny\src\gzip/decompress.hpp(52): warning C4068: unknown pragma
+src\Interface\GennyInterface.cpp(461): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(498): warning C4244: 'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(734): warning C4244: 'initializing': conversion from 'std::streamoff' to 'unsigned int', possible loss of data
+src\Interface\GennyInterface.cpp(743): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(834): warning C4244: 'initializing': conversion from 'std::streamoff' to 'unsigned int', possible loss of data
+src\Interface\GennyInterface.cpp(843): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(850): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(864): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(885): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1020): warning C4018: '>=': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1034): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1047): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1073): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1103): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1192): warning C4800: 'int': forcing value to bool 'true' or 'false' (performance warning)
+src\Interface\GennyInterface.cpp(1243): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1395): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1413): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1419): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(1421): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(1427): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+src\Interface\GennyInterface.cpp(1444): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1445): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1446): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1447): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1449): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1450): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1451): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1452): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1454): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1455): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1456): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1457): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1459): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1460): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1461): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1462): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1464): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1465): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1466): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1467): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1469): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1470): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1471): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1472): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1474): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1475): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1476): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1477): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1480): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1481): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1482): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1483): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1485): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1486): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1487): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1488): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1490): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1491): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1492): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1493): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1495): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1496): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1497): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1498): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1500): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1501): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1502): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1503): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1505): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1506): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1508): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1509): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\GennyInterface.cpp(1588): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1604): warning C4018: '<': signed/unsigned mismatch
+src\Interface\GennyInterface.cpp(1063): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\GennyInterface.cpp(1441): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+  GennyInterfaceObject.cpp
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  C:\gamedev\genny_git\Genny\src\GennyVST.h(34): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+  UIAlgorithmSelector.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UIChannelStatus.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIChannelStatus.cpp(65): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIChannelStatus.cpp(97): warning C4018: '<': signed/unsigned mismatch
+  UICheckbox.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UIDigitDisplay.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIDigitDisplay.cpp(46): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIDigitDisplay.cpp(51): warning C4018: '>': signed/unsigned mismatch
+src\Interface\UIDigitDisplay.cpp(43): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIDigitDisplay.cpp(91): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIDigitDisplay.cpp(100): warning C4018: '<': signed/unsigned mismatch
+  UIDigitKnob.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIDigitKnob.cpp(61): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIDigitKnob.cpp(66): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+  UIDigitSlider.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIDigitSlider.cpp(31): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int32_t', possible loss of data
+src\Interface\UIDigitSlider.cpp(56): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+  UIDigitSlider2.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIDigitSlider2.cpp(31): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int32_t', possible loss of data
+src\Interface\UIDigitSlider2.cpp(56): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+  UIFeedbackControl.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UIImportPanel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIImportPanel.cpp(309): warning C4018: '<': signed/unsigned mismatch
+  UIInstrument.cpp
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  C:\gamedev\genny_git\Genny\src\GennyVST.h(34): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+src\Interface\UIInstrument.cpp(15): warning C4067: unexpected tokens following preprocessor directive - expected a newline
+src\Interface\UIInstrument.cpp(186): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIInstrument.cpp(431): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrument.cpp(465): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrument.cpp(471): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrument.cpp(614): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+  UIInstrumentElement.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\UIInstrumentElement.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIInstrumentElement.cpp(228): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIInstrumentElement.cpp(235): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrumentElement.cpp(321): warning C4018: '<': signed/unsigned mismatch
+  UIInstrumentsPanel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(179): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(184): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(235): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(254): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(299): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(351): warning C4018: '>': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(365): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(367): warning C4018: '>': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(370): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(397): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIInstrumentsPanel.cpp(432): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIInstrumentsPanel.cpp(481): warning C4018: '<': signed/unsigned mismatch
+  UIKnob.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIKnob.cpp(77): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int', possible loss of data
+  UILetterDisplay.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UILetterDisplay.cpp(36): warning C4018: '>=': signed/unsigned mismatch
+src\Interface\UILetterDisplay.cpp(39): warning C4018: '<': signed/unsigned mismatch
+  Compiling...
+  UIMegaMidiPanel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIMegaMidiPanel.cpp(131): warning C4018: '<': signed/unsigned mismatch
+  UIMegaMidiPortSpinner.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIMegaMidiPortSpinner.cpp(63): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+  UIMidiChannel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIMidiChannel.cpp(62): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIMidiChannel.cpp(92): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
+  UIOperator.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UIPESelectedInstrument.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\UIPESelectedInstrument.h(4): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPESelectedInstrument.cpp(184): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPESelectedInstrument.cpp(234): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPESelectedInstrument.cpp(271): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPESelectedInstrument.cpp(291): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPESelectedInstrument.cpp(317): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPESelectedInstrument.cpp(147): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIPESelectedInstrument.cpp(149): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIPESelectedInstrument.cpp(436): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIPESelectedInstrument.cpp(438): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+  UIPanSlider.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPanSlider.cpp(19): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPanSlider.cpp(42): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int32_t', possible loss of data
+src\Interface\UIPanSlider.cpp(94): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPanSlider.cpp(101): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+src\Interface\UIPanSlider.cpp(130): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+  UIPresetElement.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\UIPresetElement.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+  UIPresetsAndInstrumentsPanel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+  UIPresetsPanel.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(101): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(139): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(179): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\Interface\UIPresetsPanel.cpp(205): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(225): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(239): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(268): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIPresetsPanel.cpp(295): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(298): warning C4018: '<': signed/unsigned mismatch
+src\Interface\UIPresetsPanel.cpp(323): warning C4018: '<': signed/unsigned mismatch
+  UIRangeSlider.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIRangeSlider.cpp(18): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIRangeSlider.cpp(41): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int32_t', possible loss of data
+  UIReverseKnob.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UISampleRangeSlider.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UISampleRangeSlider.cpp(26): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+src\Interface\UISampleRangeSlider.cpp(37): warning C4244: 'argument': conversion from 'VSTGUI::CCoord' to 'int32_t', possible loss of data
+src\Interface\UISampleRangeSlider.cpp(37): warning C4244: 'argument': conversion from 'const VSTGUI::CCoord' to 'int32_t', possible loss of data
+src\Interface\UISampleRangeSlider.cpp(90): warning C4244: 'initializing': conversion from 'VSTGUI::CCoord' to 'float', possible loss of data
+src\Interface\UISampleRangeSlider.cpp(114): warning C4244: 'initializing': conversion from 'VSTGUI::CCoord' to 'float', possible loss of data
+  UISlider.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+  UISpinner.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UISpinner.cpp(62): warning C4996: 'itoa': The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name: _itoa. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdlib.h(1316): note: see declaration of 'itoa'
+  UIWaveForm.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\interface\GennyInterfaceObject.h(6): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+src\Interface\UIWaveForm.cpp(14): warning C4244: 'initializing': conversion from 'VSTGUI::CCoord' to 'int', possible loss of data
+  VirtualInstrument.cpp
+c:\gamedev\genny_git\genny\src\vst\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+C:\gamedev\genny_git\Genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+src\VST\VirtualInstrument.cpp(56): warning C4018: '<': signed/unsigned mismatch
+  SN76489Chip.cpp
+c:\gamedev\genny_git\genny\src\ym2612\sn76489.h(607): warning C4244: '+=': conversion from 'float' to 'int16_t', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\sn76489.h(608): warning C4244: '+=': conversion from 'float' to 'int16_t', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\ym2612\SN76489Chip.h(84): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\YM2612\SN76489Chip.cpp(56): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+src\YM2612\SN76489Chip.cpp(191): warning C4244: 'initializing': conversion from 'float' to 'unsigned char', possible loss of data
+src\YM2612\SN76489Chip.cpp(195): warning C4244: '=': conversion from 'float' to 'unsigned char', possible loss of data
+src\YM2612\SN76489Chip.cpp(230): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+src\YM2612\SN76489Chip.cpp(243): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+src\YM2612\SN76489Chip.cpp(244): warning C4244: 'initializing': conversion from 'double' to 'unsigned short', possible loss of data
+  VGMLogger.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\YM2612.h(92): warning C4099: 'GennyPatch': type name first seen using 'struct' now seen using 'class'
+  c:\gamedev\genny_git\genny\src\ym2612\SN76489Chip.h(84): note: see declaration of 'GennyPatch'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+src\YM2612\VGMLogger.cpp(106): warning C4244: '=': conversion from 'std::streamoff' to 'int', possible loss of data
+src\YM2612\VGMLogger.cpp(133): warning C4244: 'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
+src\YM2612\VGMLogger.cpp(147): warning C4244: '=': conversion from 'std::streamoff' to 'long', possible loss of data
+  WaveData.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\YM2612\WaveData.cpp(96): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+src\YM2612\WaveData.cpp(104): warning C4244: '=': conversion from 'double' to 'unsigned char', possible loss of data
+  YM2612.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\ym2612\YM2612.h(92): note: see declaration of 'GennyPatch'
+c:\gamedev\genny_git\genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(8): warning C4099: 'GennyData': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\GennyLoaders.h(7): note: see declaration of 'GennyData'
+C:\gamedev\genny_git\Genny\src\GennyLoaders.h(174): warning C4018: '<': signed/unsigned mismatch
+src\YM2612\YM2612.cpp(467): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+src\YM2612\YM2612.cpp(473): warning C4244: 'initializing': conversion from 'float' to 'unsigned char', possible loss of data
+src\YM2612\YM2612.cpp(498): warning C4244: '*=': conversion from 'double' to 'float', possible loss of data
+src\YM2612\YM2612.cpp(500): warning C4244: '*=': conversion from 'double' to 'float', possible loss of data
+src\YM2612\YM2612.cpp(502): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+src\YM2612\YM2612.cpp(1034): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+src\YM2612\YM2612.cpp(1050): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+  Compiling...
+  VSTBase.cpp
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(159): warning C4005: 'M_PI': macro redefinition
+  c:\gamedev\genny_git\vstgui\src\vstgui\lib/cdrawcontext.h(289): note: see previous definition of 'M_PI'
+c:\gamedev\genny_git\genny\src\ym2612\ym2612_new.h(2247): warning C4005: 'load_param': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(551): note: see previous definition of 'load_param'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(45): warning C4005: 'READ_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(153): note: see previous definition of 'READ_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(46): warning C4005: 'READ_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(154): note: see previous definition of 'READ_WORD_LONG'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(48): warning C4005: 'WRITE_WORD': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(156): note: see previous definition of 'WRITE_WORD'
+c:\gamedev\genny_git\genny\src\ym2612\resampler\Fir_Resampler.h(49): warning C4005: 'WRITE_WORD_LONG': macro redefinition
+  c:\gamedev\genny_git\genny\src\ym2612\ym2612_plusgx.h(157): note: see previous definition of 'WRITE_WORD_LONG'
+C:\gamedev\genny_git\Genny\src\VST\VirtualInstrument.h(75): warning C4244: 'return': conversion from 'int' to 'float', possible loss of data
+c:\gamedev\genny_git\genny\src\YM2612/SN76489Chip.h(84): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  c:\gamedev\genny_git\genny\src\YM2612/YM2612.h(92): note: see declaration of 'GennyPatch'
+C:\gamedev\genny_git\Genny\src\Genny2612.h(206): warning C4099: 'GennyPatch': type name first seen using 'class' now seen using 'struct'
+  C:\gamedev\genny_git\Genny\src\Genny2612.h(206): note: see declaration of 'GennyPatch'
+src\base\VSTBase.cpp(54): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+src\base\VSTBase.cpp(70): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+src\base\VSTBase.cpp(124): warning C4244: 'argument': conversion from 'VstInt32' to 'float', possible loss of data
+LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/LTCG' specification
+     Creating library C:\gamedev\genny_git\Genny\\bin\Release\x86\Genny.lib and object C:\gamedev\genny_git\Genny\\bin\Release\x86\Genny.exp
+  Generating code
+c:\gamedev\genny_git\genny\src\ym2612\ym2612.cpp(932): warning C4715: 'YM2612::packParameter': not all control paths return a value
+  23 of 8309 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    10 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  Genny.vcxproj -> C:\gamedev\genny_git\Genny\\bin\Release\x86\Genny.dll
+  Genny.vcxproj -> C:\gamedev\genny_git\Genny\\bin\Release\x86\Genny.pdb (Full PDB)
+  
+  -------------------------------------------------------------------------------
+     ROBOCOPY     ::     Robust File Copy for Windows                              
+  -------------------------------------------------------------------------------
+  
+    Started : Monday, February 10, 2020 3:14:13 PM
+     Source : C:\gamedev\genny_git\Genny\bin\Release\x86\
+       Dest : C:\gamedev\genny_git\Genny\dist\genny\vst\
+  
+      Files : Genny.dll
+  	    
+    Options : /DCOPY:DA /COPY:DAT /R:1000000 /W:30 
+  
+  ------------------------------------------------------------------------------
+  
+  	  New Dir          1	C:\gamedev\genny_git\Genny\bin\Release\x86\
+  	    New File  		   4.3 m	Genny.dll
+    0%  
+   11%  
+   23%  
+   34%  
+   46%  
+   57%  
+   69%  
+   80%  
+   92%  
+  100%  
+  
+  ------------------------------------------------------------------------------
+  
+                 Total    Copied   Skipped  Mismatch    FAILED    Extras
+      Dirs :         1         1         0         0         0         0
+     Files :         1         1         0         0         0         0
+     Bytes :    4.34 m    4.34 m         0         0         0         0
+     Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+  
+  
+     Speed :           1519274666 Bytes/sec.
+     Speed :            86933.593 MegaBytes/min.
+     Ended : Monday, February 10, 2020 3:14:13 PM
+  
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppCommon.targets(133,5): error MSB3073: The command "call robocopy "C:\gamedev\genny_git\Genny\bin\Release\x86" "C:\gamedev\genny_git\Genny\dist\genny\vst" "Genny.dll"
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppCommon.targets(133,5): error MSB3073: :VCEnd" exited with code 1.

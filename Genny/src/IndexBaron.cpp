@@ -13,6 +13,7 @@ std::string IBYMParam::getValue(GennyPatch* patch)
 
 IndexBaron::IndexBaron(void)
 	:_currentInstrument(-1)
+	,enableTrueStereo(false)
 {
 }
 

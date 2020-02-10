@@ -113,7 +113,8 @@ void UIPresetsPanel::valueChanged (CControl* control)
 
 			if(_copyData.data != nullptr)
 			{
-				GennyPatch* newPatch = GennyLoaders::loadVGI(_copyName, "", _copyData, false);
+				_copyData.dataPos = 0;
+				GennyPatch* newPatch = GennyLoaders::loadGEN(_copyName, "", getCurrentPatch(), &_copyData, false);
 				IndexBaron* baron = getIndexBaron();
 				int count = GennyPatch::getNumParameters();
 				getCurrentPatch()->Name = _copyName;
@@ -126,6 +127,7 @@ void UIPresetsPanel::valueChanged (CControl* control)
 					plug->ProcessParam(i + 100000, static_cast<int>(newPatch->getFromBaron(baron->getIndex(i))), REC_UpdateValue);
 #endif
 				}
+				getVst()->rejiggerInstruments(true); 
 				getInterface()->reconnect();
 			}
 		}
@@ -213,7 +215,7 @@ void UIPresetsPanel::copyPatch(GennyPatch* patch)
 		delete[] _copyData.data;
 
 	_copyName = patch->Name;
-	_copyData = GennyLoaders::saveVGI(patch);
+	_copyData = GennyLoaders::saveGEN(patch);
 }
 
 void UIPresetsPanel::pastePatch()

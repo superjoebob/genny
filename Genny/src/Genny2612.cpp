@@ -223,7 +223,7 @@ float  GennyInstrument::getFromBaron(IBIndex* param)
 
 void GennyPatch::catalogue(IndexBaron* baron)
 {
-	Globals.catalogue(baron);
+	//Globals.catalogue(baron);
 	for(int i = 0; i < 16; i++)
 		baron->addIndex(new IBPatchParam((GennyPatchParam)(GPP_Ins01 + i)));
 	for(int i = 0; i < 10; i++)
@@ -258,9 +258,9 @@ void GennyPatch::setFromBaron(IBIndex* param, float val)
 	else if(param->getType() == IB_YMParam)
 	{
 		IBYMParam* p = static_cast<IBYMParam*>(param);
-		if(p->getInstrument() < 0)
-			return Globals.setFromBaron(param, val);
-		else
+		//if(p->getInstrument() < 0)
+		//	return Globals.setFromBaron(param, val);
+		//else
 			return InstrumentDef.setFromBaron(param, val);
 	}
 	else if(param->getType() == IB_InsParam)
@@ -272,7 +272,15 @@ void GennyPatch::setFromBaron(IBIndex* param, float val)
 
 float GennyPatch::getFromBaron(IBIndex* param)
 {
-	if(param->getType() == IB_PatchParam)
+	if (param->getType() == IB_YMParam)
+	{
+		IBYMParam* p = static_cast<IBYMParam*>(param);
+		//if(p->getInstrument() < 0)
+		//	return Globals.getFromBaron(param);
+		//else
+		return InstrumentDef.getFromBaron(param);
+	}
+	else if(param->getType() == IB_PatchParam)
 	{
 		IBPatchParam* p = static_cast<IBPatchParam*>(param);
 
@@ -291,14 +299,6 @@ float GennyPatch::getFromBaron(IBIndex* param)
 		if(p->getParameter() == GPP_SelectedInstrument)
 			return (float)SelectedInstrument;
 	}
-	else if(param->getType() == IB_YMParam)
-	{
-		IBYMParam* p = static_cast<IBYMParam*>(param);
-		if(p->getInstrument() < 0)
-			return Globals.getFromBaron(param);
-		else
-			return InstrumentDef.getFromBaron(param);
-	}
 	else if(param->getType() == IB_InsParam)
 	{
 		IBInsParam* p = static_cast<IBInsParam*>(param);
@@ -311,7 +311,9 @@ Genny2612::Genny2612(GennyVST* owner):
 	_owner(owner),
 	_numNotes(0),
 	_releases(0),
-	_logging(false)
+	_logging(false),
+	_chip(owner),
+	_snChip(owner)
 {
 	memset(_channelPatches, 0, sizeof(int) * 10);
 
@@ -322,6 +324,9 @@ Genny2612::Genny2612(GennyVST* owner):
 		_defaultFrequencyTable[i] = 100 * (i - 1);
 
 	_frequencyTable = _defaultFrequencyTable;
+
+	//_snChip._commandBuffer = _chip._commandBuffer;
+	_snChip._2612 = &_chip;
 }
 
 
@@ -343,7 +348,7 @@ void Genny2612::initialize()
 	_processor.initialize();
 	_processor.setChip(&_chip);
 
-	_snChip.Initialize(SN76489_NTSC, 44100);
+	_snChip.Initialize(SN76489_MEGAMIDI, 44100);
 	_processor.setSNChip(&_snChip);
 }
 
@@ -352,18 +357,18 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 {
 	//If the note is higher than 95 it is an effect note (vibrato) and should not be played.
  	bool isEffect = false;
-	int logNote = note;
 
 #if BUILD_VST
 	note *= 100;
 	velocity /= 127.0f;
 #endif
+	int logNote = note;
 
 //#ifdef BUILD_VST
 //	if(note >= 96)
 //		isEffect = true;
 //#else
-	if(note >= 9600)
+	if(note >= 9600 || note < 300)
 		isEffect = true;
 	logNote /= 100;
 //#endif			
@@ -371,12 +376,12 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 	{
 		if(_logging)
 		{
-			if(logNote == 125 && _logger.isLogging())
+			if(logNote == 2 && _logger.isLogging())
 			{
 				_logger.writeLoopPoint();	
 				return;
 			}
-			else if(logNote == 126 && _logger.isLogging() == false)
+			else if(logNote == 0 && _logger.isLogging() == false)
 			{
 				_chip.setDACEnable(false);
 				_chip.dirtyChannels();
@@ -385,7 +390,7 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 				_chip.setLogger(&_logger);		
 				return;
 			}
-			else if(logNote == 127 && _logger.isLogging() == true)
+			else if(logNote == 1 && _logger.isLogging() == true)
 			{
 				stopLogging();
 				return;
@@ -450,41 +455,41 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 
 			NoteInfo* best = &_channels[channels[0]];
 			int bestIndex = -1;
-			for(int j = 0; j < channels.size(); j++)
-			{
-				if(patch0->Channels[channels[j]] == true)
-				{
-					best = &_channels[channels[j]];
-					bestIndex = channels[j];
-					break;
-				}
-			} 
+			int bestScore = -999999;
 			for(int j = 0; j < channels.size(); j++)
 			{
 				NoteInfo* info = &_channels[channels[j]];
-				bool isReleasing = false;
-#ifndef BUILD_VST
-				PlugVoice* voice = (PlugVoice*)info->noteData;
-				if(voice != nullptr)
-					isReleasing = voice->State == -1;
-#endif
 
-				if((info->note == -1 || isReleasing) && best->note != -1 && patch0->Channels[channels[j]])
+				if (patch0->Channels[channels[j]] == false)
+					continue;
+
+				//Pick the first available channel initially
+				if (bestIndex == -1)
+				{
+					best = &_channels[channels[j]];
+					bestIndex = channels[j];
+				}
+
+				int score = 0;
+
+				//If a channel has no active note, make it a priority
+				if(info->note == -1)
+					score += 50000;
+
+				//Add points for older notes
+				score -= info->num;
+
+				//Add points for older releases
+				score -= info->release;
+
+				//Add points for higher notes
+				//score += info->note;
+
+				if (score > bestScore)
 				{
 					best = info;
 					bestIndex = channels[j];
-					continue;
-				}
-				if(info->note != -1 && best->note == -1)
-					continue;
-
-				if(info->num < best->num)
-				{
-					if(info->release < best->release && patch0->Channels[channels[j]])
-					{
-						best = info;
-						bestIndex = channels[j];
-					}
+					bestScore = score;
 				}
 			}
 			if(bestIndex != -1)
@@ -501,6 +506,11 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 //#ifndef BUILD_VST
 				newNote += (octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2)) * 1200;
 				newNote += (transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2)) * 100;
+
+#ifdef BUILD_VST
+				newNote += _owner->_globalPitchOffset[channel] * 1200;
+#endif
+
 				rlNote = newNote / 100;
 
 				int logNote = rlNote;
@@ -544,12 +554,25 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 				float lPan = 0.0f;
 				float rPan = 0.0f;
 
+				float speciallPan = 0.0f;
+				float specialrPan = 0.0f;
+
 #ifndef BUILD_VST
 				_owner->getBase()->PlugHost->ComputeLRVol(lPan, rPan, completePan, velocity);
+				
+				_owner->getBase()->PlugHost->ComputeLRVol(speciallPan, specialrPan, completePan, 1.4f);
+
+#else
+				speciallPan = (1.0f - pan);
+				if (speciallPan > 1.0f)
+					speciallPan = 1.0f;
+
+				specialrPan = 1.0f + pan;
+				if (specialrPan > 1.0f)
+					specialrPan = 1.0f;
 #endif
 				
 				int specialIndex = getIndexBaron()->getYMParamIndex(YM_SPECIAL);
-				float enableSpecialPanning = patch0->getFromBaron(baron->getIndex(specialIndex)) > 0.5f;
 
 				float tempo = _owner->getTempo(); 
 				int samplesPerTick = _owner->getSamplesPerTick(); 
@@ -564,23 +587,27 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 					IBIndex* left = baron->getIndex(baron->getYMParamIndex(YM_L_EN));
 					IBIndex* right = baron->getIndex(baron->getYMParamIndex(YM_R_EN));
 					
-					_chip.getImplementation()->fm_enablePerNotePanning = enableSpecialPanning;
-					if(enableSpecialPanning)
+					_chip.getImplementation()->fm_enablePerNotePanning = baron->enableTrueStereo;
+					_chip.getImplementation2()->fm_enablePerNotePanning = baron->enableTrueStereo;
+					if(baron->enableTrueStereo)
 					{
 						patch->setFromBaron(left, 1);
-						setFromBaron(left, bestIndex, 1);
+						setFromBaron(left, bestIndex, 1, true);
 						patch->setFromBaron(right, 1);
-						setFromBaron(right, bestIndex, 1); 
+						setFromBaron(right, bestIndex, 1, true);
 
-						_chip.getImplementation()->fm_perNoteVolumeL[bestIndex] = lPan;
-						_chip.getImplementation()->fm_perNoteVolumeR[bestIndex] = rPan;
+						_chip.getImplementation()->fm_perNoteVolumeL[bestIndex] = speciallPan;
+						_chip.getImplementation()->fm_perNoteVolumeR[bestIndex] = specialrPan;
+
+						_chip.getImplementation2()->fm_perNoteVolumeL[bestIndex] = speciallPan;
+						_chip.getImplementation2()->fm_perNoteVolumeR[bestIndex] = specialrPan;
 					}
 					else
 					{
 						patch->setFromBaron(left, completePan <= 0.5f);
-						setFromBaron(left, bestIndex, completePan <= 0.5f);
+						setFromBaron(left, bestIndex, completePan <= 0.5f, true);
 						patch->setFromBaron(right, completePan >= -0.5f);
-						setFromBaron(right, bestIndex, completePan >= -0.5f); 
+						setFromBaron(right, bestIndex, completePan >= -0.5f, true);
 					}
 				}
 				else
@@ -589,16 +616,28 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 					newNote += snDT;
 					_channels[bestIndex].detune = snDT;
 				 
-					_snChip.getCore()->sn_enablePerNotePanning = enableSpecialPanning;				
-					if(enableSpecialPanning)
+					_snChip.getCore()->sn_enablePerNotePanning = baron->enableTrueStereo;
+					if(baron->enableTrueStereo)
 					{
-					_snChip.getCore()->sn_perNoteVolumeL[bestIndex - 6] = lPan;
-					_snChip.getCore()->sn_perNoteVolumeR[bestIndex - 6] = rPan; 
+					_snChip.getCore()->sn_perNoteVolumeL[bestIndex - 6] = speciallPan;
+					_snChip.getCore()->sn_perNoteVolumeR[bestIndex - 6] = specialrPan;
 					}
 				}
 
 
-				//if(_channelPatches[bestIndex] != patch || channelDirty[bestIndex])
+
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 0)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 1)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 2)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 3)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 0)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 1)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 2)), bestIndex, 15);
+				//setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 3)), bestIndex, 15);
+
+				_chip.mute(bestIndex);
+
+				if(_channelPatches[bestIndex] != patch || channelDirty[bestIndex])
 				{
 					channelDirty[bestIndex] = false;
 					_channelPatches[bestIndex] = patch;
@@ -607,7 +646,8 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 						int count = GennyPatch::getNumParameters();
 						for(int q = 0; q < count; q++)
 						{
-							setFromBaron(baron->getIndex(q), bestIndex, patch->getFromBaron(baron->getIndex(q)));
+							if (q != 151 && q != 152)
+								setFromBaron(baron->getIndex(q), bestIndex, patch->getFromBaron(baron->getIndex(q)));
 						}
 					}
 				}
@@ -651,16 +691,6 @@ void Genny2612::noteOn(int note, float velocity, unsigned char channel, float pa
 						_chip.setDACEnable(false);
 					}
 
-
-					
-	/*				setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 0)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 1)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 2)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, 3)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 0)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 1)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 2)), bestIndex, 15);
-					setFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, 3)), bestIndex, 15);*/
 
 					_chip.noteOn(newNote, velocity * 127, bestIndex, _frequencyTable, patch);
 					_owner->updateChannel(bestIndex, true);
@@ -715,11 +745,6 @@ void Genny2612::updateNote(void* noteData)
 			PlugVoice* voice = (PlugVoice*)noteData;
 
 			int velocity = (int)(sqrt(sqrt(voice->Params->InitLevels.Vol)) * 127.0f);
-
-			if(velocity > 127)
-				velocity = 127;
-			if(velocity < 0)
-				velocity = 0;
 
 			float vibrato = 0.0f;
 			for(int iVibrato = 0; iVibrato < _vibratoNotes.size(); iVibrato++)
@@ -798,8 +823,14 @@ void Genny2612::noteOff(int note, int channel, void* noteData)
 	}
 }
 
+
 void Genny2612::update(float** buffer, int numSamples)
 {
+	if (_snChip._hardwareMode != _chip._hardwareMode)
+		clearCache();
+
+	_snChip._hardwareMode = _chip._hardwareMode;
+	_snChip._emulationMute = _chip._emulationMute;
 	_processor.update(buffer, numSamples);
 
 	int size = _vibratoNotes.size();
@@ -815,14 +846,9 @@ void Genny2612::update(float** buffer, int numSamples)
 			int offset = (_channels[i].instrumentPatch->InstrumentDef.Octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2)) * 1200;
 			offset += (_channels[i].instrumentPatch->InstrumentDef.Transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2)) * 100;
 			offset += _channels[i].detune;
-
+			offset += _owner->_globalPitchOffset[_channels[i].channel] * 1200;
 
 			int velocity = (int)(sqrt(sqrt(_channels[i].floatVelocity)) * 127.0f);
-
-			if (velocity > 127)
-				velocity = 127;
-			if (velocity < 0)
-				velocity = 0;
 
 			float vibrato = 0.0f;
 			for (int iVibrato = 0; iVibrato < _vibratoNotes.size(); iVibrato++)
@@ -840,11 +866,13 @@ void Genny2612::update(float** buffer, int numSamples)
 		}
 	}
 #endif
+
+	_owner->midiFlush();
 }
 
-void Genny2612::setFromBaron(IBIndex* param, int channel, float val)
+void Genny2612::setFromBaron(IBIndex* param, int channel, float val, bool pForceDACWrite)
 {
-	_chip.setFromBaron(param, channel, val);
+	_chip.setFromBaron(param, channel, val, pForceDACWrite);
 
 	//if(param->getType() == IB_YMParam)
 	//{
@@ -865,10 +893,10 @@ void Genny2612::setFromBaron(IBIndex* param, int channel, float val)
 	//}
 }
 
-void Genny2612::setFromBaronGlobal(IBIndex* param, int channel, float val)
-{
-	_chip.setFromBaronGlobal(param, channel, val);
-}
+//void Genny2612::setFromBaronGlobal(IBIndex* param, int channel, float val)
+//{
+//	_chip.setFromBaronGlobal(param, channel, val);
+//}
 
 void Genny2612::getParameterName(int index, char* text)
 {
@@ -897,4 +925,25 @@ void Genny2612::stopLogging()
 		_logger.finishLogging();
 
 	_owner->loggingComplete();
+}
+
+
+void Genny2612::clearCache()
+{
+	for (int i = 0; i < 10; i++)
+	{
+		_channelPatches[i] = nullptr; 
+		channelDirty[i] = true;
+	}
+
+	_chip.clearCache();
+	_snChip.clearCache();
+}
+
+void Genny2612::lfoChanged()
+{
+	GennyPatch* patch0 = static_cast<GennyPatch*>(_owner->getPatch(0));
+	IndexBaron* baron = _indexBaron;
+	setFromBaron(baron->getIndex(151), 0, patch0->getFromBaron(baron->getIndex(151)));
+	setFromBaron(baron->getIndex(152), 0, patch0->getFromBaron(baron->getIndex(152)));
 }

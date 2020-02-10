@@ -16,7 +16,7 @@ struct WaveData
 
 	int size;
 	unsigned char* audioData;
-	int audioPosition;
+	float audioPosition;
 	float waitTime;
 
 	int streamStartPos;

@@ -95,8 +95,9 @@ bool UIInstrumentElement::attached (CView* parent)
 	_typeDisplay = new CMovieBitmap(CRect((size.left + 2) + 10, size.top + 0, (size.left + 15) + 10, size.top + 12), this, -1, UIBitmap(IDB_PNG15));
 	_typeDisplay->setMouseableArea(CRect(0, 0, 0, 0));
 	frame->addView(_typeDisplay);
-	
-	_label = new CTextLabel(CRect(size.left + 4 + 12, size.top, size.left + 142, size.top + 15), ""); 
+
+
+	_label = new CTextLabel(CRect(size.left + 4 + 12, size.top - 2, size.left + 142, size.top + 15), "");
 	_label->setFont(kNormalFont);
 	_label->setHoriAlign(kLeftText);
 	_label->getFont()->setStyle(kBoldFace);
@@ -241,6 +242,8 @@ void UIInstrumentElement::makeChannelsDirty()
 		else
 			_active[i] = false;
 	}
+
+	setPatchLink(_patch);
 }
 
 
@@ -301,11 +304,13 @@ void UIInstrumentElement::setPatchLink(GennyPatch* patch)
 	_enabledCheckbox->setVisible(_patch != nullptr);
 	if(_patch == nullptr)
 	{
+		setVisible(true);
 		setVisible(false);
 		invalid();
 	}
 	else
 	{
+		setVisible(false);
 		_label->setText(patch->Name.c_str());
 		setVisible(true);
 		invalid();
@@ -383,8 +388,8 @@ void UIInstrumentElement::setVisible(bool visible)
 	//Set visibility of instrument channel status lights
 	for(int i = 0; i < 10; i++)
 	{
-		GennyPatch* channelPatch = getInterface()->getVst()->getCore()->getInstrumentPatch(i);
-		_lights[i]->setVisible(channelPatch != nullptr ? (channelPatch->InstrumentDef.Channels[i] && visible) : visible);
+		//GennyPatch* channelPatch = getInterface()->getVst()->getCore()->getInstrumentPatch(i);
+		_lights[i]->setVisible(/*channelPatch != nullptr ? (channelPatch->InstrumentDef.Channels[i] && visible) : */visible);
 		_lights[i]->invalid();
 	}
 

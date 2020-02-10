@@ -40,7 +40,9 @@ bool UIPresetElement::attached (CView* parent)
 	_typeDisplay->setMouseableArea(CRect(0, 0, 0, 0));
 	frame->addView(_typeDisplay);
 
-	_label = new CTextLabel(CRect(size.left + 4, size.top, size.left + 180, size.top + 15), "");
+
+
+	_label = new CTextLabel(CRect(size.left + 4, size.top - 2, size.left + 180, size.top + 15), "");
 	_label->setFont(kNormalFont);
 	_label->setHoriAlign(kLeftText);
 	_label->getFont()->setStyle(kBoldFace);
@@ -170,6 +172,10 @@ void UIPresetElement::setVisible(bool visible)
 	_typeDisplay->setValue(visible);
 	CCheckBox::setVisible(visible);
 	CCheckBox::invalid();
+
+	_typeDisplay->invalid();
+	_copyButton->invalid();
+	_pasteButton->invalid();
 }
 
 void UIPresetElement::draw(CDrawContext* context)
@@ -190,16 +196,16 @@ void UIPresetElement::invalid()
 		else 
 		{		
 			_label->setTextInset(CPoint(12, 0));
-			_typeDisplay->setVisible(true);
+			_typeDisplay->setVisible(isVisible());
 			if(_patch->InstrumentDef.Type != GIType::DAC)
 				_typeDisplay->setValue(0.0f);
 			else
 				_typeDisplay->setValue(1.0);
 		}	
 
-		_copyButton->setVisible(value == 1.0f && _patch->InstrumentDef.Type != GIType::DAC);
+		_copyButton->setVisible(value == 1.0f);
 		_copyButton->invalid(); 
-		_pasteButton->setVisible(value == 1.0f && _patch->InstrumentDef.Type != GIType::DAC);
+		_pasteButton->setVisible(value == 1.0f);
 		_pasteButton->invalid();
 	}
 

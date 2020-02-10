@@ -209,6 +209,60 @@
     <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp">
       <Filter>base</Filter>
     </ClCompile>
+    <ClCompile Include="..\VSTGui\src\vstgui\vstgui_win32.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIMegaMidiPanel.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIMegaMidiPortSpinner.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\gzlib.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\gzread.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\gzwrite.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\infback.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\inffast.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\inflate.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\inftrees.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\trees.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\uncompr.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\zutil.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\adler32.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\compress.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\crc32.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\deflate.c">
+      <Filter>zip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gzip\gzclose.c">
+      <Filter>zip</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -448,6 +502,93 @@
     <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.h">
       <Filter>base</Filter>
     </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\tyi.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.command.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.gd3.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.header.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.types.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\ym12.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\pre.ym2612.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\tfi.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\vgm2pre.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vgm2pre\vgm2pre\sub.ym2612.hpp">
+      <Filter>vgm2pre</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIMegaMidiPanel.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIMegaMidiPortSpinner.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\gzguts.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\inffast.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\inffixed.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\inflate.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\inftrees.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\trees.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\zconf.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\zlib.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\zutil.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\crc32.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\deflate.h">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\compress.hpp">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\config.hpp">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\decompress.hpp">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\utils.hpp">
+      <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gzip\version.hpp">
+      <Filter>zip</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VST">
@@ -470,6 +611,12 @@
     </Filter>
     <Filter Include="YM2612\filters\include">
       <UniqueIdentifier>{0398d662-a3ea-4b45-a60e-bf7d0bc47ec6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vgm2pre">
+      <UniqueIdentifier>{c37fbe02-a08e-4e2f-8609-b6d973d99e20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="zip">
+      <UniqueIdentifier>{6e6ff4ed-b8b8-495c-b0fc-f42a6ed1ca9e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -568,5 +715,9 @@
     <Image Include="res\op3.png" />
     <Image Include="res\op4.png" />
     <Image Include="res\halfButton.png" />
+    <Image Include="res\velocity_map.png" />
+    <Image Include="res\megamidicheck.png" />
+    <Image Include="res\emu_switch.png" />
+    <Image Include="res\presetsTab_VST.png" />
   </ItemGroup>
 </Project>

@@ -38,7 +38,7 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 	_dataStream << (unsigned char)0x00;
 	_dataStream << (unsigned char)0x00;
 
-	int clock = SN76489_NTSC;
+	int clock = SN76489_MEGAMIDI;
 	//SN76489 clock
 	_dataStream.write((const char*)&clock, 4);
 
@@ -69,7 +69,7 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 	//sn flags
 	_dataStream << (unsigned char)0;
 
-	clock = YM2612_NTSC;
+	clock = YM2612_GENNY;
 	//YM2612 clock
 	_dataStream.write((const char*)&clock, 4);
 
@@ -110,14 +110,17 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 				}
 
 				DrumSet* drums = &patch->InstrumentDef.Drumset;
-				for(int iDrum = 60; iDrum < 75; iDrum++)
+
+
+				for (int i = 36; i < 55; i++)
 				{
-					WaveData* drum = drums->getDrum(iDrum);
-					if(drum != nullptr)
+					char has = 0;
+					WaveData* wave = drums->getDrum(i);
+					if (wave != nullptr)
 					{
-						drum->streamStartPos = drumSamplePosition;
-						_dataStream.write((const char*)drum->audioData, drum->size);
-						drumSamplePosition += drum->size;
+						wave->streamStartPos = drumSamplePosition;
+						_dataStream.write((const char*)wave->audioData, wave->size);
+						drumSamplePosition += wave->size;
 					}
 				}
 			}
@@ -217,8 +220,16 @@ void VGMLogger::seekDACSample(int seek)
 
 void VGMLogger::logDACSample()
 {
-	_dataStream << (unsigned char)0x80;
-	resetSampleCounter();
+	//if (_sampleCounter < 16)
+	//{
+	//	_dataStream << ((unsigned char)(0x8 << 4) | (unsigned char)_sampleCounter);
+	//	_sampleCounter = 0;
+	//}
+	//else
+	//{
+		resetSampleCounter();
+		_dataStream << (unsigned char)0x80;
+	//}
 }
 
 void VGMLogger::resetSampleCounter()
@@ -227,8 +238,8 @@ void VGMLogger::resetSampleCounter()
 	{
 		_dataStream << (unsigned char)0x61;
 		_dataStream.write((const char*)&_sampleCounter, 2);
-		_sampleCounter = 0;
 	}
+	_sampleCounter = 0;
 }
 
 void VGMLogger::writeLoopPoint()

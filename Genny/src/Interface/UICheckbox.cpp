@@ -48,8 +48,9 @@ CMouseEventResult UICheckbox::onMouseUp (CPoint& where, const CButtonState& butt
 		winFrame->getGlobalPosition(globalPos);
 		mousePos = mousePos + globalPos;
 
+		GennyPatch* patch0 = static_cast<GennyPatch*>(getVst()->getPatch(0));
 		int numParams = GennyPatch::getNumParameters();
-		int patchNum = getVst()->getPatchIndex(getCurrentPatch());
+		int patchNum = patch0->SelectedInstrument;
 		int paramTag = (numParams * patchNum) + tag;
 		
 		int param = 0;

@@ -15,6 +15,14 @@
 #include <sstream>
 #include <string>
 
+#include <gzip/compress.hpp>
+#include <gzip/config.hpp>
+#include <gzip/decompress.hpp>
+#include <gzip/utils.hpp>
+#include <gzip/version.hpp>
+
+//#include "vgm2pre.hpp"
+//#include <stdio.h>
 
 CMessageResult VSTFrame::notify (CBaseObject* sender, IdStringPtr message)
 {
@@ -104,8 +112,8 @@ GennyInterface::GennyInterface(void* effect, GennyVST* owner)
 
 GennyInterface::~GennyInterface(void)
 {
-	if(frame != 0)
-		close();
+	//if(frame != 0)
+	//	close();
 }
 
 void GennyInterface::dragEnd()
@@ -148,21 +156,15 @@ bool GennyInterface::open(void* ptr)
 
 	_patchEditor->addConfirmDialog();
 
+
+
 	return true;
 }
 
 void GennyInterface::close()
-{
-	CFrame* oldFrame = frame;
-	frame = 0;
-	oldFrame->forget ();
-	
+{	
 	delete _instrumentUI;
-	_instrumentUI = NULL;
-
-	if(_patchEditor != nullptr)
-		_patchEditor->forget();
-
+	_instrumentUI = nullptr;
 	_patchEditor = nullptr;
 
 #ifdef BUILD_VST
@@ -170,6 +172,10 @@ void GennyInterface::close()
 #else
 	PluginGUIEditor::close();
 #endif
+
+	CFrame* oldFrame = frame;
+	frame = 0;
+	oldFrame->forget();
 }
 
 void GennyInterface::setParameter(GennyInt32 index, float value)
@@ -294,8 +300,8 @@ void GennyInterface::openInstrumentImport()
 		_importInstrument->addFileExtension(CFileExtension("YM2612 Instrument", "vgi"));
 		_importInstrument->addFileExtension(CFileExtension("YM2612 Instrument", "tyi"));
 		_importInstrument->addFileExtension(CFileExtension("YM2612 Instrument", "tfi"));
-		_importInstrument->addFileExtension(CFileExtension("YM2612 Drums", "dpack"));
-		_importInstrument->addFileExtension(CFileExtension("GENNY Drums", "dac"));
+		//_importInstrument->addFileExtension(CFileExtension("YM2612 Drums", "dpack"));
+		//_importInstrument->addFileExtension(CFileExtension("GENNY Drums", "dac"));
 		_importInstrument->setDefaultExtension(CFileExtension("GENNY Instrument", "gen"));
 		_importInstrument->run(frame);
 		_importInstrument->forget();
@@ -333,7 +339,7 @@ void GennyInterface::openInstrumentExport()
 		if(currentPatch->InstrumentDef.Type == GIType::DAC)
 		{
 			_exportInstrument->addFileExtension(CFileExtension("GENNY Instrument", "gen"));
-			_exportInstrument->addFileExtension(CFileExtension("GENNY Drumset", "dac"));
+			//_exportInstrument->addFileExtension(CFileExtension("GENNY Drumset", "dac"));
 		}
 		else if(currentPatch->InstrumentDef.Type == GIType::SN || currentPatch->InstrumentDef.Type == GIType::SNDRUM)
 		{
@@ -364,7 +370,9 @@ void GennyInterface::openBankImport()
 		_importBank->addFileExtension(CFileExtension("GENNY Bank", "gnb"));
 		_importBank->addFileExtension(CFileExtension("YM2612 Bank", "bnk"));
 		_importBank->addFileExtension(CFileExtension("YM2612 Tiido Bank", "tyi"));
-		_importBank->setDefaultExtension(CFileExtension("GENNY Bank", "gnb"));
+		_importBank->addFileExtension(CFileExtension("VGZ Music File", "vgz"));
+		_importBank->addFileExtension(CFileExtension("VGM Music File", "vgm"));
+		//_importBank->setDefaultExtension(CFileExtension("GENNY Bank", "gnb"));
 		_importBank->run(frame);
 		_importBank->forget();
 		_importBank = nullptr;
@@ -439,8 +447,8 @@ void GennyInterface::openImportSample(int sampleSlot)
 		_sampleSlot = sampleSlot;
 		_importSample = CNewFileSelector::create (frame);
 		_importSample->setTitle("Import Sample");
-		_importSample->addFileExtension(CFileExtension("WAV Sample", "wav"));
-		_importSample->setDefaultExtension(CFileExtension("WAV Sample", "wav"));
+		_importSample->addFileExtension(CFileExtension("11025hz or less WAVE", "wav"));
+		_importSample->setDefaultExtension(CFileExtension("11025hz or less WAVE", "wav"));
 		_importSample->run(frame);
 		_importSample->forget();
 		_importSample = nullptr;
@@ -502,6 +510,167 @@ static char * ReadAllBytes(const char * filename, int * read)
     ifs.close();
     *read = length;
     return pChars;
+}
+
+//static alloc_func zalloc = (alloc_func)0;
+//static free_func zfree = (free_func)0;
+//#define CHECK_ERR(err, msg) { \
+//    if (err != Z_OK) { \
+//        fprintf(stderr, "%s error: %d\n", msg, err); \
+//    } \
+//}
+
+int parseChannel(unsigned char reg)
+{
+	if (reg >= 0x30 && reg <= 0xBF) //Channel + OP registers
+	{
+		unsigned char regnum = (reg >> 4) << 4;
+		unsigned char target = reg - regnum;
+		return target % 4;
+	}
+	return -1;
+}
+
+YM2612REG parseParam(unsigned char reg)
+{
+	if (reg == 0x28)
+		return YM2612REG::YMR_NOTEON;
+	else if (reg >= 0x30 && reg <= 0xBF) //Channel + OP registers
+	{
+		unsigned char regnum = (reg >> 4) << 4;
+		unsigned char target = reg - regnum;
+
+		int op = 0;
+		if (target >= 0x4 && target <= 0x7)
+			op = 1;
+		else if (target >= 0x8 && target <= 0xB)
+			op = 2;
+		else if (target >= 0xC && target <= 0xF)
+			op = 3;
+		
+		if (regnum == 0x30)
+			return (YM2612REG)(YM2612REG::YMR_DT1_MUL_OP1 + (op * 0x4));
+		if (regnum == 0x40)
+			return (YM2612REG)(YM2612REG::YMR_TL_OP1 + (op * 0x4));
+		if (regnum == 0x50)
+			return (YM2612REG)(YM2612REG::YMR_RS_AR_OP1 + (op * 0x4));
+		if (regnum == 0x60)
+			return (YM2612REG)(YM2612REG::YMR_AM_D1R_OP1 + (op * 0x4));
+		if (regnum == 0x70)
+			return (YM2612REG)(YM2612REG::YMR_D2R_OP1 + (op * 0x4));
+		if (regnum == 0x80)
+			return (YM2612REG)(YM2612REG::YMR_D1L_RR_OP1 + (op * 0x4));
+		if (regnum == 0x90)
+			return (YM2612REG)(YM2612REG::YMR_SSG_OP1 + (op * 0x4));
+		if (reg == 0xB0 || reg == 0xB1 || reg == 0xB2)
+			return (YM2612REG)YM2612REG::YMR_FB_ALG;
+		if (reg == 0xB4 || reg == 0xB5 || reg == 0xB6)
+			return (YM2612REG)YM2612REG::YMR_AMS_FMS;
+	}
+
+	return (YM2612REG)0;
+}
+
+class YMIns
+{
+public:
+	std::map<YM2612REG, unsigned char> values;
+	YMIns()
+	{
+		values[YMR_DT1_MUL_OP1] = 0;
+		values[YMR_DT1_MUL_OP2] = 0;
+		values[YMR_DT1_MUL_OP3] = 0;
+		values[YMR_DT1_MUL_OP4] = 0;
+
+		values[YMR_TL_OP1] = 0;
+		values[YMR_TL_OP2] = 0;
+		values[YMR_TL_OP3] = 0;
+		values[YMR_TL_OP4] = 0;
+
+		values[YMR_RS_AR_OP1] = 0;
+		values[YMR_RS_AR_OP2] = 0;
+		values[YMR_RS_AR_OP3] = 0;
+		values[YMR_RS_AR_OP4] = 0;
+
+		values[YMR_AM_D1R_OP1] = 0;
+		values[YMR_AM_D1R_OP2] = 0;
+		values[YMR_AM_D1R_OP3] = 0;
+		values[YMR_AM_D1R_OP4] = 0;
+
+		values[YMR_D2R_OP1] = 0;
+		values[YMR_D2R_OP2] = 0;
+		values[YMR_D2R_OP3] = 0;
+		values[YMR_D2R_OP4] = 0;
+
+		values[YMR_D1L_RR_OP1] = 0;
+		values[YMR_D1L_RR_OP2] = 0;
+		values[YMR_D1L_RR_OP3] = 0;
+		values[YMR_D1L_RR_OP4] = 0;
+
+		values[YMR_SSG_OP1] = 0;
+		values[YMR_SSG_OP2] = 0;
+		values[YMR_SSG_OP3] = 0;
+		values[YMR_SSG_OP4] = 0;
+
+		values[YMR_FB_ALG] = 0;
+		values[YMR_AMS_FMS] = 0;
+	}
+
+
+	float difference(YMIns* compare)
+	{
+		float difference = 0.0f;
+		std::map<YM2612REG, unsigned char>::iterator it = values.begin();
+		while (it != values.end())
+		{
+			std::map<YM2612REG, unsigned char>::iterator with = compare->values.find((*it).first);
+			if(with != compare->values.end())
+			{ 
+				if (((*it).second - (*with).second) != 0)
+					difference += 0.20f;
+			}
+
+			it++;
+		}
+
+		return difference;
+	}
+
+	bool exists(std::vector<YMIns> instruments)
+	{
+		std::vector<YMIns>::iterator it = instruments.begin();
+		while (it != instruments.end())
+		{
+			if ((*it).difference(this) < 1.0f)
+				return true;
+
+			it++;
+		}
+
+		return false;
+	}
+};
+
+class drumgap
+{
+public:
+	int start;
+	int finish;
+	double averageDelayBetweenSamples;
+	drumgap()
+	{
+		start = -1;
+		finish = -1;
+		averageDelayBetweenSamples = 0.0f;
+	}
+};
+
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return true;
 }
 
 void GennyInterface::fileDialogFinished(CNewFileSelector* dialog)
@@ -938,6 +1107,450 @@ void GennyInterface::fileDialogFinished(CNewFileSelector* dialog)
 #endif
 			_owner->rejiggerInstruments(false);
 			reconnect();
+		}		
+		else if (ext == "vgz" || ext == "vgm")
+		{
+			int comprLen = 0;
+			int uncomprLen = 0;
+			char* compr = ReadAllBytes(str.c_str(), &comprLen);
+			GennyData file;
+			if (gzip::is_compressed(compr, comprLen))
+			{
+				std::string decompressed_data = gzip::decompress(compr, comprLen);
+				file.data = new char[decompressed_data.length()];
+				memcpy(file.data, decompressed_data.c_str(), decompressed_data.length());
+				uncomprLen = decompressed_data.length();
+			}
+			else
+			{
+				file.data = compr;
+				uncomprLen = comprLen;
+			}
+
+
+
+			if (file.readInt() != ' mgV')
+			{
+				return; //Not a VGM file
+			}
+
+			int eofOffset = file.readInt();
+			int version = file.readInt();
+
+			file.dataPos = 0x1C;
+			int loopOffset = file.readInt();
+			int loopSamples = file.readInt();
+
+			file.dataPos = 0x24;
+			int rate = file.readInt();
+
+			file.dataPos = 0x2C;
+			int ym2612clock = file.readInt();
+
+			file.dataPos = 0x34; //Skip to VGM Data Offset Information
+			int vgmOffset = file.readInt();
+			if (vgmOffset == 0)
+				file.dataPos = 0x40;
+			else
+				file.dataPos += vgmOffset - 4;
+				
+
+			std::vector<YMIns> foundInstruments;
+			YMIns scratch[6];
+			int currentChannel = -1;
+
+			//GennyData* currentWave = new GennyData();
+			drumgap currentGap;
+			std::vector<drumgap> waves;
+			int waveIndex = 0;
+			int pcmBankAddress = 0;
+			int pcmBankOffset = 0;
+			char* pcmdata = nullptr;
+			int pcmdataSize = 0;
+
+			double averageDelayBetweenSamples = 0;
+			double totalAverageDelayBetweenSamples = 0;
+			int samplesSincePCMCommand = 0;
+
+			int numSamples = 0;
+			int totalNumSamples = 0;
+
+			//IMPLEMENT DAC IMPORT
+			//Write to currentWave from current location on PCM data bank on 0x8n, and increment
+			//On 0xe0, Write currentWave into waves[] if it doesn't already exist
+
+			bool dacEnabled = false;
+			while (true) //Read commands
+			{
+				if (file.dataPos >= uncomprLen)
+					break;
+
+				unsigned char command = file.readByte();
+
+				if (command == 0x2B)
+				{
+					dacEnabled = file.readByte() & 0x80;
+					continue;
+				}
+
+				if (command >= 0x70 && command <= 0x7F)
+				{
+					samplesSincePCMCommand += command & 0xF;
+				}
+				if (command >= 0x80 && command <= 0x8F && pcmBankAddress > 0) //DAC WRITE
+				{
+					//if(pcmBankAddress + pcmBankOffset < file.dataPos)
+					//	currentWave->writeByte(file.data[pcmBankAddress + pcmBankOffset]);
+
+					pcmBankOffset++;
+					numSamples++;
+					totalNumSamples++;
+
+					if (samplesSincePCMCommand < 20)
+					{
+						averageDelayBetweenSamples += samplesSincePCMCommand;
+						totalAverageDelayBetweenSamples += samplesSincePCMCommand;
+					}
+
+					samplesSincePCMCommand = (command & 0xF);
+				}
+				else if (command == 0xe0)
+				{
+					//if (currentWave->dataPos > 0)
+					//{
+					//	bool found = false;
+					//	for (int iWave = 0; iWave < waves.size(); iWave++)
+					//	{
+					//		if (waves[iWave]->dataPos == currentWave->dataPos && memcmp(waves[iWave]->data, currentWave->data, currentWave->dataPos) == 0)
+					//		{
+					//			found = true;
+					//			break;
+					//		}
+					//	}
+					//	if (found == false)
+					//		waves.push_back(currentWave);
+
+					//	currentWave = new GennyData();
+					//}
+
+					if (currentGap.start != -1)
+					{
+						currentGap.finish = pcmBankOffset;
+						currentGap.averageDelayBetweenSamples = averageDelayBetweenSamples / numSamples;
+						if (currentGap.finish - currentGap.start > 300)
+						{
+							bool found = false;
+							for (int i = 0; i < waves.size(); i++)
+							{
+								if (abs(waves[i].start - currentGap.start) < 300)
+								{
+									if (waves[i].start > currentGap.start)
+										waves[i].start = currentGap.start;
+
+									if (waves[i].finish < currentGap.finish)
+										waves[i].finish = currentGap.finish;
+
+									if (waves[i].averageDelayBetweenSamples > currentGap.averageDelayBetweenSamples)
+										waves[i].averageDelayBetweenSamples = currentGap.averageDelayBetweenSamples;
+
+									found = true;
+									break;
+								}
+							}
+
+							if (found == false)
+								waves.push_back(currentGap);
+						}
+					}
+
+					averageDelayBetweenSamples = 0;
+					numSamples = 0;
+					pcmBankOffset = file.readInt();
+					currentGap.start = pcmBankOffset;
+				}
+
+				switch (command)
+				{
+					//Game Gear Data
+					case 0x4f: file.dataPos += 1; break;
+					//PSG Data
+					case 0x50: file.dataPos += 1; break;
+					//YM2413 Data
+					case 0x51: file.dataPos += 2; break;
+					//YM2151 Data
+					case 0x54: file.dataPos += 2; break;
+					//WAIT DATA
+					case 0x61:
+						samplesSincePCMCommand += file.readUShort();
+						break;
+					case 0x62:
+						samplesSincePCMCommand += 735;
+						break;
+					case 0x63:
+						samplesSincePCMCommand += 882;
+						break;
+					case 0x66:
+						break;
+
+					//YM2612 PORT 0 Data
+					case 0x52:
+					{
+						unsigned char reg1 = file.readByte();
+						unsigned char data1 = file.readByte();
+
+						if (reg1 == 0x28) // NOTEON
+						{
+							if ((data1 & 0xF0) != 0)
+							{
+								int channel = data1 & 0x7;
+								if (channel > 3)
+									channel -= 1;
+
+								if (channel < 6 && channel >= 0)
+								{
+									if (scratch[channel].exists(foundInstruments) == false)
+										foundInstruments.push_back(scratch[channel]);
+								}
+							}
+						}
+						else
+						{
+							YM2612REG reg = parseParam(reg1);
+							if (reg > 0)
+							{
+								int channel = parseChannel(reg1);
+								if (channel >= 0 && channel < 3)
+								{
+									scratch[channel].values[reg] = data1;
+									currentChannel = channel;
+								}
+							}
+						}
+					}
+					break;
+					//YM2612 PORT 1 Data
+					case 0x53:
+					{
+						unsigned char reg2 = file.readByte();
+						unsigned char data2 = file.readByte();
+
+						YM2612REG reg = parseParam(reg2);
+						if (reg > 0)
+						{
+							int channel = parseChannel(reg2);
+							if (channel >= 0 && channel < 3)
+							{
+								channel += 3;
+
+								scratch[channel].values[reg] = data2;
+								currentChannel = channel;
+							}
+						}
+					}
+					break;
+
+					//PCM BLOCK
+					case 0x67:
+					{
+						if (file.readByte() == 0x66)
+						{
+							unsigned char type = file.readByte();
+							int size = file.readInt();
+							if (type == 0)
+							{
+								pcmBankAddress = file.dataPos;
+								pcmdata = new char[size];
+								memcpy(pcmdata, file.data + file.dataPos, size);
+								pcmdataSize = size;
+							}
+
+							file.dataPos += size;
+						}
+					}
+					break;
+
+					default:
+						int error = 1;
+						break;
+				}
+
+
+			}
+
+			//for (int i = 0; i < 6; i++)
+			//{
+			//	if (scratch[i].exists(foundInstruments) == false)
+			//		foundInstruments.push_back(scratch[i]);
+
+			//}
+
+
+			std::string patchName = name.c_str();
+			replace(patchName, " - ", "_");
+
+			if (patchName.length() > 20)
+				patchName = patchName.substr(0, 20);
+
+			totalAverageDelayBetweenSamples /= totalNumSamples;
+			for (int i = 0; i < foundInstruments.size() + 1; i++)
+			{
+				if (i == foundInstruments.size())
+				{
+					if (waves.size() == 0)
+						break;
+
+					getPatch(i)->Name = patchName + " Drums";
+					getPatch(i)->InstrumentDef.Type = GIType::DAC;
+					*getPatch(i)->InstrumentDef.Data.getParameter(YM_DRUMTL, 0, 3) = 100;
+					for (int iWave = 36; iWave < 56; iWave++)
+					{
+						WaveData* drum = getPatch(i)->InstrumentDef.Drumset.getDrum(i);
+						if (drum != nullptr)
+							delete drum;
+
+						WaveData* wave = new WaveData(pcmdata, pcmdataSize);
+
+						if (iWave - 36 < waves.size())
+						{
+							wave->startSample = waves[iWave - 36].start;
+							wave->endSample = waves[iWave - 36].finish;
+
+							if (waves[iWave - 36].averageDelayBetweenSamples == 0)
+								wave->sampleRate = 11025.0f;
+							else
+								wave->sampleRate = 43100.0f / (waves[iWave - 36].averageDelayBetweenSamples);
+						}
+						else
+						{
+							wave->startSample = 0;
+							wave->endSample = pcmdataSize;
+							wave->sampleRate = 43100.0f / totalAverageDelayBetweenSamples;
+						}
+
+						getPatch(i)->InstrumentDef.Drumset.mapDrum(iWave, wave);
+					}
+
+					continue;
+				}
+				else
+					getPatch(i)->InstrumentDef.Type = GIType::FM;
+
+				YMIns* ins = &foundInstruments[i];
+
+				char buf[4];
+				itoa(i, buf, 10);
+
+				getPatch(i)->Name = patchName + " " + buf;
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DT, 0)), (ins->values[YMR_DT1_MUL_OP1] & 0x70) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DT, 1)), (ins->values[YMR_DT1_MUL_OP2] & 0x70) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DT, 2)), (ins->values[YMR_DT1_MUL_OP3] & 0x70) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DT, 3)), (ins->values[YMR_DT1_MUL_OP4] & 0x70) >> 4);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_MUL, 0)), (ins->values[YMR_DT1_MUL_OP1] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_MUL, 1)), (ins->values[YMR_DT1_MUL_OP2] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_MUL, 2)), (ins->values[YMR_DT1_MUL_OP3] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_MUL, 3)), (ins->values[YMR_DT1_MUL_OP4] & 0xF));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_TL, 0)), ins->values[YMR_TL_OP1] & 0x7F);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_TL, 1)), ins->values[YMR_TL_OP2] & 0x7F);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_TL, 2)), ins->values[YMR_TL_OP3] & 0x7F);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_TL, 3)), ins->values[YMR_TL_OP4] & 0x7F);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_KS, 0)), (ins->values[YMR_RS_AR_OP1] & 0xC0) >> 6);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_KS, 1)), (ins->values[YMR_RS_AR_OP2] & 0xC0) >> 6);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_KS, 2)), (ins->values[YMR_RS_AR_OP3] & 0xC0) >> 6);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_KS, 3)), (ins->values[YMR_RS_AR_OP4] & 0xC0) >> 6);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AR, 0)), (ins->values[YMR_RS_AR_OP1] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AR, 1)), (ins->values[YMR_RS_AR_OP2] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AR, 2)), (ins->values[YMR_RS_AR_OP3] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AR, 3)), (ins->values[YMR_RS_AR_OP4] & 0x1F));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AM, 0)), (ins->values[YMR_AM_D1R_OP1] & 0x80) >> 7);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AM, 1)), (ins->values[YMR_AM_D1R_OP2] & 0x80) >> 7);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AM, 2)), (ins->values[YMR_AM_D1R_OP3] & 0x80) >> 7);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AM, 3)), (ins->values[YMR_AM_D1R_OP4] & 0x80) >> 7);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DR, 0)), (ins->values[YMR_AM_D1R_OP1] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DR, 1)), (ins->values[YMR_AM_D1R_OP2] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DR, 2)), (ins->values[YMR_AM_D1R_OP3] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_DR, 3)), (ins->values[YMR_AM_D1R_OP4] & 0x1F));
+
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SR, 0)), (ins->values[YMR_D2R_OP1] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SR, 1)), (ins->values[YMR_D2R_OP2] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SR, 2)), (ins->values[YMR_D2R_OP3] & 0x1F));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SR, 3)), (ins->values[YMR_D2R_OP4] & 0x1F));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 0)), (ins->values[YMR_D1L_RR_OP1] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 1)), (ins->values[YMR_D1L_RR_OP2] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 2)), (ins->values[YMR_D1L_RR_OP3] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 3)), (ins->values[YMR_D1L_RR_OP4] & 0xF0) >> 4);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 0)), (ins->values[YMR_D1L_RR_OP1] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 1)), (ins->values[YMR_D1L_RR_OP2] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 2)), (ins->values[YMR_D1L_RR_OP3] & 0xF0) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SL, 3)), (ins->values[YMR_D1L_RR_OP4] & 0xF0) >> 4);
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_RR, 0)), (ins->values[YMR_D1L_RR_OP1] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_RR, 1)), (ins->values[YMR_D1L_RR_OP2] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_RR, 2)), (ins->values[YMR_D1L_RR_OP3] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_RR, 3)), (ins->values[YMR_D1L_RR_OP4] & 0xF));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SSG, 0)), (ins->values[YMR_SSG_OP1] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SSG, 1)), (ins->values[YMR_SSG_OP2] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SSG, 2)), (ins->values[YMR_SSG_OP3] & 0xF));
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_SSG, 3)), (ins->values[YMR_SSG_OP4] & 0xF));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_FB, -1)), (ins->values[YMR_FB_ALG] & 0x38) >> 3);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_ALG, -1)), (ins->values[YMR_FB_ALG] & 0x7));
+
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_AMS, -1)), (ins->values[YMR_AMS_FMS] & 0x30) >> 4);
+				getPatch(i)->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex(YM2612Param::YM_FMS, -1)), (ins->values[YMR_AMS_FMS] & 0x7));
+			}
+
+			_owner->rejiggerInstruments(false);
+			_owner->_playingStatusChanged = true;
+			reconnect();
+
+			int qq = 1;
+			//uLongf uncomprLen = 8 * 1000 * 1000;
+			//char* uncompr = new char[uncomprLen]; //8MB buffer
+
+			//int result = uncompress((Bytef*)uncompr, &uncomprLen, (Bytef*)compr, comprLen);
+
+			//int err;
+			//z_stream d_stream; /* decompression stream */
+
+			//strcpy((char*)uncompr, "garbage");
+
+			//d_stream.zalloc = zalloc;
+			//d_stream.zfree = zfree;
+			//d_stream.opaque = (voidpf)0;
+
+			//d_stream.next_in = (Bytef*)compr;
+			//d_stream.avail_in = 0;
+			//d_stream.next_out = (Bytef*)uncompr;
+
+			//err = inflateInit(&d_stream);
+			//CHECK_ERR(err, "inflateInit");
+
+			//while (d_stream.total_out < uncomprLen && d_stream.total_in < comprLen) {
+			//	d_stream.avail_in = d_stream.avail_out = 1; /* force small buffers */
+			//	err = inflate(&d_stream, Z_NO_FLUSH);
+			//	if (err == Z_STREAM_END) break;
+			//	CHECK_ERR(err, "inflate");
+			//}
+
+			//err = inflateEnd(&d_stream);
+			//CHECK_ERR(err, "inflateEnd");
+
+
+			//GennyData file;
+			//file.data = readFile;
+
+
+
 		}
 	}
 	if(dialog == _exportBank)

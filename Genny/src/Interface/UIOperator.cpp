@@ -15,6 +15,13 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	_owner(owner),
 	_operator(number)
 {
+	int offset = number * 232;
+
+	if (_operator == 1)
+		_operator = 2;
+	else if (_operator == 2)
+		_operator = 1;
+
 	CFrame* frame = owner->getFrame();
 	frame->addView(this);
 
@@ -22,11 +29,10 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 
 	UIBitmap knobImage(PNG_KNOB);
 
-	int offset = number * 232;
 
 	_owner->addRefreshable(this);
 
-	int index = baron->getYMParamIndex(YM_TL, number);
+	int index = baron->getYMParamIndex(YM_TL, _operator);
 	CRect knobSize = CRect(0, 0, 26, 26);
 	knobSize.offset(26 + offset, 352);
 	UIReverseKnob* levelKnob = new UIReverseKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -38,7 +44,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	levelKnob->setValue(getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(index)));
 	levelKnob->setWheelInc(-(1.0f / (float)YM2612Param_getRange(YM_TL)));
 
-	index = baron->getYMParamIndex(YM_AR, number);
+	index = baron->getYMParamIndex(YM_AR, _operator);
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(32 + offset, 404);
 	UIKnob* attackKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -51,7 +57,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	attackKnob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_AR));
 
 
-	index = baron->getYMParamIndex(YM_DR, number);
+	index = baron->getYMParamIndex(YM_DR, _operator);
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(74 + offset, 404);
 	UIKnob* decay1Knob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -64,7 +70,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	decay1Knob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_DR));
 
 
-	index = baron->getYMParamIndex(YM_SL, number);
+	index = baron->getYMParamIndex(YM_SL, _operator);
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(116 + offset, 404);
 	UIKnob* sustainKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -77,7 +83,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	sustainKnob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_SL));
 
 
-	index = baron->getYMParamIndex(YM_SR, number);
+	index = baron->getYMParamIndex(YM_SR, _operator);
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(158 + offset, 404);
 	UIKnob* decay2Knob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -90,7 +96,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	decay2Knob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_SR));
 
 
-	index = baron->getYMParamIndex(YM_RR, number);
+	index = baron->getYMParamIndex(YM_RR, _operator);
 	knobSize = CRect(0 , 0, 26, 26);
 	knobSize.offset(200 + offset, 404);
 	UIKnob* releaseKnob = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
@@ -103,9 +109,9 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	releaseKnob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_RR));
 
 
-	index = baron->getYMParamIndex(YM_DT, number);
+	index = baron->getYMParamIndex(YM_DT, _operator);
 	CRect sliderSize = CRect();
-	UIDigitSlider* detuneSlider = new UIDigitSlider(CPoint(92, 446), 110, this, YM_DT, number);
+	UIDigitSlider* detuneSlider = new UIDigitSlider(CPoint(92, 446), 110, this, YM_DT, _operator);
 	frame->addView(detuneSlider);
 	_owner->mapControl(detuneSlider, index);
 	detuneSlider->setMin(0);
@@ -114,9 +120,9 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	detuneSlider->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_DT));
 
 
-	index = baron->getYMParamIndex(YM_MUL, number);
+	index = baron->getYMParamIndex(YM_MUL, _operator);
 	sliderSize = CRect();
-	UIDigitSlider* freqSlider = new UIDigitSlider(CPoint(72, 468), 130, this, YM_MUL, number);
+	UIDigitSlider* freqSlider = new UIDigitSlider(CPoint(72, 468), 130, this, YM_MUL, _operator);
 	frame->addView(freqSlider);
 	_owner->mapControl(freqSlider, index);
 	freqSlider->setMin(0);
@@ -125,9 +131,9 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	freqSlider->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_MUL));
 
 
-	index = baron->getYMParamIndex(YM_KS, number);
+	index = baron->getYMParamIndex(YM_KS, _operator);
 	sliderSize = CRect();
-	UIDigitSlider* envSlider = new UIDigitSlider(CPoint(124, 490), 78, this, YM_KS, number);
+	UIDigitSlider* envSlider = new UIDigitSlider(CPoint(124, 490), 78, this, YM_KS, _operator);
 	frame->addView(envSlider);
 	_owner->mapControl(envSlider, index);
 	envSlider->setMin(0);
@@ -136,9 +142,9 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	envSlider->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_KS));
 
 
-	index = baron->getYMParamIndex(YM_SSG, number);
+	index = baron->getYMParamIndex(YM_SSG, _operator);
 	sliderSize = CRect();
-	UIDigitSlider* ssgSlider = new UIDigitSlider(CPoint(124, 512), 78, this, YM_SSG, number);
+	UIDigitSlider* ssgSlider = new UIDigitSlider(CPoint(124, 512), 78, this, YM_SSG, _operator);
 	frame->addView(ssgSlider);
 	_owner->mapControl(ssgSlider, index);
 	ssgSlider->setMin(0);
@@ -147,7 +153,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	ssgSlider->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_SSG));
 
 
-	index = getIndexBaron()->getYMParamIndex(YM_AM, number);
+	index = getIndexBaron()->getYMParamIndex(YM_AM, _operator);
 	UIBitmap specialButton(PNG_BIGLIGHT);
 	CRect lfoSize = CRect(0, 0, 22, 22);
 	lfoSize.offset(56 + offset, 509);
@@ -168,7 +174,7 @@ UIOperator::UIOperator(UIInstrument* owner, int number):
 	opSize.offset(18 + offset, 298);
 	_operatorVelocity = new UICheckbox(opSize, this, 0, "", getInterface(), opImage);
 
-	bool en = getCurrentPatch()->InstrumentDef.OperatorVelocity[number];
+	bool en = getCurrentPatch()->InstrumentDef.OperatorVelocity[_operator];
 	_operatorVelocity->setValue(en);
 	_operatorVelocity->setMin(0);
 	_operatorVelocity->setMax(1);
@@ -215,12 +221,18 @@ void UIOperator::valueChanged (CControl* control)
 
 void UIOperator::draw (CDrawContext* pContext)
 {
-	int offset = _operator * 232;
+	int offsetNumber = _operator;
+	if (offsetNumber == 2)
+		offsetNumber = 1;
+	else if (offsetNumber == 1)
+		offsetNumber = 2;
+
+	int offset = offsetNumber * 232;
 
 	IndexBaron* baron = _owner->getIndexBaron();
 	float tl = 1.0f - (getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_TL, _operator))) / (float)YM2612Param_getRange(YM_TL));
 	float ar = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_AR, _operator))) / (float)YM2612Param_getRange(YM_AR);
-	float d1r = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_DR, _operator))) / (float)YM2612Param_getRange(YM_DR);
+	float d1r = 1.0f - (getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_DR, _operator))) / (float)YM2612Param_getRange(YM_DR));
 	float sus = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SL, _operator))) / (float)YM2612Param_getRange(YM_SL);
 	float d2r = getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_SR, _operator))) / (float)YM2612Param_getRange(YM_SR);
 	float rr = 1.0f - getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(baron->getYMParamIndex(YM_RR, _operator))) / (float)YM2612Param_getRange(YM_RR);

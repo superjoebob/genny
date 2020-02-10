@@ -3,8 +3,12 @@
 enum YM2612Clock
 {
 	YM2612_NTSC = 7670453,
-	YM2612_PAL = 7600489
+	YM2612_PAL = 7600489,
+	YM2612_GENNY = 8000000
 };
+	  
+
+
 
 //Don't mess with this unless you know what you're doing,
 //these correspond to parameters on the actual YM2612 hardware
@@ -46,6 +50,50 @@ enum YM2612Param
 	YM_DACEN = 30,
 	YM_DAC = 31,
 	YM_NONE
+}; 
+
+
+enum YM2612REG
+{
+	YMR_NOTEON = 0x28,
+
+	YMR_DT1_MUL_OP1 = 0x30,
+	YMR_DT1_MUL_OP2 = 0x34,
+	YMR_DT1_MUL_OP3 = 0x38,
+	YMR_DT1_MUL_OP4 = 0x3C,
+
+	YMR_TL_OP1 = 0x40,
+	YMR_TL_OP2 = 0x44,
+	YMR_TL_OP3 = 0x48,
+	YMR_TL_OP4 = 0x4C,
+
+	YMR_RS_AR_OP1 = 0x50,
+	YMR_RS_AR_OP2 = 0x54,
+	YMR_RS_AR_OP3 = 0x58,
+	YMR_RS_AR_OP4 = 0x5C,
+
+	YMR_AM_D1R_OP1 = 0x60,
+	YMR_AM_D1R_OP2 = 0x64,
+	YMR_AM_D1R_OP3 = 0x68,
+	YMR_AM_D1R_OP4 = 0x6C,
+
+	YMR_D2R_OP1 = 0x70,
+	YMR_D2R_OP2 = 0x74,
+	YMR_D2R_OP3 = 0x78,
+	YMR_D2R_OP4 = 0x7C,
+
+	YMR_D1L_RR_OP1 = 0x80,
+	YMR_D1L_RR_OP2 = 0x84,
+	YMR_D1L_RR_OP3 = 0x88,
+	YMR_D1L_RR_OP4 = 0x8C,
+
+	YMR_SSG_OP1 = 0x90,
+	YMR_SSG_OP2 = 0x94,
+	YMR_SSG_OP3 = 0x98,
+	YMR_SSG_OP4 = 0x9C,
+
+	YMR_FB_ALG = 0xB0,
+	YMR_AMS_FMS = 0xB4,
 };
 
 static unsigned char YM2612Param_getRange(YM2612Param param)

@@ -87,11 +87,28 @@ WaveData::WaveData(GennyData* data)
 						data->dataPos = oldPos;
 
 						deleteData = true;
+
+						float sampInc = sampleRate / 11025.0f;
+						if (sampInc < 1)
+							sampInc = 1;
+
+						int loopSize = newSize;
+						newSize = newSize / (sampInc);
 						sampleData = new unsigned char[newSize];
-						for(int i = 0; i < newSize; i++)
+						int idx = 0;
+						for(int i = 0; i < loopSize; i)
 						{
-							sampleData[i] = dubs[i] * 255;
+							if (idx >= newSize)
+								break;
+
+							sampleData[idx] = dubs[i] * 255;
+							i += (int)sampInc;
+							idx++;
 						}
+
+						if (sampleRate > 11025)
+							sampleRate = 11025;
+
 						delete[] dubs;
 						size = newSize;
 					}

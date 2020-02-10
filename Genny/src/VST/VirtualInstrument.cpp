@@ -4,8 +4,10 @@
 
 VirtualInstrument::VirtualInstrument(void)
 	: _currentPatch(NULL)
+	, _playingStatusChanged(false)
 {
-
+	for (int i = 0; i < 16; i++)
+		_globalPitchOffset[i] = 0.0f;
 }
 
 
@@ -66,6 +68,16 @@ std::vector<VSTPatch*> VirtualInstrument::getPatches(std::string category)
 		}
 	}
 	return patches;
+}
+
+void VirtualInstrument::midiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort)
+{
+	_base->MidiOut(pStatus, pData1, pData2, pPort);
+}
+
+void VirtualInstrument::midiFlush()
+{
+	_base->MidiFlush();
 }
 
 void VirtualInstrument::setProgramName(char* name)

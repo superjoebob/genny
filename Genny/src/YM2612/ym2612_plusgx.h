@@ -134,6 +134,7 @@
 #include <math.h>
 #include <cstdint>
 
+
 /*#define unsigned char  unsigned char
 #define unsigned short unsigned short
 #define unsigned int unsigned int
@@ -740,6 +741,9 @@ t_config config;
  signed long int  out_fm[8];  /* outputs of working channels */
 
 
+float  fm_perNoteVolumeL[6];  /* superjoebob adds per note panning */
+float  fm_perNoteVolumeR[6];
+bool fm_enablePerNotePanning;
 
 inline void FM_KEYON(FM_CH *CH , int s )
 {
@@ -2103,6 +2107,20 @@ void YM2612Init(double clock, int rate)
   ym2612.OPN.ST.clock = clock;
   ym2612.OPN.ST.rate = rate;
   OPNSetPres(6*24); /* YM2612 prescaler is fixed to 1/6, one sample (6 mixed channels) is output for each 24 FM clocks */
+
+  fm_enablePerNotePanning = false;
+  fm_perNoteVolumeL[0] = 0;
+  fm_perNoteVolumeL[1] = 0;
+  fm_perNoteVolumeL[2] = 0;
+  fm_perNoteVolumeL[3] = 0;
+  fm_perNoteVolumeL[4] = 0;
+  fm_perNoteVolumeL[5] = 0;
+  fm_perNoteVolumeR[0] = 0;
+  fm_perNoteVolumeR[1] = 0;
+  fm_perNoteVolumeR[2] = 0;
+  fm_perNoteVolumeR[3] = 0;
+  fm_perNoteVolumeR[4] = 0;
+  fm_perNoteVolumeR[5] = 0;
 }
 
 /* reset OPN registers */
@@ -2290,19 +2308,37 @@ void YM2612Update(int *buffer, int length)
     if (out_fm[5] > 8192) out_fm[5] = 8192;
     else if (out_fm[5] < -8192) out_fm[5] = -8192;
 
-    /* 6-channels stereo mixing  */
-    lt  = ((out_fm[0]) & ym2612.OPN.pan[0]);
-    rt  = ((out_fm[0]) & ym2612.OPN.pan[1]);
-    lt += ((out_fm[1]) & ym2612.OPN.pan[2]);
-    rt += ((out_fm[1]) & ym2612.OPN.pan[3]);
-    lt += ((out_fm[2]) & ym2612.OPN.pan[4]);
-    rt += ((out_fm[2]) & ym2612.OPN.pan[5]);
-    lt += ((out_fm[3]) & ym2612.OPN.pan[6]);
-    rt += ((out_fm[3]) & ym2612.OPN.pan[7]);
-    lt += ((out_fm[4]) & ym2612.OPN.pan[8]);
-    rt += ((out_fm[4]) & ym2612.OPN.pan[9]);
-    lt += ((out_fm[5]) & ym2612.OPN.pan[10]);
-    rt += ((out_fm[5]) & ym2612.OPN.pan[11]);
+	if (fm_enablePerNotePanning)
+	{
+		lt = (((signed int)(out_fm[0] * fm_perNoteVolumeL[0])) & ym2612.OPN.pan[0]);
+		rt = (((signed int)(out_fm[0] * fm_perNoteVolumeR[0])) & ym2612.OPN.pan[1]);
+		lt += (((signed int)(out_fm[1] * fm_perNoteVolumeL[1])) & ym2612.OPN.pan[2]);
+		rt += (((signed int)(out_fm[1] * fm_perNoteVolumeR[1])) & ym2612.OPN.pan[3]);
+		lt += (((signed int)(out_fm[2] * fm_perNoteVolumeL[2])) & ym2612.OPN.pan[4]);
+		rt += (((signed int)(out_fm[2] * fm_perNoteVolumeR[2])) & ym2612.OPN.pan[5]);
+		lt += (((signed int)(out_fm[3] * fm_perNoteVolumeL[3])) & ym2612.OPN.pan[6]);
+		rt += (((signed int)(out_fm[3] * fm_perNoteVolumeR[3])) & ym2612.OPN.pan[7]);
+		lt += (((signed int)(out_fm[4] * fm_perNoteVolumeL[4])) & ym2612.OPN.pan[8]);
+		rt += (((signed int)(out_fm[4] * fm_perNoteVolumeR[4])) & ym2612.OPN.pan[9]);
+		lt += (((signed int)(out_fm[5] * fm_perNoteVolumeL[5])) & ym2612.OPN.pan[10]);
+		rt += (((signed int)(out_fm[5] * fm_perNoteVolumeR[5])) & ym2612.OPN.pan[11]);
+	}
+	else
+	{
+		/* 6-channels stereo mixing  */
+		lt = ((out_fm[0]) & ym2612.OPN.pan[0]);
+		rt = ((out_fm[0]) & ym2612.OPN.pan[1]);
+		lt += ((out_fm[1]) & ym2612.OPN.pan[2]);
+		rt += ((out_fm[1]) & ym2612.OPN.pan[3]);
+		lt += ((out_fm[2]) & ym2612.OPN.pan[4]);
+		rt += ((out_fm[2]) & ym2612.OPN.pan[5]);
+		lt += ((out_fm[3]) & ym2612.OPN.pan[6]);
+		rt += ((out_fm[3]) & ym2612.OPN.pan[7]);
+		lt += ((out_fm[4]) & ym2612.OPN.pan[8]);
+		rt += ((out_fm[4]) & ym2612.OPN.pan[9]);
+		lt += ((out_fm[5]) & ym2612.OPN.pan[10]);
+		rt += ((out_fm[5]) & ym2612.OPN.pan[11]);
+	}
 
     /* buffering */
     *buffer++ = lt;

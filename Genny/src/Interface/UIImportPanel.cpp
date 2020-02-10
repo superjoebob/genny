@@ -41,7 +41,7 @@ bool UIImportPanel::attached (CView* parent)
 	setTag(kPresetControlIndex);
 	setMax(10000.0f);
 
-	_selectedInstrument = new CTextLabel(CRect(644 + 82, 121, 644 + 82 + 180, 121 + 16), "Poopy Doody Balls");
+	_selectedInstrument = new CTextLabel(CRect(644 + 82, 118, 644 + 82 + 180, 121 + 16), "Poopy Doody Balls");
 	_selectedInstrument->setFont(kNormalFont);
 	_selectedInstrument->setHoriAlign(kLeftText);
 	_selectedInstrument->getFont()->setStyle(kBoldFace);
@@ -64,7 +64,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(importBank);
 	_views.push_back(importBank);
 
-	CTextLabel* label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 98, buttonPos.y + 20), "Import Bank");
+	CTextLabel* label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 98, buttonPos.y + 20), "Import Bank");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -80,7 +80,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(exportBank);
 	_views.push_back(exportBank);
 
-	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 98, buttonPos.y + 20), "Export Bank");
+	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 98, buttonPos.y + 20), "Export Bank");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -98,7 +98,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(importState);
 	_views.push_back(importState);
 
-	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 98, buttonPos.y + 20), "Load State");
+	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 98, buttonPos.y + 20), "Load State");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -114,7 +114,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(exportState);
 	_views.push_back(exportState);
 
-	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 98, buttonPos.y + 20), "Save State");
+	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 98, buttonPos.y + 20), "Save State");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -134,7 +134,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(importIns);
 	_views.push_back(importIns);
 
-	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 198, buttonPos.y + 20), "Import Instrument");
+	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 198, buttonPos.y + 20), "Import Instrument");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -151,7 +151,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(exportIns);
 	_views.push_back(exportIns);
 
-	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 198, buttonPos.y + 20), "Export Instrument");
+	label = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 198, buttonPos.y + 20), "Export Instrument");
 	label->setFont(kNormalFont);
 	label->setHoriAlign(kCenterText);
 	label->getFont()->setStyle(kBoldFace);
@@ -170,7 +170,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(logButton);
 	_views.push_back(logButton);
 
-	_loggingButton = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 198, buttonPos.y + 20), "Log VGM");
+	_loggingButton = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 198, buttonPos.y + 20), "Log VGM");
 	_loggingButton->setFont(kNormalFont);
 	_loggingButton->setHoriAlign(kCenterText);
 	_loggingButton->getFont()->setStyle(kBoldFace);
@@ -189,7 +189,7 @@ bool UIImportPanel::attached (CView* parent)
 	frame->addView(tuningButton);
 	_views.push_back(tuningButton);
 
-	_tuningLabel = new CTextLabel(CRect(buttonPos.x, buttonPos.y, buttonPos.x + 198, buttonPos.y + 20), "Import Tuning");
+	_tuningLabel = new CTextLabel(CRect(buttonPos.x, buttonPos.y - 2, buttonPos.x + 198, buttonPos.y + 20), "Import Tuning");
 	_tuningLabel->setFont(kNormalFont);
 	_tuningLabel->setHoriAlign(kCenterText);
 	_tuningLabel->getFont()->setStyle(kBoldFace);
@@ -295,6 +295,12 @@ void UIImportPanel::reconnect()
 		_tuningLabel->setText("Reset Tuning");
 		_tuningLabel->invalid();
 	}
+
+
+	//if (((GennyPatch*)patches[selectedIndex])->InstrumentDef.Type == GIType::FM)
+	//	_selectedInstrument->setTextInset(CPoint(0, 0));
+	//else
+	//	_selectedInstrument->setTextInset(CPoint(12, 0));
 }
 
 

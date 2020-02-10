@@ -64,6 +64,7 @@ private:
 	UISampleRangeSlider* _sampleRangeHigh;
 	UICheckbox* _sampleNormalize;
 	UICheckbox* _sampleLoop;
+	CCheckBox* _specialMode;
 	std::vector<CKickButton*> _drumButtons;
 	std::vector<UIImage*> _drumLights;
 	std::vector<float> _drumLightVals;

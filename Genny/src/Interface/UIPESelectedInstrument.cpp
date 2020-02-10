@@ -107,7 +107,7 @@ UIPESelectedInstrument::UIPESelectedInstrument(UIInstrumentsPanel* vOwner, Genny
 
 	int labelX = 646;
 	int labelY = 262 - 22 - 18 + 2;
-	_rangeLabel = new CTextLabel(CRect(labelX, labelY, labelX + 60, labelY + 12), "127-127");
+	_rangeLabel = new CTextLabel(CRect(labelX, labelY - 4, labelX + 60, labelY + 12), "127-127");
 	_rangeLabel->setFont(kNormalFontBig);
 	_rangeLabel->setHoriAlign(kLeftText);
 	_rangeLabel->getFont()->setStyle(kBoldFace);

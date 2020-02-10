@@ -7,9 +7,11 @@
 #include "UIInstrumentsPanel.h"
 #include "UIPresetsPanel.h"
 #include "UIImportPanel.h"
+#include "UIMegaMidiPanel.h"
 
 const int kPresetsTab = 0;
-const int kImportTab = 2;
+const int kImportTab = 1;
+const int kMegaMidiTab = 2;
 UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, GennyInterface* owner):
 	CView(size),
 	GennyInterfaceObject(owner),
@@ -21,21 +23,37 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 	CFrame* frame = owner->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
+#ifdef BUILD_VST
+	_presetTab = new UIImage(CRect(636 + 82, 96, 636 + 82 + 206, 96 + 186), IDB_PNG39, false);
+#else
 	_presetTab = new UIImage(CRect(636 + 82, 96, 636 + 82 + 206, 96 + 186), PNG_PRESETSTAB, false);
+#endif
 	frame->addView(_presetTab);
 
 	_presetsTabButton = new CKickButton(CRect(638 + 82, 98, 638 + 82 + 68, 98 + 20), this, 9999, 20, nullptr );
 	frame->addView(_presetsTabButton);
 
-	_importTabButton = new CKickButton(CRect(712 + 82, 98, 712 + 82 + 56, 98 + 18), this, 999, 20, nullptr );
+	_importTabButton = new CKickButton(CRect(802, 96, 878, 116), this, 999, 20, nullptr );
 	frame->addView(_importTabButton);
+
+	_megamidiTabButton = new CKickButton(CRect(880, 96, 910, 116), this, 999, 20, nullptr);
+	frame->addView(_megamidiTabButton);
 
 	_presetsView = new UIPresetsPanel(CRect(640 + 82, 120, 640 + 82 + 180, 120 + 158), this);
 	_instrumentView = new UIInstrumentsPanel(CRect(420, 128, 420 + 192, 128 + 140), this);
 	_importView = new UIImportPanel(CRect(0,0,0,0), this);
 	frame->addView(_importView);
-
 	_importView->setVisible(false);
+
+	_megaMidiView = new UIMegaMidiPanel(CRect(0, 0, 0, 0), this);
+	frame->addView(_megaMidiView);
+	_megaMidiView->setVisible(false);
+
+	//UIImage* velocityMapWindow = new UIImage(CRect(0, 0, 954, 552), IDB_PNG36, false);
+	//frame->addView(velocityMapWindow);
+
+
+
 }
 
 UIPresetsAndInstrumentsPanel::~UIPresetsAndInstrumentsPanel(void)
@@ -63,6 +81,8 @@ void UIPresetsAndInstrumentsPanel::valueChanged (CControl* control)
 		setTab(kImportTab);
 	else if(control == _presetsTabButton)
 		setTab(kPresetsTab);
+	else if (control == _megamidiTabButton)
+		setTab(kMegaMidiTab);
 	else
 		_owner->valueChanged(control);
 }
@@ -88,6 +108,7 @@ void UIPresetsAndInstrumentsPanel::reconnect()
 	_instrumentView->reconnect();
 	_presetsView->reconnect();
 	_importView->reconnect();
+	_megaMidiView->reconnect();
 	setTab(_tab);
 }
 	
@@ -99,18 +120,33 @@ void UIPresetsAndInstrumentsPanel::reconnectSelectedInstrument()
 
 void UIPresetsAndInstrumentsPanel::setTab(int tab)
 {
-	if(tab == kImportTab)
+	if(tab == kPresetsTab)
 	{
-		_presetsView->setVisible(false);
-		_presetTab->setFrame(2);
-		_importView->reconnect();
-		_importView->setVisible(true);
-	}
-	else if(tab == kPresetsTab)
-	{
-		_presetsView->setVisible(true);
 		_presetTab->setFrame(0);
+
+		_presetsView->setVisible(true);
 		_importView->setVisible(false);
+		_megaMidiView->setVisible(false);
+	}	
+	else if (tab == kImportTab)
+	{
+		_presetTab->setFrame(1);
+
+		_presetsView->setVisible(false);
+		_importView->setVisible(true);
+
+		_importView->reconnect();
+		_megaMidiView->setVisible(false);
+	}
+	else if (tab == kMegaMidiTab)
+	{
+		_presetTab->setFrame(2);
+
+		_presetsView->setVisible(false);
+		_importView->setVisible(false);
+
+		_megaMidiView->setVisible(true);
+		_megaMidiView->reconnect();
 	}
 	_tab = tab;
 }

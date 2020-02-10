@@ -2,10 +2,12 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <windows.h>
 
 class YM2612;
 class SN76489Chip;
 class GennyVST;
+class GennyData;
 class VGMLogger
 {
 public:
@@ -30,6 +32,7 @@ private:
 	std::fstream _dataStream;
 
 	long _sampleCounter;
+	long _DACsampleCounter;
 	long _totalSamples;
 	bool _logging;
 	int _loopPosition;

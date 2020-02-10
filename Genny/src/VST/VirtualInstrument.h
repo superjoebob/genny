@@ -53,6 +53,8 @@ public:
 
 	virtual void onMidiMessage(int channel, int message, int value) { };
 	virtual void midiTick() { };
+	virtual void midiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort);
+	virtual void midiFlush();
 
 	virtual void noteOn(int note, float velocity, unsigned char channel, float panning, void* noteData = nullptr) = 0;
 	virtual void updateNote(void* noteData){};
@@ -75,6 +77,8 @@ public:
 	
 	std::vector<VSTPatch*> _patches;
 	std::map<int, std::vector<int>> _midiLearn;
+	bool _playingStatusChanged;
+	float _globalPitchOffset[16];
 protected:
 	VSTPatch* _currentPatch;
 	VSTBase* _base;

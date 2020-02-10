@@ -31,7 +31,10 @@ GennyVST::GennyVST(void):
 	_patchesInitialized(false),
 	_first(true),
 	_saving(false),
-	_switchingPreset(false)
+	_switchingPreset(false),
+	megaMidiPort(0),
+	megaMidiVSTMute(false),
+	accurateEmulationMode(false)
 {
 	_core = new Genny2612(this);
 	_core->initialize();
@@ -54,16 +57,28 @@ void GennyVST::initialize()
 }
 
 //long versionIndicator = nullptr //Before February 17, 2019 - Version 0.5 (no version indicator)
-long kVersionIndicator1 = 593829658389673; //February 17, 2019 - Version 1.0
+long kVersionIndicator1 = 593829658389673; //February 17, 2019 - Version 1.0 //OBSOLETE! NO LONGER SUPPORTED!
 long kVersionIndicator2 = 1127443247; //February 20, 2019 - Version 1.01
-long kVersionIndicator3 = 1127443248; //June21, 2019 - Version 1.02
+long kVersionIndicator3 = 1127443248; //June 21, 2019 - Version 1.02
 long kVersionIndicator4 = 1127443249; //Sept 16, 2019 - Version 1.03 (Added VST automation)
+long kVersionIndicator5 = 1127443250; //Nov 7, 2019 - Version 1.04 (Saved per operator velocity settings)
+long kVersionIndicator6 = 1127443251; //Nov 7, 2019 - Version 1.05 (Saved True Stereo setting)
+long kVersionIndicator7 = 1127443252; //Nov 12, 2019 - Version 1.06 (Combined 'Global' Parameters with normal ones)
+long kVersionIndicator8 = 1127443253; //Nov 19, 2019 - Version 1.07 (Added MEGA MIDI flags)
+long kVersionIndicator9 = 1127443254; //Nov 24, 2019 - Version 1.08 (Added EMULATION MODES)
+long kVersionIndicator10 = 1127443255; //Nov 24, 2019 - Version 1.09 (Corrected number of drum samples from 55 to 56)
 bool isVersionNumber(long kVersion)
 {
-	if(	kVersion == kVersionIndicator1 ||
+	if (kVersion == kVersionIndicator1 ||
 		kVersion == kVersionIndicator2 ||
 		kVersion == kVersionIndicator3 ||
-		kVersion == kVersionIndicator4)
+		kVersion == kVersionIndicator4 || 
+		kVersion == kVersionIndicator5 ||
+		kVersion == kVersionIndicator6 ||
+		kVersion == kVersionIndicator7 ||
+		kVersion == kVersionIndicator8 ||
+		kVersion == kVersionIndicator9 ||
+		kVersion == kVersionIndicator10)
 		return true;
 
 	return false;
@@ -106,7 +121,7 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 	stream.write((char*)(&written), sizeof(int));
 	written += sizeof(int);
 	
-	stream.write((char*)(&kVersionIndicator4), sizeof(long));
+	stream.write((char*)(&kVersionIndicator10), sizeof(long));
 	written += sizeof(long);
 
 	int hasFrequencyTable = getFrequencyTable() != getDefaultFrequencyTable() ? 1 : 0;
@@ -138,40 +153,20 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 
 		//Write drum samples
 		GennyPatch* gennypatch = (GennyPatch*)_currentPatch;
-		DrumSet set = gennypatch->InstrumentDef.Drumset;
-
-		for(int i = 36; i < 55; i++)
-		{
-			char has = 0;
-			WaveData* wave = set.getDrum(i);
-			if(wave != nullptr)
-			{
-				has = 1;
-				stream.write(&has, 1);
-				written += 1;
-
-				stream.write((char*)(&wave->sampleRate), sizeof(int));
-				written += sizeof(int);
-
-				stream.write((char*)(&wave->size), sizeof(int));
-				written += sizeof(int);
-
-				stream.write((char*)wave->audioData, wave->size);
-				written += wave->size;
-			}
-			else
-			{
-				stream.write(&has, 1);
-				written += 1;  
-			} 
-		}
-
-
-
 		
 		char instype = (char)gennypatch->InstrumentDef.Type;
 		stream.write(&instype, 1);
 		written += 1;
+
+		if (gennypatch->InstrumentDef.Type == GIType::DAC)
+		{
+			GennyData dat;
+			GennyLoaders::saveGDAC(gennypatch, &dat);
+			stream.write(dat.data, dat.dataPos);
+
+			written += dat.dataPos;
+			delete[] dat.data;
+		}
 
 		for(int j = 0; j < numParams; j++)
 		{
@@ -179,6 +174,15 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 			stream.write((char*)(&param), sizeof(float));
 			written += sizeof(float);
 		}
+
+		stream.write((char*)&gennypatch->InstrumentDef.OperatorVelocity[0], 1);
+		written += 1;
+		stream.write((char*)&gennypatch->InstrumentDef.OperatorVelocity[1], 1);
+		written += 1;
+		stream.write((char*)&gennypatch->InstrumentDef.OperatorVelocity[2], 1);
+		written += 1;
+		stream.write((char*)&gennypatch->InstrumentDef.OperatorVelocity[3], 1);
+		written += 1;
 	}
 
 	int numMidiLearn = _midiLearn.size();
@@ -200,6 +204,18 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 			written += sizeof(int);
 		}
 	}
+
+	stream.write((char*)&_core->getIndexBaron()->enableTrueStereo, 1);
+	written += 1;
+
+	stream.write((char*)&megaMidiPort, 1);
+	written += 1;
+
+	stream.write((char*)&megaMidiVSTMute, 1);
+	written += 1;
+
+	stream.write((char*)&accurateEmulationMode, 1);
+	written += 1;
 
 	stream.seekp(0);
 	stream.write((char*)(&written), sizeof(int));
@@ -286,32 +302,71 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		GennyPatch* gennypatch = (GennyPatch*)_currentPatch;
 		DrumSet* set = &gennypatch->InstrumentDef.Drumset;
 
-		for(int i = 36; i < 55; i++)
+
+		int numDrums = 56;
+		if (checkVersionLessThan(versionNumber, kVersionIndicator10))
+			numDrums = 55;
+
+
+		if (checkVersionLessThan(versionNumber, kVersionIndicator10))
 		{
-			char has = ((char*)data)[readPos];
-			readPos++;
-			if(has == 1)
+			for (int i = 36; i < numDrums; i++)
 			{
-				int sampleRate = 0;
-				memcpy(&sampleRate, &((char*)data)[readPos], sizeof(sampleRate));
-				readPos += sizeof(sampleRate);
+				char has = ((char*)data)[readPos];
+				readPos++;
+				if (has == 1)
+				{
+					int sampleRate = 0;
+					memcpy(&sampleRate, &((char*)data)[readPos], sizeof(sampleRate));
+					readPos += sizeof(sampleRate);
 
-				int sampleSize = 0;
-				memcpy(&sampleSize, &((char*)data)[readPos], sizeof(sampleSize));
-				readPos += sizeof(sampleSize);
+					int sampleSize = 0;
+					memcpy(&sampleSize, &((char*)data)[readPos], sizeof(sampleSize));
+					readPos += sizeof(sampleSize);
 
-				char* sampleData = new char[sampleSize];
-				memcpy(sampleData, &((char*)data)[readPos], sampleSize);
-				readPos += sampleSize;
+					char* sampleData = new char[sampleSize];
+					memcpy(sampleData, &((char*)data)[readPos], sampleSize);
+					readPos += sampleSize;
 
-				WaveData* wave = new WaveData(sampleData, sampleSize);
-				wave->sampleRate = sampleRate;
+					//Resample
+					if (sampleRate > 11025)
+					{
+						float sampInc = sampleRate / 11025.0f;
+						if (sampInc < 1)
+							sampInc = 1;
 
-				WaveData* drum = set->getDrum(i);
-				if(drum != nullptr)
-					delete drum;
+						int newSize = sampleSize / (sampInc);
+						char* sampleData2 = new char[newSize];
+						int idx = 0;
+						for (int i = 0; i < sampleSize; i)
+						{
+							if (idx >= newSize)
+								break;
 
-				set->mapDrum(i, wave);
+							sampleData2[idx] = sampleData[i];
+							i += (int)sampInc;
+							idx++;
+						}
+
+						delete[] sampleData;
+						sampleData = sampleData2;
+						sampleSize = newSize;
+
+						sampleRate = 11025;
+					}
+
+
+
+
+					WaveData* wave = new WaveData(sampleData, sampleSize);
+					wave->sampleRate = sampleRate;
+
+					WaveData* drum = set->getDrum(i);
+					if (drum != nullptr)
+						delete drum;
+
+					set->mapDrum(i, wave);
+				}
 			}
 		}
 
@@ -329,7 +384,23 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 			char insType = ((char*)data)[readPos];
 			gennypatch->InstrumentDef.Type = (GIType::GIType)insType;
 			readPos++;
+
+			if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator10))
+			{
+				if (gennypatch->InstrumentDef.Type == GIType::DAC)
+				{
+					GennyData d;
+					d.data = (char*)data;
+					d.dataPos = readPos;
+					GennyLoaders::loadGDAC(gennypatch, &d, false);
+
+					readPos = d.dataPos;
+				}
+			}
 		}
+
+
+		bool oldLFO = checkVersionLessThan(versionNumber, kVersionIndicator7);
 
 		for(int j = 0; j < numParams; j++)
 		{
@@ -337,8 +408,27 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 			memcpy(&val, &((char*)data)[readPos], sizeof(val));
 			readPos += sizeof(val);
 
-			setParameter(j, val);
+			if (oldLFO)
+			{
+				if(j > 2)
+					setParameter(j - 3, val);
+			}
+			else
+				setParameter(j, val);
 		}
+
+		//Version 5 stores operator velocity settings
+		if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator5))
+		{
+			memcpy(&gennypatch->InstrumentDef.OperatorVelocity[0], &((char*)data)[readPos], 1);
+			readPos += 1;
+			memcpy(&gennypatch->InstrumentDef.OperatorVelocity[1], &((char*)data)[readPos], 1);
+			readPos += 1;
+			memcpy(&gennypatch->InstrumentDef.OperatorVelocity[2], &((char*)data)[readPos], 1);
+			readPos += 1;
+			memcpy(&gennypatch->InstrumentDef.OperatorVelocity[3], &((char*)data)[readPos], 1);
+			readPos += 1;
+		}		
 
 
 		GennyInstrument::loadingOldPanning = false;
@@ -369,15 +459,33 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 				_midiLearn[first].push_back(element);
 			}
 		}
+	}	
+
+	if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator6))
+	{
+		memcpy(&_core->getIndexBaron()->enableTrueStereo, &((char*)data)[readPos], 1);
+		readPos += 1;
 	}
 
+	if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator8))
+	{
+		memcpy(&megaMidiPort, &((char*)data)[readPos], 1);
+		readPos += 1;
+		memcpy(&megaMidiVSTMute, &((char*)data)[readPos], 1);
+		readPos += 1; 
+	}
 
+	if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator9))
+	{
+		memcpy(&accurateEmulationMode, &((char*)data)[readPos], 1);
+		readPos += 1;
+	}
 
 	_saving = false;
 
 
-	//GennyPatch* patch = static_cast<GennyPatch*>(getPatch(0));
-	//setPatchIndex(patch->Instruments[patch->SelectedInstrument]);
+	GennyPatch* patch = static_cast<GennyPatch*>(getPatch(0));
+	setPatchIndex(patch->Instruments[patch->SelectedInstrument]);
 
 
 	if (_editor != NULL)
@@ -599,24 +707,27 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 	}
 	else
 	{
-		bool wasGlobal = false;
-		if(idx->getType() == IB_YMParam)
-		{
-			IBYMParam* param = (IBYMParam*)idx; 
-			if(param->getParameter() == YM_LFO ||
-			  param->getParameter() == YM_LFO_EN ||
-			  param->getParameter() == YM_SPECIAL)
-			{
-				_patches[0]->setFromBaron(idx, value);
-				_core->setFromBaronGlobal(idx, 0, value);
-				wasGlobal = true;
-			}
-		}
+		//bool wasGlobal = false;
+		//if(idx->getType() == IB_YMParam)
+		//{
+		//	IBYMParam* param = (IBYMParam*)idx; 
+		//	if(param->getParameter() == YM_LFO ||
+		//	  param->getParameter() == YM_LFO_EN ||
+		//	  param->getParameter() == YM_SPECIAL)
+		//	{
+		//		_patches[0]->setFromBaron(idx, value);
+		//		_core->setFromBaronGlobal(idx, 0, value);
+		//		wasGlobal = true;
+		//	}
+		//}
 
-		if(wasGlobal == false)
+		//if(wasGlobal == false)
 		{
 			if(patch != nullptr)
 			{
+				if (index == 151 || index == 152)
+					_core->lfoChanged();
+
 				patch->setFromBaron(idx, value);
 				for(int i = 0; i < 6; i++)
 				{
@@ -678,6 +789,12 @@ void GennyVST::setCurrentPatch(VSTPatch* patch)
 
 void GennyVST::getSamples(float** buffer, int numSamples)
 {
+	if (_playingStatusChanged)
+	{
+		_core->clearCache();
+		_playingStatusChanged = false;
+	}
+
 	_core->update(buffer, numSamples);
 }
 

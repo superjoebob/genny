@@ -39,7 +39,7 @@ bool UIMidiChannel::attached (CView* parent)
 	CKickButton* downArrow = new CKickButton(CRect(454 + xoff, 164 + yoff + 12, 454 + xoff + 16, 164 + yoff + 12 + 8), this, 99999999, 10, UIBitmap(PNG_LITTLEDOWNARROW));
 	frame->addView(downArrow);
 
-	_midiLabel = new CTextLabel(CRect(430 + xoff, 162 + yoff, 430 + xoff + 25, 162 + yoff + 25), "16");
+	_midiLabel = new CTextLabel(CRect(430 + xoff, (162 + yoff) - 4, 430 + xoff + 25, 162 + yoff + 25), "16");
 	_midiLabel->setFont(kNormalFontBig);
 	_midiLabel->setHoriAlign(kLeftText);
 	_midiLabel->getFont()->setStyle(kBoldFace);

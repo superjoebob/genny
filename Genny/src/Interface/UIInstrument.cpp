@@ -19,7 +19,8 @@ UIInstrument::UIInstrument(GennyInterface* owner):
 	GennyInterfaceObject(owner),
 	_owner(owner),
 	_drumLabel(nullptr),
-	_lastDrumClick(0.0f)
+	_lastDrumClick(0.0f),
+	_specialMode(nullptr)
 {
 }
 
@@ -29,6 +30,7 @@ UIInstrument::~UIInstrument(void)
 
 const int kDrumButtonIndexStart = 459382;
 const int kDrumButtonIndexEnd = 459382 + 20;
+const int kTrueStereoIndex = 666666;
 
 void UIInstrument::initialize()
 {
@@ -59,7 +61,7 @@ void UIInstrument::initialize()
 
 
 	index = baron->getYMParamIndex(YM_LFO);
-	UIDigitKnob* lfoKnob = new UIDigitKnob(CPoint(116, 256 - 158), this, YM_LFO);
+	UIDigitKnob* lfoKnob = new UIDigitKnob(CPoint(114, 256 - 158), this, YM_LFO);
 	_globalControls[index] = lfoKnob;
 	lfoKnob->setMin(0);
 	lfoKnob->setMax((float)YM2612Param_getRange(YM_LFO));
@@ -67,7 +69,7 @@ void UIInstrument::initialize()
 	lfoKnob->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_LFO));
 
 	index = baron->getYMParamIndex(YM_AMS);
-	UIDigitKnob* amsKnob = new UIDigitKnob(CPoint(230, 256 - 158), this, YM_AMS);
+	UIDigitKnob* amsKnob = new UIDigitKnob(CPoint(234, 256 - 158), this, YM_AMS);
 	_controls[index] = amsKnob;
 	amsKnob->setMin(0);
 	amsKnob->setMax((float)YM2612Param_getRange(YM_AMS));
@@ -85,13 +87,11 @@ void UIInstrument::initialize()
 	_channelStatus = new UIChannelStatus(this);
 	frame->addView(_channelStatus);
 	
-	int specialIndex = getIndexBaron()->getYMParamIndex(YM_SPECIAL);
 	CRect specialSize = CRect(0, 0, 22, 22);
 	specialSize.offset(372, 54);
-	CCheckBox* specialMode = new CCheckBox(specialSize, this, specialIndex, "", specialButton);
-	_globalControls[specialIndex] = specialMode;
-	specialMode->setValue(getPatch(0)->getFromBaron(baron->getIndex(specialIndex)));
-	frame->addView(specialMode);
+	_specialMode = new CCheckBox(specialSize, this, kTrueStereoIndex, "", specialButton);
+	_specialMode->setValue(baron->enableTrueStereo ? 1.0f : 0.0f);
+	frame->addView(_specialMode);
 
 	index = baron->getInsParamIndex(GIP_Octave);
 	UIDigitKnob* octaveKnob = new UIDigitKnob(CPoint(870, 116), this, YM_NONE, GIP_Octave);
@@ -237,7 +237,7 @@ void UIInstrument::initialize()
 			int drumIndex = (xpos * 5) + (ypos);
 			WaveData* drum = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + drumIndex);
 
-			CKickButton* drumButton = new CKickButton(CRect(bX + 4, bY, bX + 4 + 40, bY + 14), this, kDrumButtonIndexStart + ((xpos * 5) + (ypos)), 14, UIBitmap(IDB_PNG18), CPoint(xpos * 40, (drum != nullptr ? (drumIndex == selectedDrum ? 280 : 0) : 140) + (ypos * 28)));
+			CKickButton* drumButton = new CKickButton(CRect(bX + 4, bY, bX + 4 + 40, bY + 14), this, kDrumButtonIndexStart + ((xpos * 5) + (ypos)), 14, UIBitmap(IDB_PNG18), CPoint(xpos * 40, /*(drum != nullptr ? (drumIndex == selectedDrum ? 280 : 0) : 140) + */(ypos * 28)));
 
 			UIImage* drumLight = new UIImage(CRect(bX, bY, bX + 2, bY + 14), IDB_PNG19, false);
 			drumLight->setFrame(4);
@@ -354,7 +354,13 @@ void UIInstrument::makeOperatorDirty(int op)
 
 void UIInstrument::valueChanged (CControl* control)
 {	
-	if(control == _sampleRangeLow)
+	if (control->getTag() == kTrueStereoIndex)
+	{
+		IndexBaron* baron = getIndexBaron();
+		baron->enableTrueStereo = control->getValue() > 0.5f ? true : false;
+		return;
+	}
+	else if(control == _sampleRangeLow)
 	{
 		if(control->getValue() > _sampleRangeHigh->getValue())
 			control->setValue(_sampleRangeHigh->getValue());
@@ -443,6 +449,7 @@ void UIInstrument::reconnect()
 	}
 	for(it = _globalControls.begin(); it != _globalControls.end(); it++)
 	{
+		//Global controls take their settings from patch ZERO
 		(*it).second->setValue(getVst()->getPatch(0)->getFromBaron(baron->getIndex((*it).second->getTag())));
 	}
 
@@ -484,6 +491,7 @@ void UIInstrument::reconnect()
 		_sampleRangeLow->setVisible(false);
 	}
 
+	_specialMode->setValue(baron->enableTrueStereo ? 1.0f : 0.0f);
 
 	//WaveData* wave = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + ((GennyPatch*)getCurrentPatch())->InstrumentDef.SelectedDrum);
 	//if(wave != nullptr)
@@ -534,7 +542,7 @@ void UIInstrument::reconnect()
 			WaveData* drum = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + drumIndex);
 
 			int buttonX = (_drumButtons[i]->getTag() - kDrumButtonIndexStart) / 5;
-			int buttonY = (_drumButtons[i]->getTag() - kDrumButtonIndexStart) % 4;
+			int buttonY = (_drumButtons[i]->getTag() - kDrumButtonIndexStart) % 5;
 			_drumButtons[i]->setBackground(UIBitmap(IDB_PNG18));
 			_drumButtons[i]->setBackgroundOffsetNotBroken(CPoint(buttonX * 40, (drum != nullptr ? (drumIndex == selectedDrum ? 280 : 0) : 140) + (buttonY * 28)));
 			_drumButtons[i]->setVisible(false);

@@ -43,8 +43,9 @@ CMouseEventResult UISlider::onMouseUp (CPoint& where, const CButtonState& button
 		winFrame->getGlobalPosition(globalPos);
 		mousePos = mousePos + globalPos;
 
+		GennyPatch* patch0 = static_cast<GennyPatch*>(getVst()->getPatch(0));
 		int numParams = GennyPatch::getNumParameters();
-		int patchNum = getPatchIndex(getCurrentPatch());
+		int patchNum = patch0->SelectedInstrument;
 		int paramTag = (numParams * patchNum) + tag;
 
 		b->AdjustParamPopup(ContextMenu, paramTag, 0, DefaultMenuID);

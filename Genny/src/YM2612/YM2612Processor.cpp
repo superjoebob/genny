@@ -26,7 +26,10 @@ YM2612Processor::~YM2612Processor(void)
 void YM2612Processor::initialize()
 {
 	_resampler.Fir_Resampler_initialize(4096);
-	_resampler.Fir_Resampler_time_ratio( 53693175 / (double)44100 / (144.0 * 7.0), 0.995 );
+	//_resampler.Fir_Resampler_time_ratio( 53693175 / (double)44100 / (144.0 * 7.0), 0.995 );
+
+	//_resampler.Fir_Resampler_time_ratio(((8000000 / 144.0f) * 1000) / (double)44100 / (144.0 * 7.0), 0.995);
+	_resampler.Fir_Resampler_time_ratio((8000000 / 144.0f) / (double)44100, 0.995);
 }
 
 void YM2612Processor::terminate()
@@ -44,6 +47,7 @@ void YM2612Processor::update(float** buffer, int numSamples)
 	float* out2 = buffer[1];
 
 	float amp = 3.0 * _masterVolume;
+	float snamp = 4.5 * _masterVolume;
 	for(int i = 0; i < numSamples; i++)
 	{
 		out1[i] = 0.0f;
@@ -51,25 +55,35 @@ void YM2612Processor::update(float** buffer, int numSamples)
 
 		_chip->runSample();
 		_snChip->tick();
-		_snChip->getCore()->SN76489_Update(snSamples, 1);
-		_snChip->updateEnvelopes();
 
-		out1[i] += (snSamples[0][0] / (float)32767) * 5;
-		out2[i] += (snSamples[1][0] / (float)32767) * 5;
 
-		int avail = 0;
-		do
+		if (_snChip->_emulationMute == false)
 		{
-			_chip->updateDAC();
-			_chip->getImplementation()->YM2612Update(_resampler.Fir_Resampler_buffer(), 1);
-			_resampler.Fir_Resampler_write( 2 );
+			_snChip->getCore()->SN76489_Update(snSamples, 1);
 
-			avail = _resampler.Fir_Resampler_avail();
-		} while( avail == 0 );
-		int num = _resampler.Fir_Resampler_read( _samples, avail ); 
+			out1[i] += (snSamples[0][0] / (float)32767) * snamp;
+			out2[i] += (snSamples[1][0] / (float)32767) * snamp;
+		}
 
-		out1[i] += (float)(_samples[0] / (float)32767) * amp;
-		out2[i] += (float)(_samples[1] / (float)32767) * amp;
+		_snChip->updateEnvelopes();
+		_chip->updateDAC();
+
+
+		if (_chip->_emulationMute == false)
+		{
+			int avail = 0;
+			do
+			{
+				_chip->Update(_resampler.Fir_Resampler_buffer(), 1);
+				_resampler.Fir_Resampler_write( 2 );
+
+				avail = _resampler.Fir_Resampler_avail();
+			} while( avail == 0 );
+			int num = _resampler.Fir_Resampler_read( _samples, avail ); 
+
+			out1[i] += (float)(_samples[0] / (float)32767) * amp;
+			out2[i] += (float)(_samples[1] / (float)32767) * amp;
+		}
 	}
 
 }
@@ -85,31 +99,44 @@ void YM2612Processor::update(float** buffer, int numSamples)
 		return;
 
 	float amp = 3.0 * _masterVolume;
+	float snamp = 4.5 * _masterVolume;
 	for(int i = 0; i < numSamples; i++)
 	{
 		_chip->runSample();
 		_snChip->tick();
-		_snChip->getCore()->SN76489_Update(snSamples, 1);
-		_snChip->updateEnvelopes();
 
-		//Mix in SN76489
-		//float val = (prevSample / (float)32767) * 5.0f;
-		(*buf)[i][0] += (snSamples[0][0] / (float)32767) * 5;
-		(*buf)[i][1] += (snSamples[1][0] / (float)32767) * 5;
-
-		int avail = 0;
-		do
+		if (_snChip->_emulationMute == false)
 		{
-			_chip->updateDAC();
-			_chip->getImplementation()->YM2612Update(_resampler.Fir_Resampler_buffer(), 1);
-			_resampler.Fir_Resampler_write( 2 );
+			_snChip->getCore()->SN76489_Update(snSamples, 1);
 
-			avail = _resampler.Fir_Resampler_avail();
-		} while( avail == 0 );
-		int num = _resampler.Fir_Resampler_read( _samples, avail ); 
+			//Mix in SN76489
+			//float val = (prevSample / (float)32767) * 5.0f;
+			(*buf)[i][0] += (snSamples[0][0] / (float)32767) * snamp;
+			(*buf)[i][1] += (snSamples[1][0] / (float)32767) * snamp;
+		}
 
-		(*buf)[i][0] += (float)(_samples[0] / (float)32767) * amp;
-		(*buf)[i][1] += (float)(_samples[1] / (float)32767) * amp;
+		_snChip->updateEnvelopes();
+		_chip->updateDAC();
+
+		if (_chip->_emulationMute == false)
+		{
+			int avail = 0;
+			do
+			{
+				_chip->Update(_resampler.Fir_Resampler_buffer(), 1);
+				_resampler.Fir_Resampler_write(2);
+
+				avail = _resampler.Fir_Resampler_avail();
+			} while (avail == 0);
+			int num = _resampler.Fir_Resampler_read(_samples, avail);
+
+
+			//_chip->getImplementation()->YM2612Update(_samples, 1);
+
+
+			(*buf)[i][0] += (float)(_samples[0] / (float)32767) * amp;
+			(*buf)[i][1] += (float)(_samples[1] / (float)32767) * amp;
+		}
 	}
 }
 #endif

@@ -1,9 +1,13 @@
 #pragma once
 #include "YM2612Enum.h"
+
+#include "ym2612_plusgx.h"
 #include "ym2612_new.h"
+
 #include "WaveData.h"
 #include <vector>
 #include <map>
+#include <mutex>
 
 //YMParams exists to offer an interface for classes
 //which require searching for YM2612Params within
@@ -25,7 +29,7 @@ public:
 	float* getParameter(YM2612Param param, int channel, int op);
 	unsigned char getParameterChar(YM2612Param param, int channel, int op);
 
-	static unsigned int getNumParameters() { return (14 * 4) + 10; }
+	static unsigned int getNumParameters() { return (14 * 4) + 10 + 3; }
 
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
@@ -42,22 +46,22 @@ public:
 	bool _dirty;
 	int _currentDelay;
 };
-
-class YM2612Global : YMParams
-{
-public:
-	float* getParameter(YM2612Param param, int channel, int op);
-	unsigned char getParameterChar(YM2612Param param, int channel, int op);
-	static unsigned int getNumParameters() { return 3; }
-
-	void catalogue(IndexBaron* baron);
-	void setFromBaron(IBIndex* param, float val);
-	float getFromBaron(IBIndex* param);
-
-private:
-	//LFO_EN, LFO, Special Mode
-	std::map<YM2612Param, float> _parameters;
-};
+//
+//class YM2612Global : YMParams
+//{
+//public:
+//	float* getParameter(YM2612Param param, int channel, int op);
+//	unsigned char getParameterChar(YM2612Param param, int channel, int op);
+//	static unsigned int getNumParameters() { return 3; }
+//
+//	void catalogue(IndexBaron* baron);
+//	void setFromBaron(IBIndex* param, float val);
+//	float getFromBaron(IBIndex* param);
+//
+//private:
+//	//LFO_EN, LFO, Special Mode
+//	std::map<YM2612Param, float> _parameters;
+//};
 
 struct YM2612Command
 {
@@ -86,28 +90,38 @@ struct YM2612CommandCluster
 };
 
 class GennyPatch;
+class GennyVST;
+class GennyData;
 class YM2612 : YMParams
 {
 public:
-	YM2612(void);
+	YM2612(GennyVST* pVST);
 	~YM2612(void);
 
 	void initialize(YM2612Clock clock = YM2612_NTSC, int soundRate = 44100);
+	void mute(int channel);
 	void noteOn(int note, int velocity, int channel, double* frequencyTable = nullptr, GennyPatch* patch = nullptr);
 	void writeFrequencies(int note, int velocity, int channel, float vibrato = 0.0f, double* frequencyTable = nullptr, GennyPatch* patch = nullptr);
 	void noteOff(int channel, int note);
 	void killNote(int channel);
 
+
+	void SendMIDI(unsigned char chan, unsigned char reg, unsigned char data);
+	void SendChipReset();
+
 	void setParameter(YM2612Param param, int channel, int op, float value);
 	void setParameterChar(YM2612Param param, int channel, int op, unsigned char value);
-	void setFromBaron(IBIndex* param, int channel, float val);
-	void setFromBaronGlobal(IBIndex* param, int channel, float val);
+	void setFromBaron(IBIndex* param, int channel, float val, bool pForceDACWrite = false);
+	void writeChannel(YM2612Channel& pFMChannel, int pChannelIndex);
+
+	//void setFromBaronGlobal(IBIndex* param, int channel, float val);
 	float* getParameter(YM2612Param param, int channel, int op);
 	unsigned char getParameterChar(YM2612Param param, int channel, int op);
 
 	void writeParams(int channel);
 
 	YM2612Impl* getImplementation() { return &_chip; }
+	ymnew::YM2612Impl* getImplementation2() { return &_chipAccurate; }
 	bool getChipWrite() const { return _chipWrite; }
 	void setChipWrite(bool write) { _chipWrite = write; }
 
@@ -122,11 +136,23 @@ public:
 
 	YM2612Channel* getChannel(int c) { return &_channels[c]; }
 
+	//void beginCommandChunk();
+	//void endCommandChunk();
+
 	//static unsigned int getNumParameters() { return YM2612Global::getNumParameters() + (YM2612Channel::getNumParameters() * 6); }
+
+	GennyData* _commandBuffer;
+	bool _hardwareMode;
+	bool _emulationMute;
+	void clearCache();
+
+	void Update(int *buffer, int length);
+
+	bool _sleep;
 
 private:
 	void writeParameter(YM2612Param param, int channel, int op);
-	void writeData(int reg, unsigned char data, int channel, int realChannel);
+	void writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock = false);
 
 	//Helpers
 	unsigned char packParameter(YM2612Param param, int channel, int op);
@@ -134,14 +160,20 @@ private:
 	
 	//6 FM channels
 	YM2612Channel _channels[6];
-	YM2612Global _global;
+	//YM2612Global _global;
 	std::vector<YM2612CommandCluster> _commands;
-	volatile bool _commandLock;
+	std::map<YM2612Param, float> _values;
 	bool _chipWrite;
 	float _freqMult;
 	YM2612Impl _chip;
+	ymnew::YM2612Impl _chipAccurate;
+
+
+
 	float _freqs[388];
 	VGMLogger* _logger;
+	std::mutex _mutex;
+	GennyVST* _vst;
 
 	bool _dacEnable;
 	DrumSet* _drumSet;
@@ -154,5 +186,13 @@ private:
 
 	bool _updateNoteFreq;
 	double _noteFreq;
+
+	std::map<int, unsigned char> _writeMap;
+
+	//int _writingChunk;
+	bool _writingHigh;
+	unsigned char _lastSample;
+	bool _writeSamples;
+	bool _invalidateDAC;
 };
 

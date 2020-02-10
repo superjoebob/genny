@@ -6,9 +6,27 @@
 
 struct GennyData
 {
-	GennyData() : handle(0), dataPos(0), data(nullptr), size(0), fullSize(0)
+	const static long version1 = 1127443255;
+	const static long currentVersion = version1; //CHANGE THIS FOR NEW VERSIONS!
+	GennyData() : handle(0), dataPos(0), data(nullptr), size(0), fullSize(0), createdData(false)
 	{
 
+	}
+
+	//~GennyData()
+	//{
+	//	if (data != nullptr && createdData)
+	//		delete[] data;
+	//}
+
+	void readVersion()
+	{
+		version = readLong();
+	}
+
+	void writeVersion()
+	{
+		writeLong(currentVersion);
 	}
 
 	unsigned char readByte()
@@ -167,25 +185,6 @@ struct GennyData
 
 		dataPos += str.length() + 1;
 	}
-/*
-	void readShort(short s)
-	{
-		if(size - dataPos < 2)
-			resize(size + 1);
-
-		memcpy(&data[dataPos], (char*)&s, 2);
-		dataPos += 2;
-	}
-
-	void readInt(int i)
-	{
-		if(size - dataPos < 4)
-			resize(size + 1);
-
-		memcpy(&data[dataPos], (char*)&i, 4);
-		dataPos += 4;
-	}*/
-
 
 	void resize(int s)
 	{
@@ -193,11 +192,13 @@ struct GennyData
 		{
 			if(data == nullptr)
 			{
+				createdData = true;
 				data = new char[s];
 				size = s;
 			}
 			else
-			{		
+			{
+				createdData = true;
 				char* newData = new char[s * 2];
 
 				memcpy(newData, data, size);
@@ -215,6 +216,8 @@ struct GennyData
 	char* data;
 
 	int dataPos;
+	long version;
+	bool createdData = false;
 };
 
 class GennyLoaders

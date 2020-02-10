@@ -189,7 +189,15 @@ struct GennyInstrument
 	static bool loadingOldPanning;
 	GIType::GIType Type;
 	bool OperatorVelocity[4];
+
+	std::map<int, std::vector<int>> _midiLearn;
 };
+
+struct VelocityMap
+{
+
+};
+
 
 //Every patch but the first patch will contain an instrument definition.
 //The first patch is the VST workspace, all selected patches will be 
@@ -197,7 +205,7 @@ struct GennyInstrument
 class GennyVST;
 struct GennyPatch : VSTPatch
 {
-	YM2612Global Globals;
+	//YM2612Global Globals;
 	static const unsigned int NumInstruments = 16;
 
 	//Links to patch indexes for getPatch(0), links to instrument order remapping for getPatch(1), links to instrument enabled status for getPatch(2)
@@ -217,13 +225,248 @@ struct GennyPatch : VSTPatch
 
 	static unsigned int getNumParameters()
 	{
-		return YM2612Global::getNumParameters() + NumInstruments + 11 + GennyInstrument::getNumParameters();
+		return NumInstruments + 11 + GennyInstrument::getNumParameters();
 	}
 
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
 	float getFromBaron(IBIndex* param);
 };
+
+//struct GennySerializable
+//{
+//	virtual void serialize(GennyData& pData) = 0;
+//	virtual void deserialize(GennyData& pData) = 0;
+//};
+//
+//struct GennyOperator : GennySerializable //YMOperatorParameter
+//{
+//	enum Param
+//	{
+//		YMO_DT = 0,
+//		YMO_MUL = 1,
+//		YMO_TL = 2,
+//		YMO_DRUMTL = 3,
+//		YMO_KS = 4,
+//		YMO_AR = 5,
+//		YMO_DR = 6,
+//		YMO_SR = 7,
+//		YMO_AM = 8,
+//		YMO_SL = 9,
+//		YMO_RR = 10,
+//		YMO_F1 = 11,
+//		YMO_F2 = 12,
+//		YMO_SSG = 13,
+//		YMO_END = 14
+//	};
+//
+//	//values is a list of values for operator parameters, Param values
+//	//work as indexes into this list. For example: values[YMO_DT] = 5;
+//	unsigned char values[YMO_END];
+//	GennyOperator()
+//	{
+//		memset(&values, 0, YMO_END);
+//	}
+//
+//	virtual void serialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < YMO_END; i++)
+//			pData.writeByte(values[i]);
+//	}
+//
+//	virtual void deserialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < YMO_END; i++)
+//			values[i] = pData.readByte();
+//	}
+//};
+//
+//struct GennyFMChannel : GennySerializable
+//{
+//	enum Param
+//	{
+//		YMC_AMS = 0,
+//		YMC_FMS = 1,
+//		YMC_L_EN = 2,
+//		YMC_R_EN = 3,
+//		YMC_FB = 4,
+//		YMC_ALG = 5,
+//		YMC_LFO_EN = 6,
+//		YMC_LFO = 7,
+//		YMC_CH3SPECIAL = 8,
+//		YMC_END = 9
+//	};
+//
+//	GennyOperator operators[4];
+//	unsigned char values[YMC_END];
+//	GennyFMChannel()
+//	{
+//		memset(&values, 0, YMC_END);
+//	}
+//
+//	virtual void serialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < 4; i++)
+//			operators[i].serialize(pData);
+//
+//		for (int i = 0; i < YMC_END; i++)
+//			pData.writeByte(values[i]);
+//	}
+//
+//	virtual void deserialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < 4; i++)
+//			operators[i].deserialize(pData);
+//
+//		for (int i = 0; i < YMC_END; i++)
+//			values[i] = pData.readByte();
+//	}
+//};
+//
+//
+//struct GennySNChannel : GennySerializable
+//{
+//	enum Param
+//	{
+//		SN_DUTYCYCLE = 0,
+//		SN_PERIODIC = 1,
+//		SN_DETUNE = 2,
+//		SN_LEVEL = 3,
+//		SN_END = 4
+//	};
+//
+//	unsigned char values[SN_END];
+//	GennySNChannel()
+//	{
+//		memset(&values, 0, SN_END);
+//	}
+//
+//	virtual void serialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < SN_END; i++)
+//			pData.writeByte(values[i]);
+//	}
+//
+//	virtual void deserialize(GennyData& pData)
+//	{
+//		for (int i = 0; i < SN_END; i++)
+//			values[i] = pData.readByte();
+//	}
+//};
+//
+//
+//struct GennyDMChannel : GennySerializable
+//{
+//	GennyDMChannel()
+//	{
+//	}	
+//	
+//	//void mapDrum(int note, WaveData* drum) { _drumMap[note] = drum; }
+//	//WaveData* getDrum(int note);
+//
+//	//void setCurrentDrum(int drum);
+//	//WaveData* getCurrentDrum();
+//
+//	virtual void serialize(GennyData& pData)
+//	{
+//	}
+//
+//	virtual void deserialize(GennyData& pData)
+//	{
+//	}
+//private:
+//	std::map<int, WaveData*> _drumMap;
+//	int _currentDrum;
+//};
+//
+//
+//struct GennyPatchNew : VSTPatch, GennySerializable
+//{
+//	GIType::GIType type;
+//	GennyFMChannel fm;
+//	GennySNChannel square;
+//	GennyDMChannel drums;
+//
+//	char midiChannel;
+//	char octave;
+//	char transpose;
+//	unsigned char panning;
+//
+//	char delay;
+//	unsigned char lowRange;
+//	unsigned char highRange;
+//	char selectedDrum;
+//
+//	bool operatorVelocity[4];
+//
+//	GennyPatchNew()
+//	{
+//		type = GIType::FM;
+//
+//		midiChannel = 0;
+//		octave = 3;
+//		transpose = 11;
+//		panning = 127;
+//
+//		highRange = 0;
+//		lowRange = 127;
+//		delay = 0;
+//		selectedDrum = 0;
+//
+//		operatorVelocity[0] = false;
+//		operatorVelocity[1] = false;
+//		operatorVelocity[2] = false;
+//		operatorVelocity[3] = true;
+//	}
+//
+//	virtual void serialize(GennyData& pData)
+//	{
+//		pData.writeByte((char)type);
+//		fm.serialize(pData);
+//
+//		pData.writeByte(midiChannel);
+//		pData.writeByte(octave);
+//		pData.writeByte(transpose);
+//		pData.writeByte(panning);
+//
+//		pData.writeByte(highRange);
+//		pData.writeByte(lowRange);
+//		pData.writeByte(delay);
+//		pData.writeByte(selectedDrum);
+//
+//		pData.writeByte(operatorVelocity[0]);
+//		pData.writeByte(operatorVelocity[1]);
+//		pData.writeByte(operatorVelocity[2]);
+//		pData.writeByte(operatorVelocity[3]);
+//	}
+//
+//	virtual void deserialize(GennyData& pData)
+//	{
+//		type = (GIType::GIType)pData.readByte();
+//		fm.deserialize(pData);
+//
+//		midiChannel = pData.readByte();
+//		octave = pData.readByte();
+//		transpose = pData.readByte();
+//		panning = pData.readByte();
+//
+//		highRange = pData.readByte();
+//		lowRange = pData.readByte();
+//		delay = pData.readByte();
+//		selectedDrum = pData.readByte();
+//
+//		operatorVelocity[0] = pData.readByte();
+//		operatorVelocity[1] = pData.readByte();
+//		operatorVelocity[2] = pData.readByte();
+//		operatorVelocity[3] = pData.readByte();
+//	}
+//
+//
+//	//STUBBS, trying to kill the Baron
+//	void catalogue(IndexBaron* baron) {}
+//	void setFromBaron(IBIndex* param, float val) { }
+//	float getFromBaron(IBIndex* param) { return 0.0f; }
+//};
 
   
 struct NoteInfo
@@ -256,6 +499,7 @@ struct VibratoInfo
 class Genny2612
 {
 public:
+
 	Genny2612(GennyVST* owner);
 	~Genny2612(void);
 	void initialize();
@@ -267,10 +511,12 @@ public:
 	void startNote(int channel, int pan);
 	void midiTick();
 	
+	bool getTrueStereo() { return _chip.getImplementation()->fm_enablePerNotePanning; }
+	void setTrueStereo(bool pValue) { _chip.getImplementation()->fm_enablePerNotePanning = pValue; _chip.getImplementation2()->fm_enablePerNotePanning = pValue;}
 
 	IndexBaron* getIndexBaron() { return _indexBaron; }
-	void setFromBaron(IBIndex* param, int channel, float val);
-	void setFromBaronGlobal(IBIndex* param, int channel, float val);
+	void setFromBaron(IBIndex* param, int channel, float val, bool pForceDACWrite = false);
+	//void setFromBaronGlobal(IBIndex* param, int channel, float val);
 	GennyPatch* getChannelPatch(int channel) { return _channelPatches[channel]; }
 	GennyPatch* getInstrumentPatch(int channel) { return _channels[channel].instrumentPatch; }
 	void setMasterVolume(float volume) {_processor.setMasterVolume(volume);}
@@ -302,6 +548,9 @@ public:
 
 	static bool channelDirty[10];
 
+	void clearCache();
+	void lfoChanged();
+
 private:
 	GennyPatch _patches[12];
 	IndexBaron* _indexBaron;
@@ -310,7 +559,10 @@ private:
 	YM2612Processor _processor;
 	GennyVST* _owner;
 
+	// A number that increments every time a note is pressed
 	int _numNotes;
+
+	// A number that increments every time a note is released
 	int _releases;
 
 	NoteInfo _channels[10];

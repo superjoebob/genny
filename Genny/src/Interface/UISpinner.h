@@ -7,7 +7,7 @@ class UIInstrumentsPanel;
 class UISpinner : public CControl, public CControlListener, public GennyInterfaceObject
 {
 public:
-	UISpinner(CPoint point, UIInstrumentsPanel* owner, GennyInstrumentParam param);
+	UISpinner(CPoint point, GennyInterfaceObject* owner, GennyInstrumentParam param);
 	~UISpinner(void);
 	virtual bool attached (CView* parent);
 
@@ -22,7 +22,7 @@ public:
 
 private:
 	CTextLabel* _midiLabel;
-	UIInstrumentsPanel* _owner;
+	GennyInterfaceObject* _owner;
 	CPoint _position;
 
 	GennyInstrumentParam _param;

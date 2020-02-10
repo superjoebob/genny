@@ -14,7 +14,7 @@ class IBIndex
 {
 public:
 	IBIndex(std::string name = "") :_name(name) { }
-	IBType getType() const { return _type; }
+	inline IBType getType() const { return _type; }
 	std::string getName() const { return _name; }
 
 	virtual std::string getValue(GennyPatch* patch) { return ""; }
@@ -110,6 +110,8 @@ public:
 	int getCurrentInstrument() const { return _currentInstrument; }
 	void setCurrentInstrument(int ins) { _currentInstrument = ins; }
 	int getNumParams() const { return _catalogue.size(); }
+
+	bool enableTrueStereo;
 
 private:
 	std::vector<IBIndex*> _catalogue;

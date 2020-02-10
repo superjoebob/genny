@@ -41,10 +41,26 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp" />
+    <ClCompile Include="..\VSTGui\src\vstgui\vstgui_win32.cpp" />
     <ClCompile Include="src\base\VSTBase.cpp" />
     <ClCompile Include="src\Genny2612.cpp" />
     <ClCompile Include="src\GennyLoaders.cpp" />
     <ClCompile Include="src\GennyVST.cpp" />
+    <ClCompile Include="src\gzip\adler32.c" />
+    <ClCompile Include="src\gzip\compress.c" />
+    <ClCompile Include="src\gzip\crc32.c" />
+    <ClCompile Include="src\gzip\deflate.c" />
+    <ClCompile Include="src\gzip\gzclose.c" />
+    <ClCompile Include="src\gzip\gzlib.c" />
+    <ClCompile Include="src\gzip\gzread.c" />
+    <ClCompile Include="src\gzip\gzwrite.c" />
+    <ClCompile Include="src\gzip\infback.c" />
+    <ClCompile Include="src\gzip\inffast.c" />
+    <ClCompile Include="src\gzip\inflate.c" />
+    <ClCompile Include="src\gzip\inftrees.c" />
+    <ClCompile Include="src\gzip\trees.c" />
+    <ClCompile Include="src\gzip\uncompr.c" />
+    <ClCompile Include="src\gzip\zutil.c" />
     <ClCompile Include="src\IndexBaron.cpp" />
     <ClCompile Include="src\Interface\GennyInterface.cpp" />
     <ClCompile Include="src\Interface\GennyInterfaceObject.cpp" />
@@ -63,6 +79,8 @@
     <ClCompile Include="src\Interface\UIInstrument.cpp" />
     <ClCompile Include="src\Interface\UIKnob.cpp" />
     <ClCompile Include="src\Interface\UILetterDisplay.cpp" />
+    <ClCompile Include="src\Interface\UIMegaMidiPanel.cpp" />
+    <ClCompile Include="src\Interface\UIMegaMidiPortSpinner.cpp" />
     <ClCompile Include="src\Interface\UIMidiChannel.cpp" />
     <ClCompile Include="src\Interface\UIOperator.cpp" />
     <ClCompile Include="src\Interface\UIPanSlider.cpp" />
@@ -123,6 +141,22 @@
     <ClInclude Include="src\GennyLoaders.h" />
     <ClInclude Include="src\GennyVST.h" />
     <ClInclude Include="src\gmnames.h" />
+    <ClInclude Include="src\gzip\compress.hpp" />
+    <ClInclude Include="src\gzip\config.hpp" />
+    <ClInclude Include="src\gzip\crc32.h" />
+    <ClInclude Include="src\gzip\decompress.hpp" />
+    <ClInclude Include="src\gzip\deflate.h" />
+    <ClInclude Include="src\gzip\gzguts.h" />
+    <ClInclude Include="src\gzip\inffast.h" />
+    <ClInclude Include="src\gzip\inffixed.h" />
+    <ClInclude Include="src\gzip\inflate.h" />
+    <ClInclude Include="src\gzip\inftrees.h" />
+    <ClInclude Include="src\gzip\trees.h" />
+    <ClInclude Include="src\gzip\utils.hpp" />
+    <ClInclude Include="src\gzip\version.hpp" />
+    <ClInclude Include="src\gzip\zconf.h" />
+    <ClInclude Include="src\gzip\zlib.h" />
+    <ClInclude Include="src\gzip\zutil.h" />
     <ClInclude Include="src\IndexBaron.h" />
     <ClInclude Include="src\Interface\GennyInterface.h" />
     <ClInclude Include="src\Interface\GennyInterfaceObject.h" />
@@ -141,6 +175,8 @@
     <ClInclude Include="src\Interface\UIInstrument.h" />
     <ClInclude Include="src\Interface\UIKnob.h" />
     <ClInclude Include="src\Interface\UILetterDisplay.h" />
+    <ClInclude Include="src\Interface\UIMegaMidiPanel.h" />
+    <ClInclude Include="src\Interface\UIMegaMidiPortSpinner.h" />
     <ClInclude Include="src\Interface\UIMidiChannel.h" />
     <ClInclude Include="src\Interface\UIOperator.h" />
     <ClInclude Include="src\Interface\UIPanSlider.h" />
@@ -157,6 +193,17 @@
     <ClInclude Include="src\Interface\UISlider.h" />
     <ClInclude Include="src\Interface\UISpinner.h" />
     <ClInclude Include="src\Interface\UIWaveForm.h" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\pre.ym2612.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\tfi.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\tyi.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.command.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.gd3.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.header.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\vgm.types.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\fmt\ym12.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\sub.ym2612.hpp" />
+    <ClInclude Include="src\vgm2pre\vgm2pre\vgm2pre.hpp" />
     <ClInclude Include="src\VST\VirtualInstrument.h" />
     <ClInclude Include="src\YM2612\DrumSet.h" />
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Bessel.h" />
@@ -288,11 +335,15 @@
     <ResourceCompile Include="resource.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\emu_switch.png" />
     <Image Include="res\halfButton.png" />
+    <Image Include="res\megamidicheck.png" />
     <Image Include="res\op1.png" />
     <Image Include="res\op2.png" />
     <Image Include="res\op3.png" />
     <Image Include="res\op4.png" />
+    <Image Include="res\presetsTab_VST.png" />
+    <Image Include="res\velocity_map.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7BF8BDD9-0B61-4267-B419-130BFDA38709}</ProjectGuid>
@@ -393,7 +444,7 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Genny</TargetName>
+    <TargetName>Genny_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
     <TargetExt>.dll</TargetExt>
@@ -429,7 +480,7 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <TargetExt>.dll</TargetExt>
-    <TargetName>Genny</TargetName>
+    <TargetName>Genny_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -455,6 +506,7 @@
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <DataExecutionPrevention>true</DataExecutionPrevention>
+      <AdditionalOptions>/VERBOSE %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Command>echo robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\Gennydev.dll" "$(ProgramFiles)\VstPlugins\" /y</Command>
@@ -486,10 +538,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre;$(SolutionDir)libsndfile\headers</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre;$(SolutionDir)libsndfile\headers;$(ProjectDir)src\vgm2pre</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST;ITERATOR_DEBUG_LEVEL=1;</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalOptions>/verbose %(AdditionalOptions)</AdditionalOptions>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -503,15 +557,7 @@
       </IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>echo F|xcopy $(SolutionDir)libsndfile\libsndfile-1.dll $(OutDir)GENNY_devFL\GennyFLDev\libsndfile-1.dll /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.dll /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.exp /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.ilk /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.lib /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.pdb /y
-echo F|xcopy "$(OutDir)GENNY_devFL\GennyFLdev" "C:\Program Files (x86)\Image-Line\FL Studio 11\Plugins\Fruity\Generators\GennyFLdev" /s/h/e/k/f/c /i /y
-
-start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
+      <Command>
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -556,7 +602,7 @@ start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>call copy "$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)\Gennybeta.dll" "$(ProgramFiles)\VstPlugins\"</Command>
+      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\vst" "Genny.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">
@@ -577,15 +623,7 @@ start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.dll /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.exp /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.ilk /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.lib /y
-echo F|xcopy $(OutDir)GennyFLdev.dll $(OutDir)GENNY_devFL\GennyFLDev\GennyFLdev.pdb /y
-echo F|xcopy "$(OutDir)GENNY_devFL\GennyFLdev" "C:\Program Files (x86)\Image-Line\FL Studio 11\Plugins\Fruity\Generators\GennyFLdev" /s/h/e/k/f/c /i /y
-
-start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
-</Command>
+      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\fl\GennyFL" "GennyFL.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -594,7 +632,7 @@ start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\vgm2pre</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN64;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -606,7 +644,7 @@ start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>echo robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\Gennydev.dll" "C:\Program Files\Common Files\VST2" /y</Command>
+      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\vst" "Genny_x64.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'">
@@ -628,7 +666,7 @@ start /b $(OutDir)GENNY_devFL\FPSetup -f GennyFLdev.scr
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>call copy "$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)\Genny.dll" "$(ProgramFiles)\VstPlugins\"</Command>
+      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\fl\GennyFL" "GennyFL_x64.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

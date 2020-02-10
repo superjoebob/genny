@@ -6,8 +6,8 @@
 #include "UIImage.h"
 #include "UIInstrumentsPanel.h"
 
-UISpinner::UISpinner(CPoint point, UIInstrumentsPanel* owner, GennyInstrumentParam param):
-	CControl(CRect(point.x, point.y, point.x + 20, point.y + 30), owner),
+UISpinner::UISpinner(CPoint point, GennyInterfaceObject* owner, GennyInstrumentParam param):
+	CControl(CRect(point.x, point.y, point.x + 20, point.y + 30), (CControlListener*)owner),
 	GennyInterfaceObject(owner),
 	_param(param),
 	_owner(owner),
@@ -25,7 +25,7 @@ bool UISpinner::attached (CView* parent)
 {
 	bool returnValue = CControl::attached(parent);
 
-	CFrame* frame = _owner->getFrame();
+	CFrame* frame = parent->getFrame();
 	IndexBaron* baron = getIndexBaron();
 	int index = baron->getInsParamIndex(_param);
 
@@ -39,7 +39,7 @@ bool UISpinner::attached (CView* parent)
 	CKickButton* downArrow = new CKickButton(CRect(_position.x + xoff, _position.y + 10, _position.x + xoff + 16, _position.y + 10 + 8), this, 99999999, 10, UIBitmap(PNG_LITTLEDOWNARROW));
 	frame->addView(downArrow);
 
-	_midiLabel = new CTextLabel(CRect(_position.x - 4, _position.y - 4, _position.x + 25, _position.y - 4 + 25), "16");
+	_midiLabel = new CTextLabel(CRect(_position.x - 4, _position.y - 8, _position.x + 25, _position.y - 4 + 25), "16");
 	_midiLabel->setFont(kNormalFontBig);
 	_midiLabel->setHoriAlign(kLeftText);
 	_midiLabel->getFont()->setStyle(kBoldFace);

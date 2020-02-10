@@ -484,14 +484,33 @@ GennyData GennyLoaders::saveVGI(GennyPatch* patch)
 	return dat;
 }
 
+int kVersion1 = 4392586;
+int kVersion2 = 4392587;
+bool isVersionNumber(int pNumber)
+{
+	return pNumber == kVersion1
+		|| pNumber == kVersion2;
+}
+
+
 GennyPatch* GennyLoaders::loadGEN(const std::string& name, const std::string& prefix, GennyPatch* patch, GennyData* loadData, bool del)
 {	
+
+
 	GennyPatch* newPatch = patch;
 	
 	if(newPatch == nullptr)
 		newPatch = new GennyPatch(name);
 
 	newPatch->Prefix = prefix;
+
+	int version = loadData->readInt();
+	if (!isVersionNumber(version))
+	{
+		loadData->dataPos -= 4;
+		version = 0;
+	}
+
 
 	newPatch->Name = loadData->readString();
 
@@ -502,8 +521,15 @@ GennyPatch* GennyLoaders::loadGEN(const std::string& name, const std::string& pr
 	
 	*newPatch->InstrumentDef.Data.getParameter(YM_ALG, 0, -1) = (float)loadData->readByte();
 	*newPatch->InstrumentDef.Data.getParameter(YM_FB, 0, -1) = (float)loadData->readByte();
+
 	*newPatch->InstrumentDef.Data.getParameter(YM_AMS, 0, -1) = (float)loadData->readByte();
-	*newPatch->InstrumentDef.Data.getParameter(YM_FMS, 0, -1) = (float)loadData->readByte();
+	*newPatch->InstrumentDef.Data.getParameter(YM_FMS, 0, -1) = (float)loadData->readByte(); 
+
+	if (version != 0 && version < kVersion2)
+	{
+		/**newPatch->InstrumentDef.Data.getParameter(YM_LFO, 0, -1) = */(float)loadData->readByte(); //This is a global setting, it never should have been saved
+		/**newPatch->InstrumentDef.Data.getParameter(YM_LFO_EN, 0, -1) = */(float)loadData->readByte(); //This is a global setting, it never should have been saved
+	}
 
 	for( int i = 0; i < 4; i++ )
 	{
@@ -527,6 +553,14 @@ GennyPatch* GennyLoaders::loadGEN(const std::string& name, const std::string& pr
 	*newPatch->InstrumentDef.Data.getParameter(SN_SR, 0, -1) = (float)loadData->readByte();
 	*newPatch->InstrumentDef.Data.getParameter(YM_DRUMTL, 0, 3) = (float)loadData->readByte();
 
+	if (version != 0)
+	{
+		newPatch->InstrumentDef.OperatorVelocity[0] = (bool)loadData->readByte();
+		newPatch->InstrumentDef.OperatorVelocity[1] = (bool)loadData->readByte();
+		newPatch->InstrumentDef.OperatorVelocity[2] = (bool)loadData->readByte();
+		newPatch->InstrumentDef.OperatorVelocity[3] = (bool)loadData->readByte();
+	}
+
 
 	if(del)
 	{
@@ -536,14 +570,68 @@ GennyPatch* GennyLoaders::loadGEN(const std::string& name, const std::string& pr
 			delete[] loadData->data;
 	}
 	
-	if(dac)
+	if (dac)
+	{
 		newPatch->InstrumentDef.Type = GIType::DAC;
-	else if(fm)
+
+		newPatch->InstrumentDef.Channels[0] = false;
+		newPatch->InstrumentDef.Channels[1] = false;
+		newPatch->InstrumentDef.Channels[2] = false;
+		newPatch->InstrumentDef.Channels[3] = false;
+		newPatch->InstrumentDef.Channels[4] = false;
+		newPatch->InstrumentDef.Channels[5] = true;
+		newPatch->InstrumentDef.Channels[6] = false;
+		newPatch->InstrumentDef.Channels[7] = false;
+		newPatch->InstrumentDef.Channels[8] = false;
+		newPatch->InstrumentDef.Channels[9] = false;
+
+	}
+	else if (fm)
+	{
 		newPatch->InstrumentDef.Type = GIType::FM;
-	else if(periodic > 0.0f)
+
+		newPatch->InstrumentDef.Channels[0] = true;
+		newPatch->InstrumentDef.Channels[1] = true;
+		newPatch->InstrumentDef.Channels[2] = true;
+		newPatch->InstrumentDef.Channels[3] = true;
+		newPatch->InstrumentDef.Channels[4] = true;
+		newPatch->InstrumentDef.Channels[5] = true;
+		newPatch->InstrumentDef.Channels[6] = false;
+		newPatch->InstrumentDef.Channels[7] = false;
+		newPatch->InstrumentDef.Channels[8] = false;
+		newPatch->InstrumentDef.Channels[9] = false;
+	}
+	else if (periodic > 0.0f)
+	{
 		newPatch->InstrumentDef.Type = GIType::SNDRUM;
+
+		newPatch->InstrumentDef.Channels[0] = false;
+		newPatch->InstrumentDef.Channels[1] = false;
+		newPatch->InstrumentDef.Channels[2] = false;
+		newPatch->InstrumentDef.Channels[3] = false;
+		newPatch->InstrumentDef.Channels[4] = false;
+		newPatch->InstrumentDef.Channels[5] = false;
+		newPatch->InstrumentDef.Channels[6] = false;
+		newPatch->InstrumentDef.Channels[7] = false;
+		newPatch->InstrumentDef.Channels[8] = false;
+		newPatch->InstrumentDef.Channels[9] = true;
+	}
 	else
+	{
 		newPatch->InstrumentDef.Type = GIType::SN;
+
+		newPatch->InstrumentDef.Channels[0] = false;
+		newPatch->InstrumentDef.Channels[1] = false;
+		newPatch->InstrumentDef.Channels[2] = false;
+		newPatch->InstrumentDef.Channels[3] = false;
+		newPatch->InstrumentDef.Channels[4] = false;
+		newPatch->InstrumentDef.Channels[5] = false;
+		newPatch->InstrumentDef.Channels[6] = true;
+		newPatch->InstrumentDef.Channels[7] = true;
+		newPatch->InstrumentDef.Channels[8] = true;
+		newPatch->InstrumentDef.Channels[9] = false;
+	}
+
 
 	return newPatch;
 }
@@ -554,8 +642,10 @@ GennyData GennyLoaders::saveGEN(GennyPatch* patch)
 	unsigned char val = 0;
 	int index = 0;
 
-	//Save drum sample information
+	dat.writeInt(kVersion1);
 	dat.writeString(patch->Name);
+
+	//Save drum sample information
 	saveGDAC(patch, &dat);
 
 	if(patch->InstrumentDef.Type == GIType::FM)
@@ -578,6 +668,8 @@ GennyData GennyLoaders::saveGEN(GennyPatch* patch)
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_FB, 0, -1));
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_AMS, 0, -1));
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_FMS, 0, -1));
+	//dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_LFO, 0, -1));
+	//dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_LFO_EN, 0, -1));
 
 	for( int i = 0; i < 4; i++ )
 	{
@@ -598,6 +690,12 @@ GennyData GennyLoaders::saveGEN(GennyPatch* patch)
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(SN_PERIODIC, 0, -1));
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(SN_SR, 0, -1));
 	dat.writeByte(patch->InstrumentDef.Data.getParameterChar(YM_DRUMTL, 0, 3));
+
+
+	dat.writeByte(patch->InstrumentDef.OperatorVelocity[0]);
+	dat.writeByte(patch->InstrumentDef.OperatorVelocity[1]);
+	dat.writeByte(patch->InstrumentDef.OperatorVelocity[2]);
+	dat.writeByte(patch->InstrumentDef.OperatorVelocity[3]);
 
 
 
@@ -638,33 +736,85 @@ GennyPatch* GennyLoaders::loadDPACK(const std::string& name, GennyData& info, in
 	return newPatch;
 }
 
+long gdacVersion = 241493957835;
 void GennyLoaders::loadGDAC(GennyPatch* patch, GennyData* loadData, bool del)
 {
 	unsigned char val = 0;
 	int index = 0;
 
-	for(int i = 36; i < 55; i++)
+	long version = loadData->readLong();
+	int numDrums = 56;
+	bool oldVersion = false;
+	if (version != gdacVersion) //Old Version
+	{
+		loadData->dataPos -= 8;
+		numDrums = 55;
+		oldVersion = true;
+	}
+
+	for(int i = 36; i < numDrums; i++)
 	{
 		char has = loadData->readByte();
 		if(has == 1)
 		{	
+			int sampleStart = 0;
+			int sampleEnd = 0;
+			bool sampleLoop = false;
+			if (oldVersion == false)
+			{
+				sampleStart = loadData->readInt();
+				sampleEnd = loadData->readInt();
+				sampleLoop = loadData->readByte();
+			}
+
 			int sampleRate = loadData->readInt();
 			int sampleSize = loadData->readInt();
 			char* sampleData = new char[sampleSize];			
 			memcpy(sampleData, &((char*)loadData->data)[loadData->dataPos], sampleSize);
 			loadData->dataPos += sampleSize;
 
+
+
+			//Resample
+			if (sampleRate > 11025)
+			{
+				float sampInc = sampleRate / 11025.0f;
+				if (sampInc < 1)
+					sampInc = 1;
+
+				int newSize = sampleSize / (sampInc);
+				char* sampleData2 = new char[newSize];
+				int idx = 0;
+				for (int i = 0; i < sampleSize; i)
+				{
+					if (idx >= newSize)
+						break;
+
+					sampleData2[idx] = sampleData[i];
+					i += (int)sampInc;
+					idx++;
+				}
+					
+				delete[] sampleData;
+				sampleData = sampleData2;
+				sampleSize = newSize;
+
+				sampleRate = 11025;
+			}
+
 			WaveData* wave = new WaveData(sampleData, sampleSize);
 			wave->sampleRate = sampleRate;
 
+			if (oldVersion == false)
+			{
+				wave->startSample = sampleStart;
+				wave->endSample = sampleEnd;
+				wave->loop = sampleLoop;
+			}
+
 			WaveData* drum = patch->InstrumentDef.Drumset.getDrum(i);
 			if(drum != nullptr)
-			{
-				if(drum->audioData != nullptr)
-					delete drum->audioData;
-
 				delete drum;
-			}
 
 			patch->InstrumentDef.Drumset.mapDrum(i, wave);
 		}
@@ -680,6 +830,7 @@ void GennyLoaders::loadGDAC(GennyPatch* patch, GennyData* loadData, bool del)
 
 	
 	patch->InstrumentDef.Type = GIType::DAC;
+	*patch->InstrumentDef.Data.getParameter(YM_DRUMTL, 0, 3) = 100;
 	//patch->InstrumentDef.Channels[0] = false;
 	//patch->InstrumentDef.Channels[1] = false;
 	//patch->InstrumentDef.Channels[2] = false;
@@ -697,12 +848,18 @@ GennyData* GennyLoaders::saveGDAC(GennyPatch* patch, GennyData* data)
 	if(data == nullptr)
 		data = new GennyData();
 
-	for(int i = 36; i < 55; i++)
+
+	data->writeLong(gdacVersion);
+	for(int i = 36; i < 56; i++)
 	{
 		WaveData* wave = patch->InstrumentDef.Drumset.getDrum(i);
 		if(wave != nullptr)
 		{
 			data->writeByte(1);
+			data->writeInt(wave->startSample);
+			data->writeInt(wave->endSample);
+			data->writeByte(wave->loop);
+
 			data->writeInt(wave->sampleRate);
 			data->writeInt(wave->size);
 			data->writeBytes((char*)wave->audioData, wave->size);

@@ -46,11 +46,22 @@ CMouseEventResult UIKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
 
 #if !BUILD_VST
 		b->AdjustParamPopup(ContextMenu, paramTag, 0, DefaultMenuID);
+
+		//unsigned int flags = MF_STRING; 
+		//AppendMenuA(ContextMenu, MF_SEPARATOR, 9999, "Separator");
+		//AppendMenuA(ContextMenu, flags, 100, "Assign To Note Velocity");
+
 		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow() , NULL);
 		if (r)
 		{
-			int val = b->PlugHost->Dispatcher(b->HostTag, FHD_ParamMenu, paramTag, r-DefaultMenuID);
-			int qq = 1;
+			//if (r > 100 && r < 200) //FL Studio menu options seem to lie in the range of 1024 - whatever
+			//{
+			//	if (r == 100)
+			//	{
+			//	}
+			//}
+			//else
+				int val = b->PlugHost->Dispatcher(b->HostTag, FHD_ParamMenu, paramTag, r - DefaultMenuID);
 		}
 #else
 		

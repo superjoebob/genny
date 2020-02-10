@@ -22,10 +22,22 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	_parent = parent;
 	_tempo = 0.0f;
 	_midiLearnParameter = -1;
+
+	_currentEvents = (VstEvents *)malloc(sizeof(VstEvents) + 300 * sizeof(VstEvent *));
+	memset(_currentEvents, 0, sizeof(VstEvents)); // zeroing class fields is enough
+
+	for (int i = 0; i < 300; i++)
+	{
+		_currentEvents->events[i] = (VstEvent*)new VstMidiEvent();
+	}
 }
 
 VSTBase::~VSTBase(void)
 {
+	for (int i = 0; i < 300; i++)
+		delete _currentEvents->events[i];
+
+	free(_currentEvents);
 }
 
 void VSTBase::initialize()
@@ -38,8 +50,16 @@ void VSTBase::processReplacing (float** inputs, float** outputs, VstInt32 sample
 {
 	_parent->getSamples(outputs, sampleFrames);
 
-	VstTimeInfo* time = getTimeInfo(kVstTempoValid);
+	VstTimeInfo* time = getTimeInfo(kVstTempoValid | kVstTransportChanged);
 	_tempo = time->tempo;
+
+	if (time->flags & kVstTransportChanged)
+	{
+		_parent->_playingStatusChanged = true;
+
+		for (int i = 0; i < 16; i++)
+			_parent->_globalPitchOffset[i] = 0.0f;
+	}
 }
 
 void VSTBase::process (float** inputs, float** outputs, VstInt32 sampleFrames)
@@ -61,7 +81,23 @@ VstInt32 VSTBase::processEvents (VstEvents* ev)
 		unsigned char* midiData = (unsigned char*)event->midiData;
 		VstInt32 status = midiData[0];	// ignoring channel
 
-		if (status > 127 && status < 160 )	// we only look at notes
+		if ((status & 0xF0) == 0xE0) //PITCH BEND!
+		{
+			int channel = status & 0xF;
+			int p1 = midiData[1];
+			int p2 = midiData[2];
+
+			int pitchChange = ((p2 << 7) | p1) - 8192;
+			_parent->_globalPitchOffset[channel] = pitchChange / 8192.0f;
+		}
+		else if (status == 250)
+		{
+			_parent->_playingStatusChanged = true;
+
+			for (int i = 0; i < 16; i++)
+				_parent->_globalPitchOffset[i] = 0.0f;
+		}
+		else if (status > 127 && status < 160 )	// we only look at notes
 		{
 			VstInt32 note = midiData[1];// & 0x7f;
 			VstInt32 velocity = midiData[2];// & 0x7f;
@@ -116,19 +152,14 @@ VstInt32 VSTBase::processEvents (VstEvents* ev)
 				//_parmAdjust = false;
 			}
 		}
-		else if( status >= 0xE0 && status <= 0xE5 )
-		{
-			//Pitch Wheel
-			/*int channel = status - 0xE0;
-			_parmAdjust = true;
-			setParameter(_stateData.Channels[channel].P_FREQBEND.GetIndex(), (float)midiData[2] / 127);
-			_parmAdjust = false;*/
-			_parent->pitchChanged(midiData[0], midiData [1] * midiData[2]);
-		}
 
 		event++;
 	}
 	return 1;
+}
+VstIntPtr VSTBase::dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
+{
+	return AudioEffectX::dispatcher(opcode, index, value, ptr, opt);
 }
 
 VstInt32 VSTBase::getChunk (void** data, bool isPreset)
@@ -218,6 +249,30 @@ void VSTBase::MidiLearn(int paramTag)
 void VSTBase::MidiForget(int paramTag)
 {
 	_midiForgetParameter = paramTag;
+}
+void VSTBase::MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort)
+{
+	VstMidiEvent* midi = (VstMidiEvent*)_currentEvents->events[_currentEvents->numEvents];
+	memset(midi, 0, sizeof(VstMidiEvent));
+
+	midi->type = kVstMidiType;
+	midi->byteSize = sizeof(VstMidiEvent);
+	midi->midiData[0] = pStatus;
+	midi->midiData[1] = pData1;
+	midi->midiData[2] = pData2;
+	_currentEvents->numEvents++;
+
+	if (_currentEvents->numEvents == 300)
+		MidiFlush();
+}
+
+void VSTBase::MidiFlush()
+{
+	if (_currentEvents->numEvents > 0)
+	{
+		sendVstEventsToHost(_currentEvents);
+		_currentEvents->numEvents = 0;
+	}
 }
 
 VstInt32 VSTBase::getNumMidiInputChannels()
@@ -345,6 +400,11 @@ bool VSTBase::getOutputProperties(VstInt32 index, VstPinProperties* properties)
 	return false;
 }
 #else
+
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
+
 #include "GennyInterface.h"
 #include "fp_def.h"
 #include "fp_plugclass.h"
@@ -393,8 +453,10 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 
 VSTBase::~VSTBase(void)
 {
-	if(_editor != nullptr)
-		delete _editor;
+	//if(_editor != nullptr)
+	//	delete _editor;
+
+	//_CrtDumpMemoryLeaks();
 }
 
 void VSTBase::initialize()
@@ -407,6 +469,18 @@ void VSTBase::setProgram(int program)
 	_parent->setPatchIndex(program);
 }
 
+void VSTBase::MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort)
+{
+	TMIDIOutMsg msg;
+	msg.Status = pStatus;
+	msg.Data1 = pData1;
+	msg.Data2 = pData2;
+	msg.Port = pPort;
+	//PlugHost->MIDIOut(HostTag, *(int*)&msg);
+
+	PlugHost->MIDIOut_Delayed(HostTag, *(int*)&msg);
+}
+
 void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 {
 	//PlugHost->Dispatcher(HostTag, FHD_GetParamMenuEntry, 0, 0);
@@ -415,11 +489,13 @@ void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 	{
 		if(_voices[i]->State == 1)
 		{
-			float masterVolume = _voices[i]->Params->FinalLevels.Vol / _voices[i]->Params->InitLevels.Vol;
+			float masterVolume = 0;
+			if(_voices[i]->Params->InitLevels.Vol > 0.0f)
+				masterVolume = _voices[i]->Params->FinalLevels.Vol / _voices[i]->Params->InitLevels.Vol;
 
 			int note = (int)_voices[i]->Params->FinalLevels.Pitch + 6000; 
 			int midiChannel = PlugHost->Voice_ProcessEvent(_voices[i]->HostTag, FPV_GetColor, 0, 0);
-			_parent->noteOn(note, sqrt(_voices[i]->Params->InitLevels.Vol), midiChannel, (_voices[i]->Params->FinalLevels.Pan), _voices[i]);
+			_parent->noteOn(note, sqrt(sqrt(_voices[i]->Params->InitLevels.Vol)), midiChannel, (_voices[i]->Params->FinalLevels.Pan), _voices[i]);
 			_parent->setMasterVolume(masterVolume);
 			_voices[i]->State = 2;
 		}
@@ -448,7 +524,9 @@ intptr_t _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Valu
 	if (r != 0)
 		return r;
 
-	if( ID == FPD_ShowEditor )
+	if (ID == FPD_SetPlaying || ID == FPD_SongPosChanged)
+		_parent->_playingStatusChanged = true;
+	else if( ID == FPD_ShowEditor )
 	{
 		if( _editor != nullptr)
 		{
@@ -623,6 +701,9 @@ int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 	if(isCurrentPatch)
 		patchNum = _parent->getPatchIndex(_parent->getCurrentPatch());
 
+	if (Index == 151 || Index == 152)
+		patchNum = 0;
+
 	VSTPatch* patch = _parent->getPatch(patchNum);
 	if(isAutomation && patchNum < 16)
 	{	
@@ -711,6 +792,12 @@ void VSTBase::MIDIIn(int &Msg)
 void VSTBase::MsgIn(int Msg)
 {
 	int qq = 1;
+}
+
+
+void VSTBase::MidiFlush()
+{
+
 }
 
 

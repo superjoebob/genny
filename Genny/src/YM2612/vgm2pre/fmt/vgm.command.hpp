@@ -1,10 +1,6 @@
 #ifndef __VGM_CMD_H__
 #define __VGM_CMD_H__
 
-#include <nall/nall.hpp>
-
-using namespace nall;
-
 /****
 VGM file version applies to allowance of VGM::Command values
 ****/

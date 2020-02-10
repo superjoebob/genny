@@ -2,11 +2,16 @@
 #include "IndexBaron.h"
 #include "GennyLoaders.h"
 #include "DrumSet.h"
+#include "GennyVST.h"
 
+#include <windows.h>
 
 //#include <algorithm>
 
 using namespace std;
+
+HANDLE serialHandle;
+bool doWrite = false;
 //YM2612Channel
 //-------------------------------------------------------------------
 float* YM2612Channel::getParameter(YM2612Param param, int channel, int op)
@@ -24,7 +29,7 @@ float* YM2612Channel::getParameter(YM2612Param param, int channel, int op)
 		return &_operators[op][param];
 	}
 	//Global channel parameters
-	else if(param >= YM_AMS && param <= YM_ALG)
+	else if(param >= YM_AMS && param <= YM_SPECIAL)
 	{
 		std::map<YM2612Param, float>::iterator it = _parameters.find(param);
 		if( it != _parameters.end() )
@@ -62,7 +67,7 @@ void YM2612Channel::catalogue(IndexBaron* baron)
 		}
 	}
 
-	for(int p = YM_AMS; p <= YM_ALG; p++)
+	for(int p = YM_AMS; p <= YM_SPECIAL; p++)
 	{
 		baron->addIndex(new IBYMParam((YM2612Param)p, -1, 0, YM2612Param_getName((YM2612Param)p)));
 	}
@@ -97,62 +102,62 @@ float YM2612Channel::getFromBaron(IBIndex* param)
 
 //YM2612Global
 //-------------------------------------------------------------------
-float* YM2612Global::getParameter(YM2612Param param, int channel, int op)
-{
-	//Global YM2612 parameters
-	if(param >= YM_LFO_EN && param <= YM_SPECIAL)
-	{
-		std::map<YM2612Param, float>::iterator it = _parameters.find(param);
-		if( it != _parameters.end() )
-			return &(*it).second;
-
-		//Add the parameter if it is not yet added
-		_parameters[param] = 0;
-		return &_parameters[param];
-	}
-}
-
-unsigned char YM2612Global::getParameterChar(YM2612Param param, int channel, int op)
-{
-	float parm = *getParameter(param, channel, op);
-	return (unsigned char)(parm + 0.5f); 
-}
-
-
-void YM2612Global::catalogue(IndexBaron* baron)
-{
-	for(int p = YM_LFO_EN; p <= YM_SPECIAL; p++)
-	{
-		baron->addIndex(new IBYMParam((YM2612Param)p, -1, -1));
-	}
-}
-
-void YM2612Global::setFromBaron(IBIndex* param, float val)
-{
-	if(param->getType() == IB_YMParam)
-	{
-		IBYMParam* p = static_cast<IBYMParam*>(param);
-		char op = p->getOperator();
-		*getParameter(p->getParameter(), 0, op) = val;
-	}
-}
-
-float YM2612Global::getFromBaron(IBIndex* param)
-{
-	if(param->getType() == IB_YMParam)
-	{
-		IBYMParam* p = static_cast<IBYMParam*>(param);
-		char op = p->getOperator();
-		return *getParameter(p->getParameter(), 0, op);
-	}
-	return 0.0f;
-}
+//float* YM2612Global::getParameter(YM2612Param param, int channel, int op)
+//{
+//	//Global YM2612 parameters
+//	if(param >= YM_LFO_EN && param <= YM_SPECIAL)
+//	{
+//		std::map<YM2612Param, float>::iterator it = _parameters.find(param);
+//		if( it != _parameters.end() )
+//			return &(*it).second;
+//
+//		//Add the parameter if it is not yet added
+//		_parameters[param] = 0;
+//		return &_parameters[param];
+//	}
+//}
+//
+//unsigned char YM2612Global::getParameterChar(YM2612Param param, int channel, int op)
+//{
+//	float parm = *getParameter(param, channel, op);
+//	return (unsigned char)(parm + 0.5f); 
+//}
+//
+//
+//void YM2612Global::catalogue(IndexBaron* baron)
+//{
+//	for(int p = YM_LFO_EN; p <= YM_SPECIAL; p++)
+//	{
+//		baron->addIndex(new IBYMParam((YM2612Param)p, -1, -1));
+//	}
+//}
+//
+//void YM2612Global::setFromBaron(IBIndex* param, float val)
+//{
+//	if(param->getType() == IB_YMParam)
+//	{
+//		IBYMParam* p = static_cast<IBYMParam*>(param);
+//		char op = p->getOperator();
+//		*getParameter(p->getParameter(), 0, op) = val;
+//	}
+//}
+//
+//float YM2612Global::getFromBaron(IBIndex* param)
+//{
+//	if(param->getType() == IB_YMParam)
+//	{
+//		IBYMParam* p = static_cast<IBYMParam*>(param);
+//		char op = p->getOperator();
+//		return *getParameter(p->getParameter(), 0, op);
+//	}
+//	return 0.0f;
+//}
 
 
 
 //YM2612
 //-------------------------------------------------------------------
-YM2612::YM2612(void)
+YM2612::YM2612(GennyVST* pVST)
 	: _chipWrite(false)
 	, _freqMult(0.0f)
 	, _logger(nullptr)
@@ -161,30 +166,81 @@ YM2612::YM2612(void)
 	, _sampleVolume(1.0f)
 	, _updateNoteFreq(false)
 	, _noteFreq(0.0f)
-	, _commandLock(false)
+	, _mutex()
+	, _vst(pVST)
+	, _hardwareMode(false)
+	//, _writingChunk(0)
+	, _writingHigh(false)
+	,_lastSample(0)
+	,_writeSamples(false)
+	,_emulationMute(false)
+	,_invalidateDAC(false)
+	,_sleep(false)
 {
-	for(int i = 0; i < 6; i++)
-	{
-		channelVelocity[i] = 0;
-		channelLSB[i] = 0;
-		channelMSB[i] = 0;
-	}
+	clearCache();
+
+	//_commandBuffer = new GennyData();
+
+	//if (_hardwareMode)
+	//{
+	//	serialHandle = CreateFile("\\\\.\\COM3", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+
+	//	// Do some basic settings
+	//	DCB serialParams = { 0 };
+	//	serialParams.DCBlength = sizeof(serialParams);
+
+	//	GetCommState(serialHandle, &serialParams);
+	//	serialParams.BaudRate = CBR_256000;
+	//	serialParams.ByteSize = 8;
+	//	serialParams.StopBits = ONESTOPBIT;
+	//	serialParams.Parity = NOPARITY;
+	//	SetCommState(serialHandle, &serialParams);
+
+	//	// Set timeouts
+	//	COMMTIMEOUTS timeout = { 0 };
+	//	timeout.ReadIntervalTimeout = 1;
+	//	timeout.ReadTotalTimeoutConstant = 1;
+	//	timeout.ReadTotalTimeoutMultiplier = 1;
+	//	timeout.WriteTotalTimeoutConstant = 1;
+	//	timeout.WriteTotalTimeoutMultiplier = 1;
+
+	//	SetCommTimeouts(serialHandle, &timeout);
+
+	//	char lpBuffer[] = "x";
+	//	DWORD dNoOFBytestoWrite;         // No of bytes to write into the port
+	//	DWORD dNoOfBytesWritten = 0;     // No of bytes written to the port
+	//	dNoOFBytestoWrite = sizeof(lpBuffer);
+
+	//	bool Status = WriteFile(serialHandle,        // Handle to the Serial port
+	//		lpBuffer,     // Data to be written to the port
+	//		dNoOFBytestoWrite,  //No of bytes to write
+	//		&dNoOfBytesWritten, //Bytes written
+	//		NULL);
+	//}
 
 }
 
 
 YM2612::~YM2612(void)
 {
+	//if(_hardwareMode)
+	//	CloseHandle(serialHandle);
 }
+
 
 void YM2612::initialize(YM2612Clock clock, int soundRate)
 {
-	//_chip.YM2612Init( clock, soundRate );
-	//_chip.YM2612Restore( (unsigned char*)&_chip.ym2612 );
-	_chip.YM2612Init();
+	_chip.YM2612Init(YM2612_GENNY, soundRate);
+	_chip.YM2612Restore((unsigned char*)&_chip.ym2612);
 	_chip.YM2612LoadContext((unsigned char*)&_chip.ym2612);
 	_chip.YM2612ResetChip();
-	_chip.YM2612Config(0);
+
+	_chipAccurate.YM2612Init();
+	_chipAccurate.YM2612LoadContext((unsigned char*)&_chipAccurate.ym2612);
+	_chipAccurate.YM2612ResetChip();
+	_chipAccurate.YM2612Config(0);
+
+
 
 	//Frequency formula is (144 * noteFrequency * 2 ^ 20 / masterClock) / 2 ^ block - 1
 	//_freqMult is (2 ^ 20 / 12) / (masterClock / 12) to make the returned number
@@ -192,10 +248,55 @@ void YM2612::initialize(YM2612Clock clock, int soundRate)
 	_freqMult = (float)87381 / ((float)clock / 12);
 }
 
+void YM2612::mute(int channel)
+{
+	//int reg = getRegister(YM2612Param::YM_RR, channel % 3, 0);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_RR, channel % 3, 1);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_RR, channel % 3, 2);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_RR, channel % 3, 3);
+	//writeData(reg, 255, channel, channel);
+
+	//reg = getRegister(YM2612Param::YM_TL, channel % 3, 0);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_TL, channel % 3, 1);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_TL, channel % 3, 2);
+	//writeData(reg, 255, channel, channel);
+	//reg = getRegister(YM2612Param::YM_TL, channel % 3, 3);
+	//writeData(reg, 255, channel, channel);	
+	//
+	//reg = getRegister(YM2612Param::YM_AR, channel % 3, 0);
+	//writeData(reg, 0, channel, channel);
+	//reg = getRegister(YM2612Param::YM_AR, channel % 3, 1);
+	//writeData(reg, 0, channel, channel);
+	//reg = getRegister(YM2612Param::YM_AR, channel % 3, 2);
+	//writeData(reg, 0, channel, channel);
+	//reg = getRegister(YM2612Param::YM_AR, channel % 3, 3);
+	//writeData(reg, 0, channel, channel);
+
+	//noteOff(channel, 0);
+}
+//
+//void YM2612::beginCommandChunk()
+//{
+//	if (_writingChunk == 0)
+//		_commandBuffer->writeByte('?');
+//	_writingChunk++;
+//}
+//
+//void YM2612::endCommandChunk()
+//{
+//	_writingChunk--;
+//
+//	if (_writingChunk == 0)
+//		_commandBuffer->writeByte('!');
+//}
 
 void YM2612::noteOn(int note, int velocity, int channel, double* frequencyTable, GennyPatch* patch)
 {
-	noteOff(channel, note);
 	if(channel == 5 && _drumSet != nullptr)
 	{
 		int drumNote = note / 100;
@@ -211,14 +312,28 @@ void YM2612::noteOn(int note, int velocity, int channel, double* frequencyTable,
 			_drumSet->setCurrentDrum(drumNote);
 
 		if(_logger != nullptr && _logger->isLogging() && _drumSet->getCurrentDrum() != nullptr)
-		{
 			_logger->seekDACSample(_drumSet->getCurrentDrum()->streamStartPos);
+
+		if (_dacEnable != false && _drumSet != nullptr)
+		{
+			if(_updateNoteFreq)
+				writeFrequencies(note, velocity, channel, 0.0f, frequencyTable, patch);
+
+			return;
 		}
 	}
 
+
+	noteOff(channel, note);
+
 	writeParams(channel);
 	writeFrequencies(note, velocity, channel, 0.0f, frequencyTable, patch);
+
+
+	doWrite = true;
 	writeData(getRegister(YM_NOTEON, channel % 3, 0), 0xF0 | (channel > 2 ? (channel + 1) : channel), channel % 3, channel);
+
+	doWrite = false;
 }
 
 void YM2612::killNote(int channel)
@@ -330,14 +445,15 @@ void YM2612::killNote(int channel)
 
 void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato, double* frequencyTable, GennyPatch* patch)
 {
-//#if BUILD_VST
-//	note *= 100;
-//#endif
-
-	if (channel == 5)
+	if (channel == 5 && patch != nullptr)
 	{
-		float tlSampleVol = *getParameter(YM_DRUMTL, channel, 3);
+		float tlSampleVol = (*patch->InstrumentDef.Data._operators[3].find(YM_DRUMTL)).second;//*getParameter(YM_DRUMTL, channel, 3);
 		_sampleVolume = (((float)velocity / 127.0f) * ((tlSampleVol / 100.0f) + ((max(tlSampleVol - 100, 0) / 27.0f) * 3.0f)));
+
+		if (_dacEnable != false && _drumSet != nullptr && _updateNoteFreq == false)
+		{
+			return;
+		}
 	}
 
 
@@ -350,13 +466,16 @@ void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato
 			float t = *getParameter(YM_TL, channel, i);
 			int vel = ((127.0f - t) / 127.0f) * velocity;
 
+			if (vel > 127) 
+				vel = 127;
+
 			float tlVol = *getParameter(YM_TL, channel, i);
 			unsigned char volume = tlVol * (127 - velocity);
 
 			//TODO fix optimization, this allowed less data to be written when VGM logging
 			//if(127 - vel != channelVelocity[channel])
 			{
-				writeData(reg, 127 - vel, channel, channel);
+				writeData(reg, max(127 - vel, 0), channel, channel);
 				channelVelocity[channel] = 127 - vel;
 			}
 		}
@@ -397,11 +516,17 @@ void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato
 	{
 		_noteFreq = musicalFrequency;
 		_updateNoteFreq = false;
+		return;
 	}
 
 
 
-	double fnum = (144 * freq * 0.136702729) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
+	
+
+
+	//double fnum = (144 * freq * 0.136702729) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
+	double fnum = (144 * freq * 0.131072) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
+
 	int fnumi = (int)floor(fnum + 0.5);
 
 	int lsb = (int)fnumi & 255;
@@ -424,23 +549,36 @@ void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato
 	//setParameter( YM_FNUM1, 0, (float)lsb / CHAR_MAX, channel );
 
 	//TODO fix optimization, this allowed less data to be written when VGM logging
-	//if(channelLSB[channel] != lsb || channelMSB[channel] != msb)
+	if(channelLSB[channel] != lsb || channelMSB[channel] != msb)
 	{
 		writeData(getRegister(YM_FNUM2, channel % 3, 0), msb, channel, channel);
 		writeData(getRegister(YM_FNUM1, channel % 3, 0), lsb, channel, channel);
 		channelLSB[channel] = lsb;
 		channelMSB[channel] = msb;
 	}
+
+	//endCommandChunk();
 }
 
 void YM2612::noteOff(int channel, int note)
 {
-	if(channel == 5 && _drumSet != nullptr && (_drumSet->getCurrentDrum() == _drumSet->getDrum(note / 100) || _drumSet->isPitchInstrument()))
+	//beginCommandChunk();
+	if (channel == 5 && _drumSet != nullptr && (_drumSet->getCurrentDrum() == _drumSet->getDrum(note / 100) || _drumSet->isPitchInstrument()))
 		_drumSet->setCurrentDrum(-1);
 
+	if (channel == 5 && _dacEnable != false && _drumSet != nullptr)
+	{
+		return;
+	}
+
+
+	//doWrite = true;
 	writeData(getRegister(YM_NOTEON, channel % 3, 0),channel > 2 ? (channel + 1) : channel, channel % 3, channel);
 
-	_chip.YM2612Update(nullptr, 0);
+	//doWrite = false;
+
+	//endCommandChunk();
+	//_chip.YM2612Update(nullptr, 0);
 }
 
 void YM2612::setParameter(YM2612Param param, int channel, int op, float value)
@@ -455,8 +593,13 @@ void YM2612::setParameterChar(YM2612Param param, int channel, int op, unsigned c
 
 }
 
-void YM2612::setFromBaron(IBIndex* param, int channel, float val)
+
+
+void YM2612::setFromBaron(IBIndex* param, int channel, float val, bool pForceDACWrite)
 {
+	if (!pForceDACWrite && channel == 5 && _dacEnable != false && _drumSet != nullptr)
+		return;
+
 	if(param->getType() == IB_YMParam)
 	{
 		IBYMParam* ymParam = static_cast<IBYMParam*>(param);
@@ -468,31 +611,42 @@ void YM2612::setFromBaron(IBIndex* param, int channel, float val)
 		}
 	}
 }
+//
+//void YM2612::writeChannel(YM2612Channel& pFMChannel, int pChannelIndex)
+//{
+//	for (int i = 0; i < 4; i++)
+//	{
+//		auto it = pFMChannel._operators[i].begin();
+//		while (it != pFMChannel._operators[i].end())
+//		{
+//			_values[(*it).first] = (*it).second;
+//			writeParameter((*it).first, pChannelIndex, i);
+//
+//
+//			it++;
+//		}
+//	}
+//}
 
-void YM2612::setFromBaronGlobal(IBIndex* param, int channel, float val)
-{
-	if(param->getType() == IB_YMParam)
-	{
-		IBYMParam* ymParam = static_cast<IBYMParam*>(param);
-
-		if(ymParam->getInstrument() < 0)
-		{
-			_global.setFromBaron(param, val);
-			writeParameter(ymParam->getParameter(), channel, 0);
-		}
-	}
-}
+//void YM2612::setFromBaronGlobal(IBIndex* param, int channel, float val)
+//{
+//	if(param->getType() == IB_YMParam)
+//	{
+//		IBYMParam* ymParam = static_cast<IBYMParam*>(param);
+//
+//		if(ymParam->getInstrument() < 0)
+//		{
+//			_global.setFromBaron(param, val);
+//			writeParameter(ymParam->getParameter(), channel, 0);
+//		}
+//	}
+//}
 
 
 float* YM2612::getParameter(YM2612Param param, int channel, int op)
 {
-	//Global YM2612 parameters
-	if(param >= YM_LFO_EN && param <= YM_SPECIAL)
-	{
-		return _global.getParameter(param, channel, op);
-	}
 	//Channel parameters
-	else if(param >= YM_DT && param <= YM_ALG)
+	if(param >= YM_DT && param <= YM_SPECIAL)
 	{
 		channel = max( 0, min( channel, 6 ) );
 		return _channels[channel].getParameter(param, channel, op);
@@ -532,17 +686,40 @@ void YM2612::writeParams(int channel)
 void YM2612::writeParameter(YM2612Param param, int channel, int op)
 {
 	int reg = getRegister(param, channel % 3, op);
-	unsigned char value = packParameter(param, channel, op);
-	writeData(reg, value, channel, channel);
+	if (reg != 0)
+	{
+		unsigned char value = packParameter(param, channel, op);
+		writeData(reg, value, channel, channel);
+	}
 }
 
-void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel)
+char chanInc = 0;
+char regInc = 0;
+char dataInc = 0;
+void YM2612::SendMIDI(unsigned char chan, unsigned char reg, unsigned char data)
 {
+	if (_vst->megaMidiPort == 0)
+		return;
+
+	unsigned char status = (8 << 4) | (chan << 2) | ((reg & 1) << 1) | ((data & 1));
+	_vst->midiOut(status, reg >> 1, data >> 1, _vst->megaMidiPort - 1);
+}
+
+void YM2612::SendChipReset()
+{
+	if (_vst->megaMidiPort == 0)
+		return;
+
+	_vst->midiOut((9 << 4), 123, 124, _vst->megaMidiPort - 1);
+}
+
+void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock)
+{
+	if (inLock == false)
+		_mutex.lock();
+
 	if(_channels[realChannel]._currentDelay > 0 && realChannel >= 0)
 	{
-		while (_commandLock) {}
-		_commandLock = true;
-
 		if(_commands.size() == 0)
 			_commands.push_back(YM2612CommandCluster(_channels[realChannel]._currentDelay));
 		else if(_commands.back().delaySamples != _commands.back().originalDelay || (_commands.back().delaySamples != _channels[realChannel]._currentDelay))
@@ -550,31 +727,69 @@ void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel
 
 		_commands.back().commands.push_back(YM2612Command(reg, data, channel));
 
-		_commandLock = false;
 	}
 	else
 	{
-		//The first 3 channels are parts 0 and 1, the last 3
-		//are parts 2 and 3.
-		if(channel <= 2)
-		{
-			_chip.YM2612Write(0, reg);
-			_chip.YM2612Write(1, data);
+		int val = reg + (channel * 400);
 
-			//We log YM_DAC elsewhere
-			if(_logger != nullptr && _logger->isLogging() && reg != 42)
-				_logger->logWriteYM2612(0, reg, data);
-		}
-		else
+		auto it = _writeMap.find(val);
+		if (((reg >= 160 && reg <= 169) || reg == 0x2A) || it == _writeMap.end() || (*it).second != data)
 		{
-			_chip.YM2612Write(2, reg);
-			_chip.YM2612Write(3, data);
+			_writeMap.insert_or_assign(val, data);
 
-			//We log YM_DAC elsewhere
-			if(_logger != nullptr && _logger->isLogging() && reg != 42)
-				_logger->logWriteYM2612(1, reg, data);
+			//The first 3 channels are parts 0 and 1, the last 3
+			//are parts 2 and 3.
+			if (channel <= 2)
+			{
+				if (!_emulationMute)
+				{
+					if (_vst->accurateEmulationMode)
+					{
+						_chipAccurate.YM2612Write(0, reg);
+						_chipAccurate.YM2612Write(1, data);
+					}
+					else
+					{
+						_chip.YM2612Write(0, reg);
+						_chip.YM2612Write(1, data);
+					}
+				}
+
+				if (_hardwareMode && reg != 0x2A)
+					SendMIDI(0, reg, data);
+
+				//We log YM_DAC elsewhere
+				if (_logger != nullptr && _logger->isLogging() && reg != 42)
+					_logger->logWriteYM2612(0, reg, data);
+			}
+			else
+			{
+				if (!_emulationMute)
+				{
+					if (_vst->accurateEmulationMode)
+					{
+						_chipAccurate.YM2612Write(2, reg);
+						_chipAccurate.YM2612Write(3, data);
+					}
+					else
+					{
+						_chip.YM2612Write(2, reg);
+						_chip.YM2612Write(3, data);
+					}
+				}
+
+				if(_hardwareMode)
+					SendMIDI(1, reg, data);
+
+				//We log YM_DAC elsewhere
+				if (_logger != nullptr && _logger->isLogging() && reg != 42)
+					_logger->logWriteYM2612(1, reg, data);
+			}
 		}
 	}
+
+	if (inLock == false)
+		_mutex.unlock();
 }
 
 unsigned char YM2612::packParameter(YM2612Param param, int channel, int op)
@@ -672,13 +887,14 @@ unsigned char YM2612::packParameter(YM2612Param param, int channel, int op)
 
 	case YM_AMS:
 	case YM_FMS:
+	case YM_L_EN:
+	case YM_R_EN:
 		{
 			//AMS_FMS
 			//------------------------------
 			//  0   1   2   3   4   5   6   7
 			// |L| |R|  |AMS|       |  FMS  |  
 
-			//Set left and right channel enables to 1 for now
 			unsigned char l = getParameterChar(YM_L_EN, channel, op);
 			unsigned char r = getParameterChar(YM_R_EN, channel, op);;
 			unsigned char ams = getParameterChar(YM_AMS, channel, op);
@@ -702,7 +918,7 @@ unsigned char YM2612::packParameter(YM2612Param param, int channel, int op)
 
 	case YM_SPECIAL:
 		{
-			return getParameterChar(YM_SPECIAL, channel, op);
+			return getParameterChar(YM_SPECIAL, channel, op); 
 		}
 		break;
 
@@ -759,6 +975,8 @@ int YM2612::getRegister( YM2612Param param, int channel, int op )
 		break;
 	case YM_AMS:
 	case YM_FMS:
+	case YM_L_EN:
+	case YM_R_EN:
 		return 0xB4 + channel;
 		break;
 
@@ -787,117 +1005,166 @@ int YM2612::getRegister( YM2612Param param, int channel, int op )
 	return 0;
 }
 
+int wait = 0;
 void YM2612::updateDAC()
 {
-	//if(_logger != nullptr && _logger->isLogging())
-	//	_logger->logSample();
 
-	if(_dacEnable == false || _drumSet == nullptr)
+	_hardwareMode = _vst->megaMidiPort > 0;
+	_emulationMute = _vst->megaMidiPort > 0 && _vst->megaMidiVSTMute;
+
+	if (_sleep)
 		return;
 
-	WaveData* currentDrum = _drumSet->getCurrentDrum();
-	if(currentDrum != nullptr)
+	if(_logger != nullptr && _logger->isLogging())
+		_logger->logSample();
+
+	if (_dacEnable != false && _drumSet != nullptr)
 	{
-		if(_drumSet->isPitchInstrument())
-		{	
-			double startFreq = pow(2.0, (48.0 / 12.0)) * 8.17579891564371;
-			double endFreq = pow(2.0, (72.0 / 12.0)) * 8.17579891564371;
-			double freqPos = 1.0 + (((endFreq - startFreq) - (_noteFreq - startFreq)) / (endFreq - startFreq));
-
-			currentDrum->waitTime += ((float)currentDrum->sampleRate) / (53267.0f) * (_noteFreq / startFreq);  
-		}
-		else
-			currentDrum->waitTime += (float)currentDrum->sampleRate / (53267.0f);
-
-		if(currentDrum->waitTime >= 1.0f)
+		WaveData* currentDrum = _drumSet->getCurrentDrum();
+		if (currentDrum != nullptr)
 		{
-			if(currentDrum->release == false && currentDrum->loop && currentDrum->audioPosition >= currentDrum->endSample)
+			float chipFreq = 44100;
+			//float chipFreq = 53267.0f;
+			if (_drumSet->isPitchInstrument())
 			{
-				currentDrum->audioPosition = currentDrum->startSample;
-			}
+				double startFreq = pow(2.0, (48.0 / 12.0)) * 8.17579891564371;
+				double endFreq = pow(2.0, (72.0 / 12.0)) * 8.17579891564371;
+				double freqPos = 1.0 + (((endFreq - startFreq) - (_noteFreq - startFreq)) / (endFreq - startFreq));
 
-			if(currentDrum->audioPosition >= currentDrum->endSample)
-			{
-				currentDrum->waitTime = 0;
-				writeData(getRegister(YM_DAC, -1, -1), 128, 0, 5);
-				_drumSet->setCurrentDrum(-1);
-				currentDrum->release = false;
+				currentDrum->audioPosition += ((float)currentDrum->sampleRate) / (chipFreq) * (_noteFreq / startFreq);
 			}
 			else
+				currentDrum->audioPosition += (float)currentDrum->sampleRate / (chipFreq);
+
+
+			//if (currentDrum->sampleRate < 15000)
+			//	currentDrum->waitTime += (float)currentDrum->sampleRate / (chipFreq);
+			//else
+				currentDrum->waitTime += 0.25f; //waiting 4 steps allows all samples to be interpreted as 11025hz, which is easier for the chip to deal with.
+
+
+			if (currentDrum->waitTime >= 1.0f) 
 			{
-				int currentSample = 0;
-				int numSamples = 0;
-				while(currentDrum->waitTime >= 1.0f && currentDrum->audioPosition < currentDrum->endSample)
+				if (currentDrum->release == false && currentDrum->loop && currentDrum->audioPosition >= currentDrum->endSample)
 				{
-					currentDrum->waitTime -= 1.0f;
-					currentSample += currentDrum->audioData[currentDrum->audioPosition];
-					currentDrum->audioPosition += 1;
-					numSamples += 1;
+					currentDrum->audioPosition = currentDrum->startSample;
+
+					if (_logger != nullptr && _logger->isLogging())
+						_logger->seekDACSample(currentDrum->streamStartPos);
 				}
-				currentSample /= numSamples;
 
-				if(_logger != nullptr && _logger->isLogging())
-					_logger->logDACSample();
+				currentDrum->waitTime -= 1.0f;
+				if (currentDrum->audioPosition >= currentDrum->endSample)
+				{
+					writeData(getRegister(YM_DAC, -1, -1), 128, 0, 5);
+					_drumSet->setCurrentDrum(-1);
+					currentDrum->release = false;
+				}
+				else
+				{
+					//int currentSample = 0;
+					//int numSamples = 0;
+					//while (currentDrum->waitTime >= 1.0f && currentDrum->audioPosition < currentDrum->endSample)
+					//{
+					//	currentDrum->waitTime -= 1.0f;
+					//	currentSample = currentDrum->audioData[currentDrum->audioPosition];
+					//	currentDrum->audioPosition += 1;
+					//	numSamples += 1;
+					//}
+					//currentSample /= numSamples;
 
-				//writeData(getRegister(YM_DAC, -1, -1), min(255, max(0, ((((int)currentDrum->audioData[currentDrum->audioPosition] - 127) * _sampleVolume) + 127))), 0);
-				//writeData(getRegister(YM_DAC, -1, -1), min(255, max(0, (int)((((float)currentDrum->audioData[currentDrum->audioPosition] - 128.0f) * _sampleVolume) + 0.5f) + 128)), 0, 5);
+					if (_logger != nullptr && _logger->isLogging())
+						_logger->logDACSample();
 
 
+					int first = currentDrum->audioData[(int)currentDrum->audioPosition];
+					int second = first;
+					if ((int)currentDrum->audioPosition < currentDrum->endSample - 1)
+					{
+						second = currentDrum->audioData[(int)currentDrum->audioPosition + 1];
+					}
 
-				//writeData(getRegister(YM_DAC, -1, -1), min(255, max(0, (int)((((float)currentDrum->audioData[currentDrum->audioPosition] - 128.0f)) + 0.5f) + 128)), 0, 5);
-				
-				//writeData(getRegister(YM_DAC, -1, -1), currentDrum->audioData[currentDrum->audioPosition] * _sampleVolume, 0, 5);
-				//writeData(getRegister(YM_DAC, -1, -1), min(255, max(0, ((((int)currentDrum->audioData[currentDrum->audioPosition] - 127) * _sampleVolume) + 127))), 0);
-				writeData(getRegister(YM_DAC, -1, -1), min(255, max(0, (int)((((float)currentSample - 128.0f) * _sampleVolume) + 0.5f) + 128)), 0, 5);
+					float lerp = currentDrum->audioPosition - (int)currentDrum->audioPosition;
+					int currentSample = (int)((first * (1.0f - lerp)) + (second * lerp));
+					unsigned char sample = min(255, max(0, (int)((((float)currentSample - 128.0f) * _sampleVolume) + 0.5f) + 128));
+					//unsigned char sample = min(255, max(0, currentSample * _sampleVolume));
 
-				//writeData(getRegister(YM_DAC, -1, -1), (int)(currentDrum->audioData[currentDrum->audioPosition] * _sampleVolume), 0, 5);
-				_mutedDAC = false;
+
+					if(!_emulationMute)
+						writeData(getRegister(YM_DAC, -1, -1), sample, 0, 5);
+					
+					if(_hardwareMode)
+					{
+						if (_writeSamples)
+							SendMIDI(3, sample, _lastSample);
+						_writeSamples = !_writeSamples;
+						_lastSample = sample;
+					}
+
+
+					_mutedDAC = false;
+				}
+
 			}
-			
 		}
-	}
-	else if(_mutedDAC == false)
-	{
-		_mutedDAC = true;
-		writeData(getRegister(YM_DAC, -1, -1), 128, 0, 5);
-	}
+		else if (_mutedDAC == false)
+		{
+			_mutedDAC = true;
+			writeData(getRegister(YM_DAC, -1, -1), 128, 0, 5);
+		}
+	}	
+
 }
 
 void YM2612::midiTick()
 {
-	while (_commandLock) {}
-	_commandLock = true;
+	if (_sleep)
+		return;
 
-	int sz = _commands.size();
-	for (int i = 0; i < sz; i++)
+	_mutex.lock();
+	auto it = _commands.begin();
+	while(it != _commands.end())
 	{
-		_commands[i].delaySamples -= 1;
-		if (_commands[i].delaySamples <= 0)
+		(*it).delaySamples -= 1;
+		if ((*it).delaySamples <= 0)
 		{
-			int innerSz = _commands[i].commands.size();
+			int innerSz = (*it).commands.size();
 			for (int j = 0; j < innerSz; j++)
-				writeData(_commands[i].commands[j].reg, _commands[i].commands[j].data, _commands[i].commands[j].channel, -1);
+				writeData((*it).commands[j].reg, (*it).commands[j].data, (*it).commands[j].channel, -1, true);
 
-			_commands.erase(_commands.begin() + i);
-			i--;
-			sz--;
+			it = _commands.erase(it);
 		}
+		else
+			++it;
 	}
-	_commandLock = false;
+	_mutex.unlock();
+
+	/*if (_commandBuffer->dataPos > 0)
+	{
+		DWORD dNoOfBytesWritten = 0;     // No of bytes written to the port
+
+
+		bool Status = WriteFile(serialHandle,        // Handle to the Serial port
+			_commandBuffer->data,     // Data to be written to the port
+			_commandBuffer->dataPos,  //No of bytes to write
+			&dNoOfBytesWritten, //Bytes written
+			NULL);
+
+		_commandBuffer->dataPos = 0;
+	}*/
 }
 
 void YM2612::runSample()
 {
-
-	_commandLock = false;
 }
 
 void YM2612::setDACEnable(bool enable)
 {
-	if(_dacEnable != enable)
+	if(_dacEnable != enable || _invalidateDAC)
 	{
 		_dacEnable = enable;
 		writeData(getRegister(YM_DACEN, -1, -1), _dacEnable ? 128 : 0, 0, 5);
+		_invalidateDAC = false;
 	}
 }
 
@@ -909,4 +1176,31 @@ void YM2612::dirtyChannels()
 	_channels[3].setDirty(true);
 	_channels[4].setDirty(true);
 	_channels[5].setDirty(true);
+}
+
+void YM2612::clearCache()
+{
+	dirtyChannels();
+	_writeMap.clear();
+
+	for (int i = 0; i < 6; i++)
+	{
+		channelVelocity[i] = -1;
+		channelLSB[i] = -1;
+		channelMSB[i] = -1;
+	}
+
+	_invalidateDAC = true;
+}
+
+
+void YM2612::Update(int *buffer, int length)
+{
+	if (_sleep)
+		return;
+
+	if (_vst->accurateEmulationMode)
+		_chipAccurate.YM2612Update(buffer, length);
+	else
+		_chip.YM2612Update(buffer, length);
 }

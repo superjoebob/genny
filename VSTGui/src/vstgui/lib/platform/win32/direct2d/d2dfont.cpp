@@ -86,7 +86,8 @@ D2DFont::D2DFont (const char* name, const CCoord& size, const int32_t& style)
 //-----------------------------------------------------------------------------
 D2DFont::~D2DFont ()
 {
-	if (textFormat)
+
+	if (textFormat && d2dreleased == false)
 		textFormat->Release ();
 }
 

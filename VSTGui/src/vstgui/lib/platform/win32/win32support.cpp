@@ -74,7 +74,7 @@ typedef HRESULT (WINAPI *D2D1CreateFactoryProc) (D2D1_FACTORY_TYPE type, REFIID 
 typedef HRESULT (WINAPI *DWriteCreateFactoryProc) (DWRITE_FACTORY_TYPE factoryType, REFIID iid, void** factory);
 
 static int VSTGUI_Eval_Exception( int ) { return EXCEPTION_EXECUTE_HANDLER; }
-
+static bool d2dreleased;
 class D2DFactory
 {
 public:
@@ -84,6 +84,7 @@ public:
 	, d2d1Dll (0)
 	, dwriteDll (0)
 	{
+		d2dreleased = false;
 		d2d1Dll = LoadLibraryA ("d2d1.dll");
 		if (d2d1Dll)
 		{
@@ -118,12 +119,15 @@ public:
 			FreeLibrary (dwriteDll);
 		if (factory)
 		{
-			__try { // since the Direct2D hotfix (KB2028560) this is necessary
-				factory->Release ();
-			} __except (VSTGUI_Eval_Exception (GetExceptionCode ())) {}
+			//GENNY change, may god have mercy I am so sorry but the factory->Release line was crashing and I have no fucking idea.
+			//__try { // since the Direct2D hotfix (KB2028560) this is necessary
+			//	factory->Release ();
+			//} __except (VSTGUI_Eval_Exception (GetExceptionCode ())) {}
 		}
 		if (d2d1Dll)
 			FreeLibrary (d2d1Dll);
+
+		d2dreleased = true;
 	}
 	ID2D1Factory* getFactory () const { return factory; }
 	IDWriteFactory* getWriteFactory () const { return writeFactory; }
