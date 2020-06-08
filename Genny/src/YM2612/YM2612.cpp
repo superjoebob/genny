@@ -176,6 +176,9 @@ YM2612::YM2612(GennyVST* pVST)
 	,_emulationMute(false)
 	,_invalidateDAC(false)
 	,_sleep(false)
+	,_clock(YM2612Clock::YM2612_NTSC)
+	,_clockDivider(0.0f)
+	,_mdmMode(true)
 {
 	clearCache();
 
@@ -230,7 +233,8 @@ YM2612::~YM2612(void)
 
 void YM2612::initialize(YM2612Clock clock, int soundRate)
 {
-	_chip.YM2612Init(YM2612_GENNY, soundRate);
+	_clock = clock;
+	_chip.YM2612Init(clock, soundRate);
 	_chip.YM2612Restore((unsigned char*)&_chip.ym2612);
 	_chip.YM2612LoadContext((unsigned char*)&_chip.ym2612);
 	_chip.YM2612ResetChip();
@@ -246,6 +250,8 @@ void YM2612::initialize(YM2612Clock clock, int soundRate)
 	//_freqMult is (2 ^ 20 / 12) / (masterClock / 12) to make the returned number
 	//smaller for proper use in the equation.
 	_freqMult = (float)87381 / ((float)clock / 12);
+	_clockDivider = pow(2, 20) / (float)clock;
+	_clockDividerMegaMidi = pow(2, 20) / (float)YM2612Clock::YM2612_MEGAMIDI;
 }
 
 void YM2612::mute(int channel)
@@ -303,35 +309,46 @@ void YM2612::noteOn(int note, int velocity, int channel, double* frequencyTable,
 //#if !BUILD_VST
 //		drumNote /= 100;
 //#endif
+
 		if(_drumSet->isPitchInstrument() && _drumSet->getDrum(_drumSet->pitchInstrumentIndex()) != NULL)
 		{
 			_updateNoteFreq = true;
 			_drumSet->setCurrentDrum(_drumSet->pitchInstrumentIndex());
 		}
 		else
-			_drumSet->setCurrentDrum(drumNote);
+		{
+			if (_dacEnable != false && _drumSet->setCurrentDrum(drumNote) == false)
+				return;
+		}
 
 		if(_logger != nullptr && _logger->isLogging() && _drumSet->getCurrentDrum() != nullptr)
 			_logger->seekDACSample(_drumSet->getCurrentDrum()->streamStartPos);
 
 		if (_dacEnable != false && _drumSet != nullptr)
 		{
-			if(_updateNoteFreq)
-				writeFrequencies(note, velocity, channel, 0.0f, frequencyTable, patch);
-
+			writeFrequencies(note, velocity, channel, 0.0f, frequencyTable, patch);
 			return;
 		}
 	}
 
 
-	noteOff(channel, note);
+	noteOff(channel, note, false);
 
-	writeParams(channel);
 	writeFrequencies(note, velocity, channel, 0.0f, frequencyTable, patch);
 
 
 	doWrite = true;
 	writeData(getRegister(YM_NOTEON, channel % 3, 0), 0xF0 | (channel > 2 ? (channel + 1) : channel), channel % 3, channel);
+
+
+	//if (_mdmMode)
+	//{
+	//	SendMIDIGenMDM(144, channel, note / 100, min(velocity, 127));
+	//}
+
+	writeParams(channel);
+
+
 
 	doWrite = false;
 }
@@ -340,113 +357,17 @@ void YM2612::killNote(int channel)
 {
 }
 
-//void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato)
-//{
-	//coreWriteFrequencies(note * 100, velocity, channel, vibrato);
-
-	/*int reg = getRegister(YM_TL, channel % 3, 3);
-
-	float t = *getParameter(YM_TL, channel, 3);
-	int vel = ((127.0f - t) / 127.0f) * velocity;
-
-	float tlVol = *getParameter(YM_TL, channel, 3);
-	unsigned char volume = tlVol * (127 - velocity);
-
-	if(channel == 5)
-	{
-		_sampleVolume = ((float)velocity / 127.0f) * (1.0f - ((tlVol - 64) / 127.0f));
-		_sampleVolume *= _sampleVolume;
-		_sampleVolume *= _sampleVolume;
-	}
-
-	if(127 - vel != channelVelocity[channel])
-	{
-		writeData(reg, 127 - vel, channel);
-		channelVelocity[channel] = 127 - vel;
-	}
-
-
-
-	int baseNote = note;
-
-	//Calculate the frequency for midi note (1-127)
-	float freqMult = (float)87381 / ((float)7670592 / 12);
-	float freq0;
-	float freq1;
-	float bend = ((float)*getParameter(YM_FRQ, channel, 0) / (float)64);
-
-	//261.6255653006 is the frequency for C6
-	if(bend > 0)
-		freq0 = (261.6255653006 + (15.5570656763 * bend)) * pow(1.05946309435, baseNote % 12);
-	if(bend <= 0)
-		freq0 = (261.6255653006 + (14.6839146725 * bend)) * pow(1.05946309435, baseNote % 12);
-
-	if(bend > 0)
-		freq1 = (261.6255653006 + (15.5570656763 * bend)) * pow(1.05946309435, (baseNote % 12) + 1);
-	if(bend <= 0)
-		freq1 = (261.6255653006 + (14.6839146725 * bend)) * pow(1.05946309435, (baseNote % 12) + 1);
-
-
-	float freqDif = freq1 - freq0;
-	float freq = freq0 + (freqDif * ((((note - (baseNote * 100.0f)) / 100.0f) + vibrato)));
-
-
-
-
-
-	//Calculate the frequency for midi note (1-127)
-	float freqMult = (float)87381 / ((float)7670592 / 12);
-	float freq;
-	float bend = ((float)*getParameter(YM_FRQ, channel, 0) / (float)64);
-
-	//261.6255653006 is the frequency for C6
-	if(bend > 0)
-		freq = (261.6255653006 + (15.5570656763 * bend)) * pow(1.05946309435, note % 12);
-	if(bend <= 0)
-		freq = (261.6255653006 + (14.6839146725 * bend)) * pow(1.05946309435, note % 12);
-
-	float fnum = (144 * freq * 0.136702729) / 8;
-	int fnumi = (int)floor(fnum + 0.5);
-
-	int lsb = (int)fnumi & 255;
-	int msb = (((int)(note / 12))<<3) | (int)((int)(fnumi>>8));	
-
-
-
-
-	if(channelLSB[channel] != lsb || channelMSB[channel] != msb)
-	{
-		writeData(getRegister(YM_FNUM2, channel % 3, 0), msb, channel);
-		writeData(getRegister(YM_FNUM1, channel % 3, 0), lsb, channel);
-		channelLSB[channel] = lsb;
-		channelMSB[channel] = msb;
-	}*/
-//}
-
-//#else
-
-/*void YM2612::noteOn(int note, int velocity, int channel)
-{
-	if(channel == 5 && _drumSet != nullptr)
-	{
-		_drumSet->setCurrentDrum(note / 100);
-		if(_logger != nullptr && _logger->isLogging() && _drumSet->getCurrentDrum() != nullptr)
-		{
-			_logger->seekDACSample(_drumSet->getCurrentDrum()->streamStartPos);
-		}
-	}
-
-	noteOff(channel, note);
-	writeParams(channel);
-	writeFrequencies(note, velocity, channel);
-	writeData(getRegister(YM_NOTEON, channel % 3, 0), 0xF0 | (channel > 2 ? (channel + 1) : channel), channel % 3);
-}
-#endif*/
-
+bool wrote = false;
 void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato, double* frequencyTable, GennyPatch* patch)
 {
-	if (channel == 5 && patch != nullptr)
+	if (channel == 5 && patch != nullptr && _drumSet != nullptr)
 	{
+		float v = velocity / 127.0f; //Un-root the velocity for drum samples
+		v = v * v;
+		v = v * v;
+		v *= 127;
+		velocity = (int)v;
+
 		float tlSampleVol = (*patch->InstrumentDef.Data._operators[3].find(YM_DRUMTL)).second;//*getParameter(YM_DRUMTL, channel, 3);
 		_sampleVolume = (((float)velocity / 127.0f) * ((tlSampleVol / 100.0f) + ((max(tlSampleVol - 100, 0) / 27.0f) * 3.0f)));
 
@@ -519,48 +440,50 @@ void YM2612::writeFrequencies(int note, int velocity, int channel, float vibrato
 		return;
 	}
 
-
-
-	
-
-
-	//double fnum = (144 * freq * 0.136702729) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
-	double fnum = (144 * freq * 0.131072) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
-
-	int fnumi = (int)floor(fnum + 0.5);
-
-	int lsb = (int)fnumi & 255;
-	int msb = (((int)(baseNote / 12))<<3) | (int)((int)(fnumi>>8));	
-
-	
 	//Lowest note frequency equals 8.17579891564371hz, which corresponds to midi note -1
 	//Tune up to B0, which is 30.868hz
 
 	//1200 cents in an octave, so the difference between (B -1) and (B0) is 22.69220109 which is the Hz in 1200 cents.
 
+	double fnum = (144 * freq * _clockDivider) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
+	int fnumi = (int)floor(fnum + 0.5);
+	int lsb = (int)fnumi & 255;
+	int msb = (((int)(baseNote / 12))<<3) | (int)((int)(fnumi>>8));	
 
+	int lsbMM = -1;
+	int msbMM = -1;
 
-
-
-
-
-
-	//setParameter( YM_FNUM2, 0, (float)msb / CHAR_MAX, channel ); 
-	//setParameter( YM_FNUM1, 0, (float)lsb / CHAR_MAX, channel );
+	if (_hardwareMode)
+	{
+		//Special frequency writes for MEGA MIDI
+		double fnumMM = (144 * freq * _clockDividerMegaMidi) / pow(2.0, ((int)(baseNote / 12.0)) - 2.0);
+		int fnumiMM = (int)floor(fnumMM + 0.5);
+		lsbMM = (int)fnumiMM & 255;
+		msbMM = (((int)(baseNote / 12)) << 3) | (int)((int)(fnumiMM >> 8));
+	}
 
 	//TODO fix optimization, this allowed less data to be written when VGM logging
 	if(channelLSB[channel] != lsb || channelMSB[channel] != msb)
 	{
-		writeData(getRegister(YM_FNUM2, channel % 3, 0), msb, channel, channel);
-		writeData(getRegister(YM_FNUM1, channel % 3, 0), lsb, channel, channel);
+		writeData(getRegister(YM_FNUM2, channel % 3, 0), msb, channel, channel, false, msbMM);
+		writeData(getRegister(YM_FNUM1, channel % 3, 0), lsb, channel, channel, false, lsbMM);
 		channelLSB[channel] = lsb;
 		channelMSB[channel] = msb;
 	}
 
+
+	//if (wrote)
+	//{
+	//	writeParameter(YM_SL, 0, 0);
+	//	//writeParameter(YM_SL, 0, 1);
+	//	//writeParameter(YM_SL, 0, 2);
+	//	//writeParameter(YM_SL, 0, 3);
+	//}
+
 	//endCommandChunk();
 }
 
-void YM2612::noteOff(int channel, int note)
+void YM2612::noteOff(int channel, int note, bool fromMidiMessage)
 {
 	//beginCommandChunk();
 	if (channel == 5 && _drumSet != nullptr && (_drumSet->getCurrentDrum() == _drumSet->getDrum(note / 100) || _drumSet->isPitchInstrument()))
@@ -574,6 +497,11 @@ void YM2612::noteOff(int channel, int note)
 
 	//doWrite = true;
 	writeData(getRegister(YM_NOTEON, channel % 3, 0),channel > 2 ? (channel + 1) : channel, channel % 3, channel);
+
+
+
+	//if (fromMidiMessage && _mdmMode)
+	//	SendMIDIGenMDM(128, channel, note / 100, 64);
 
 	//doWrite = false;
 
@@ -662,35 +590,140 @@ unsigned char YM2612::getParameterChar(YM2612Param param, int channel, int op)
 
 void YM2612::writeParams(int channel)
 {
-	if(_channels[channel].getDirty())
+	//if (wrote == false)
 	{
-		for(int op = 0; op < 4; op++)
+		if (_channels[channel].getDirty())
 		{
-			for(int param = YM_DT; param <= YM_SSG; param++)
+			for (int op = 3; op >=0; op--)
 			{
-				if(param == YM_MUL || param == YM_AR || param == YM_DR || param == YM_RR )
-					continue;
+				for (int param = YM_DT; param <= YM_SSG; param++)
+				{
+					if (param == YM_MUL || param == YM_AR || param == YM_DR || param == YM_RR)
+						continue;
 
-				writeParameter((YM2612Param)param, channel, op);
+					writeParameter((YM2612Param)param, channel, op);
+				}
 			}
-		}
-		_channels[channel].setDirty(false);
-	}
+			_channels[channel].setDirty(false);
 
-	writeParameter(YM_AMS, channel, 0);
-	writeParameter(YM_FB, channel, 0);
-	writeParameter(YM_LFO_EN, channel, 0);
+
+		}
+
+		writeParameter(YM_AMS, channel, 0);
+		writeParameter(YM_FB, channel, 0);
+		writeParameter(YM_LFO_EN, channel, 0);
+		wrote = true;
+	}
+	//else
+	//{
+	//	writeParameter(YM_TL, channel, 0);
+	//	writeParameter(YM_TL, channel, 1);
+	//	writeParameter(YM_TL, channel, 2);
+	//	writeParameter(YM_TL, channel, 3);
+
+	//	writeParameter(YM_SL, channel, 0);
+	//	writeParameter(YM_SL, channel, 1);
+	//	writeParameter(YM_SL, channel, 2);
+	//	writeParameter(YM_SL, channel, 3);
+
+	//	writeParameter(YM_SR, channel, 0);
+	//	writeParameter(YM_SR, channel, 1);
+	//	writeParameter(YM_SR, channel, 2);
+	//	writeParameter(YM_SR, channel, 3);
+	//}
+
+	//writeParameter(YM_SR, channel, 0);
+	//writeParameter(YM_SR, channel, 1);
+	//writeParameter(YM_SR, channel, 2);
+	//writeParameter(YM_SR, channel, 3);
+
+	//writeParameter(YM_SR, channel, 0);
+	//writeParameter(YM_SR, channel, 1);
+	//writeParameter(YM_SR, channel, 2);
+	//writeParameter(YM_SR, channel, 3);
+
+
 	//writeParameter(YM_SPECIAL, channel, 0);
 }
 
 void YM2612::writeParameter(YM2612Param param, int channel, int op)
 {
+
 	int reg = getRegister(param, channel % 3, op);
 	if (reg != 0)
 	{
+		//if (_mdmMode /*&& !wrote*/)
+		//{
+		//	int cc = GetGenMDMCCForParam(param, op);
+		//	if (cc >= 0)
+		//	{
+		//		unsigned char actualVal = getParameterChar(param, channel, op);
+		//		if (param == YM2612Param::YM_TL)
+		//			actualVal = 127 - actualVal;
+		//		//else if (param == YM2612Param::YM_RR)
+		//			
+		//		//if(param != YM2612Param::YM_SR)
+		//		actualVal = (int)((actualVal / (float)YM2612Param_getRange(param)) * 127);
+
+		//		//if (param == YM2612Param::YM_SR)
+		//		//	actualVal = 127 - actualVal;
+
+		//		SendMIDIGenMDM(176, channel, cc, actualVal);
+		//	}
+		//}
+
 		unsigned char value = packParameter(param, channel, op);
 		writeData(reg, value, channel, channel);
 	}
+}
+
+
+int YM2612::GetGenMDMCCForParam(YM2612Param vParam, int vOp)
+{
+	//if (vOp == 1)
+	//	vOp = 2;
+	//else if (vOp == 2)
+	//	vOp = 1;
+
+	switch (vParam)
+	{
+	case YM2612Param::YM_TL:
+		return 16 + vOp;
+	case YM2612Param::YM_MUL:
+		return 20 + vOp;
+	case YM2612Param::YM_DT:
+		return 24 + vOp;
+	case YM2612Param::YM_KS:
+		return 39 + vOp;
+	case YM2612Param::YM_AR:
+		return 43 + vOp;
+
+	case YM2612Param::YM_SL://CORRECT
+		return 55 + vOp;
+
+	case YM2612Param::YM_DR://CORRECT
+		return 47 + vOp;
+
+	case YM2612Param::YM_SR://DR2
+		return 51 + vOp;
+
+
+	case YM2612Param::YM_RR:
+		return 59 + vOp;
+	case YM2612Param::YM_AM:
+		return 70 + vOp;
+
+	case YM2612Param::YM_ALG:
+		return 14;
+	case YM2612Param::YM_FB:
+		return 15;
+	case YM2612Param::YM_AMS:
+		return 76;
+	case YM2612Param::YM_FMS:
+		return 75;
+	}
+
+	return -1;
 }
 
 char chanInc = 0;
@@ -705,6 +738,15 @@ void YM2612::SendMIDI(unsigned char chan, unsigned char reg, unsigned char data)
 	_vst->midiOut(status, reg >> 1, data >> 1, _vst->megaMidiPort - 1);
 }
 
+void YM2612::SendMIDIGenMDM(int status, unsigned char chan, unsigned char cc, unsigned char data)
+{
+	if (_vst->genMDMPort == 0)
+		return;
+
+	unsigned char fullStatusVal = status | chan;
+	_vst->midiOut(fullStatusVal, cc, data, _vst->genMDMPort - 1);
+}
+
 void YM2612::SendChipReset()
 {
 	if (_vst->megaMidiPort == 0)
@@ -713,7 +755,7 @@ void YM2612::SendChipReset()
 	_vst->midiOut((9 << 4), 123, 124, _vst->megaMidiPort - 1);
 }
 
-void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock)
+void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock, int specialLogData)
 {
 	if (inLock == false)
 		_mutex.lock();
@@ -725,7 +767,7 @@ void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel
 		else if(_commands.back().delaySamples != _commands.back().originalDelay || (_commands.back().delaySamples != _channels[realChannel]._currentDelay))
 			_commands.push_back(YM2612CommandCluster(_channels[realChannel]._currentDelay));
 
-		_commands.back().commands.push_back(YM2612Command(reg, data, channel));
+		_commands.back().commands.push_back(YM2612Command(reg, data, channel, specialLogData));
 
 	}
 	else
@@ -756,7 +798,7 @@ void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel
 				}
 
 				if (_hardwareMode && reg != 0x2A)
-					SendMIDI(0, reg, data);
+					SendMIDI(0, reg, specialLogData >= 0 ? ((unsigned char)specialLogData) : data);
 
 				//We log YM_DAC elsewhere
 				if (_logger != nullptr && _logger->isLogging() && reg != 42)
@@ -779,7 +821,7 @@ void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel
 				}
 
 				if(_hardwareMode)
-					SendMIDI(1, reg, data);
+					SendMIDI(1, reg, specialLogData >= 0 ? ((unsigned char)specialLogData) : data);
 
 				//We log YM_DAC elsewhere
 				if (_logger != nullptr && _logger->isLogging() && reg != 42)
@@ -1009,11 +1051,17 @@ int wait = 0;
 void YM2612::updateDAC()
 {
 
+
+
+
+
 	_hardwareMode = _vst->megaMidiPort > 0;
 	_emulationMute = _vst->megaMidiPort > 0 && _vst->megaMidiVSTMute;
 
 	if (_sleep)
 		return;
+
+
 
 	if(_logger != nullptr && _logger->isLogging())
 		_logger->logSample();
@@ -1040,7 +1088,7 @@ void YM2612::updateDAC()
 			//if (currentDrum->sampleRate < 15000)
 			//	currentDrum->waitTime += (float)currentDrum->sampleRate / (chipFreq);
 			//else
-				currentDrum->waitTime += 0.25f; //waiting 4 steps allows all samples to be interpreted as 11025hz, which is easier for the chip to deal with.
+				currentDrum->waitTime += 0.25f/*_hardwareMode ? 0.25f : 0.5f*/; //waiting 4 steps allows all samples to be interpreted as 11025hz, which is easier for the chip to deal with.
 
 
 			if (currentDrum->waitTime >= 1.0f) 
@@ -1130,7 +1178,9 @@ void YM2612::midiTick()
 		{
 			int innerSz = (*it).commands.size();
 			for (int j = 0; j < innerSz; j++)
-				writeData((*it).commands[j].reg, (*it).commands[j].data, (*it).commands[j].channel, -1, true);
+			{
+				writeData((*it).commands[j].reg, (*it).commands[j].data, (*it).commands[j].channel, -1, true, (*it).commands[j].logData);
+			}
 
 			it = _commands.erase(it);
 		}

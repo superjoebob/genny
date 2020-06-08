@@ -68,11 +68,13 @@ struct YM2612Command
 	int reg;
 	unsigned char data;
 	int channel;
-	YM2612Command(int vRegister, unsigned char vData, int vChannel)
+	int logData;
+	YM2612Command(int vRegister, unsigned char vData, int vChannel, int vLogData)
 	{
 		reg = vRegister;
 		data = vData; 
 		channel = vChannel;
+		logData = vLogData;
 	}
 };
 
@@ -102,11 +104,14 @@ public:
 	void mute(int channel);
 	void noteOn(int note, int velocity, int channel, double* frequencyTable = nullptr, GennyPatch* patch = nullptr);
 	void writeFrequencies(int note, int velocity, int channel, float vibrato = 0.0f, double* frequencyTable = nullptr, GennyPatch* patch = nullptr);
-	void noteOff(int channel, int note);
+	void noteOff(int channel, int note, bool fromMidiMessage = true);
 	void killNote(int channel);
+
+	int GetGenMDMCCForParam(YM2612Param vParam, int vOp);
 
 
 	void SendMIDI(unsigned char chan, unsigned char reg, unsigned char data);
+	void SendMIDIGenMDM(int status, unsigned char chan, unsigned char cc, unsigned char data);
 	void SendChipReset();
 
 	void setParameter(YM2612Param param, int channel, int op, float value);
@@ -144,15 +149,20 @@ public:
 	GennyData* _commandBuffer;
 	bool _hardwareMode;
 	bool _emulationMute;
+	bool _mdmMode;
 	void clearCache();
 
 	void Update(int *buffer, int length);
 
 	bool _sleep;
 
+	YM2612Clock _clock;
+	float _clockDivider;
+	float _clockDividerMegaMidi;
+
 private:
 	void writeParameter(YM2612Param param, int channel, int op);
-	void writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock = false);
+	void writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock = false, int specialLogData = -1);
 
 	//Helpers
 	unsigned char packParameter(YM2612Param param, int channel, int op);

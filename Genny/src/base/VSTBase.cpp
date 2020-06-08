@@ -495,7 +495,10 @@ void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 
 			int note = (int)_voices[i]->Params->FinalLevels.Pitch + 6000; 
 			int midiChannel = PlugHost->Voice_ProcessEvent(_voices[i]->HostTag, FPV_GetColor, 0, 0);
-			_parent->noteOn(note, sqrt(sqrt(_voices[i]->Params->InitLevels.Vol)), midiChannel, (_voices[i]->Params->FinalLevels.Pan), _voices[i]);
+
+			float rootedVolume = sqrt(sqrt(_voices[i]->Params->InitLevels.Vol));
+
+			_parent->noteOn(note, rootedVolume, midiChannel, (_voices[i]->Params->FinalLevels.Pan), _voices[i]);
 			_parent->setMasterVolume(masterVolume);
 			_voices[i]->State = 2;
 		}

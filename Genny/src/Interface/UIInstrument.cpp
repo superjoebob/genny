@@ -109,55 +109,55 @@ void UIInstrument::initialize()
 		_operators.push_back(operatorControl);
 	}
 
-	UIImage* image = new UIImage(CRect(44, 142, 44 + 356, 142 + 142), PNG_DOOR01, false);
+	UIImage* image = new UIImage(CRect(44, 122 - 28, 44 + 356, (122 - 28) + 190), PNG_DOOR01, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(44, 94, 44 + 356, 94 + 30), PNG_DOOR02, false);
+	image = new UIImage(CRect(44, 94, 44 + 126, 94 + 30), PNG_DOOR02, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(250, 298, 250 + 222, 298 + 140), PNG_DOOR03, false);
+	image = new UIImage(CRect(250, 298, 250 + 222, 298 + 170), PNG_DOOR03, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(482, 298, 482 + 222, 298 + 140), PNG_DOOR03, false);
+	image = new UIImage(CRect(482, 298, 482 + 222, 298 + 170), PNG_DOOR03, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(714, 298, 714 + 222, 298 + 140), PNG_DOOR03, false);
+	image = new UIImage(CRect(714, 298, 714 + 222, 298 + 170), PNG_DOOR03, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(250, 442, 250 + 222, 442 + 92), PNG_DOOR04, false);
+	image = new UIImage(CRect(250, 442 + 30, 250 + 222, 442 + 92 + 28), PNG_DOOR04, false);
+	frame->addView(image);
+	_doors.push_back(image);
+	 
+	image = new UIImage(CRect(250, 442 + 30, 250 + 222, 442 + 92 + 30), PNG_DOOR04, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(250, 442, 250 + 222, 442 + 92), PNG_DOOR04, false);
+	image = new UIImage(CRect(482, 442 + 30, 482 + 222, 442 + 92 + 30), PNG_DOOR04, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(482, 442, 482 + 222, 442 + 92), PNG_DOOR04, false);
+	image = new UIImage(CRect(714, 442 + 30, 714 + 222, 442 + 92 + 30), PNG_DOOR04, false);
 	frame->addView(image);
 	_doors.push_back(image);
 
-	image = new UIImage(CRect(714, 442, 714 + 222, 442 + 92), PNG_DOOR04, false);
-	frame->addView(image);
-	_doors.push_back(image);
-
-	image = new UIImage(CRect(12, 436, 12 + 234, 436 + 98), PNG_DOOR05, false);
+	image = new UIImage(CRect(12, 436 + 34, 12 + 234, 436 + 98 + 34), PNG_DOOR05, false);
 	frame->addView(image);
 	_doors.push_back(image);
 	_SNDoor = image;
 
 	int drumyOffset = -144;
-	image = new UIImage(CRect(12, 436 + drumyOffset, 12 + 234, 436 + 242 + drumyOffset), PNG_DOORDRUM, false);
+	image = new UIImage(CRect(12, 436 + drumyOffset, 12 + 234, 436 + 278 + drumyOffset), PNG_DOORDRUM, false);
 	frame->addView(image);
 	_doors.push_back(image);
 	_drumDoor = image;
 
 	index = baron->getYMParamIndex(SN_SR);
-	UIDigitKnob* shiftKnob = new UIDigitKnob(CPoint(72, 468), this, SN_SR);
+	UIDigitKnob* shiftKnob = new UIDigitKnob(CPoint(72, 468 + 34), this, SN_SR);
 	_controls[index] = shiftKnob;
 	shiftKnob->setMin(0);
 	shiftKnob->setMax((float)YM2612Param_getRange(SN_SR));
@@ -168,7 +168,7 @@ void UIInstrument::initialize()
 
 	index = getIndexBaron()->getYMParamIndex(SN_PERIODIC);
 	specialSize = CRect(0, 0, 22, 22);
-	specialSize.offset(214, 470);
+	specialSize.offset(214, 470 + 34);
 
 	UICheckbox* periodicMode = new UICheckbox(specialSize, this, index, "", _owner, specialButton);
 	_controls[index] = periodicMode;
@@ -196,7 +196,7 @@ void UIInstrument::initialize()
 
 
 	index = getIndexBaron()->getYMParamIndex(SN_DT);
-	UIDigitSlider2* dtSlider = new UIDigitSlider2(CPoint(214 - 118, 450 - 2), 104, this, SN_DT, -1);
+	UIDigitSlider2* dtSlider = new UIDigitSlider2(CPoint(214 - 118, 450 - 2  + 34), 104, this, SN_DT, -1);
 	_controls[index] = dtSlider;	
 	_snControls.push_back(dtSlider);
 	frame->addView(dtSlider);

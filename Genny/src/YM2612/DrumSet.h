@@ -10,7 +10,7 @@ public:
 	void mapDrum(int note, WaveData* drum) { _drumMap[note] = drum; }
 	WaveData* getDrum(int note);
 
-	void setCurrentDrum(int drum);
+	bool setCurrentDrum(int drum);
 	WaveData* getCurrentDrum();
 
 	bool hasDrums() { return _drumMap.size() > 0; }

@@ -50,7 +50,7 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 	_megaMidiView->setVisible(false);
 
 	//UIImage* velocityMapWindow = new UIImage(CRect(0, 0, 954, 552), IDB_PNG36, false);
-	//frame->addView(velocityMapWindow);
+	//frame->addView(velocityMapWindow); 
 
 
 

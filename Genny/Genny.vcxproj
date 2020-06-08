@@ -83,6 +83,7 @@
     <ClCompile Include="src\Interface\UIMegaMidiPortSpinner.cpp" />
     <ClCompile Include="src\Interface\UIMidiChannel.cpp" />
     <ClCompile Include="src\Interface\UIOperator.cpp" />
+    <ClCompile Include="src\Interface\UIOpKnob.cpp" />
     <ClCompile Include="src\Interface\UIPanSlider.cpp" />
     <ClCompile Include="src\Interface\UIPresetsAndInstrumentsPanel.cpp" />
     <ClCompile Include="src\Interface\UIImportPanel.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="src\Interface\UIMegaMidiPortSpinner.h" />
     <ClInclude Include="src\Interface\UIMidiChannel.h" />
     <ClInclude Include="src\Interface\UIOperator.h" />
+    <ClInclude Include="src\Interface\UIOpKnob.h" />
     <ClInclude Include="src\Interface\UIPanSlider.h" />
     <ClInclude Include="src\Interface\UIPresetsAndInstrumentsPanel.h" />
     <ClInclude Include="src\Interface\UIImportPanel.h" />
@@ -556,9 +558,9 @@
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>
-</Command>
+      <Command>call xcopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\GennyFL.dll" "C:\Program Files (x86)\Image-Line\FL Studio 11\Plugins\Fruity\Generators\GennyFL" /q /c /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">

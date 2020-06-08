@@ -15,10 +15,8 @@ public:
 	YM2612Processor(void);
 	~YM2612Processor(void);
 
-	void initialize();
+	void initialize(YM2612* chip, SN76489Chip* chip2);
 	void terminate();
-	void setChip(YM2612* chip) { _chip = chip; }
-	void setSNChip(SN76489Chip* chip) { _snChip = chip; }
 	void update(float** buffer, int numSamples);
 	void setMasterVolume(float vol) { _masterVolume = vol; }
 

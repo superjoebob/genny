@@ -14,7 +14,7 @@ YM2612Processor::YM2612Processor(void)
 	for( int i = 0; i < 2; ++i )
 	{
 		snSamples[ i ]  = new short[ 1 ];
-		snSamples[ i ][0] = 0;
+		snSamples[ i ][0] = 0; 
 	}
 }
 
@@ -23,13 +23,16 @@ YM2612Processor::~YM2612Processor(void)
 {
 }
 
-void YM2612Processor::initialize()
+void YM2612Processor::initialize(YM2612* chip, SN76489Chip* chip2)
 {
+	_chip = chip;
+	_snChip = chip2;
+
 	_resampler.Fir_Resampler_initialize(4096);
 	//_resampler.Fir_Resampler_time_ratio( 53693175 / (double)44100 / (144.0 * 7.0), 0.995 );
 
 	//_resampler.Fir_Resampler_time_ratio(((8000000 / 144.0f) * 1000) / (double)44100 / (144.0 * 7.0), 0.995);
-	_resampler.Fir_Resampler_time_ratio((8000000 / 144.0f) / (double)44100, 0.995);
+	_resampler.Fir_Resampler_time_ratio((_chip->_clock / 144.0f) / (double)44100, 0.995);
 }
 
 void YM2612Processor::terminate()

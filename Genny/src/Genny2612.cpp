@@ -345,11 +345,10 @@ void Genny2612::initialize()
 	_patches[0].catalogue(_indexBaron);
 
 	_chip.initialize();
-	_processor.initialize();
-	_processor.setChip(&_chip);
+	_snChip.Initialize(SN76489Clock::SN76489_NTSC, 44100);
 
-	_snChip.Initialize(SN76489_MEGAMIDI, 44100);
-	_processor.setSNChip(&_snChip);
+	_processor.initialize(&_chip, &_snChip);
+	_logger.initialize(&_chip, &_snChip);
 }
 
 static int numLogged = 0;

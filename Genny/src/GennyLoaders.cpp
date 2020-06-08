@@ -642,7 +642,7 @@ GennyData GennyLoaders::saveGEN(GennyPatch* patch)
 	unsigned char val = 0;
 	int index = 0;
 
-	dat.writeInt(kVersion1);
+	dat.writeInt(kVersion2);
 	dat.writeString(patch->Name);
 
 	//Save drum sample information

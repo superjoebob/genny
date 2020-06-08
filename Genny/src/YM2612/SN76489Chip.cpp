@@ -10,7 +10,7 @@
 //-------------------------------------------------------------------------------------------------------
 SN76489Chip::SN76489Chip(GennyVST* pVST)
 	:_impl(nullptr)
-	,_clock(SN76489Clock::SN76489_MEGAMIDI)
+	,_clock(SN76489Clock::SN76489_NTSC)
 	,_soundRate(0)
 	,_logger(nullptr)
 	,_lastWrite(0)
@@ -94,7 +94,7 @@ void SN76489Chip::Terminate()
 //-------------------------------------------------------------------------
 
 //Simply writes a value into a register. 
-void SN76489Chip::Write( unsigned char data, int channel )
+void SN76489Chip::Write( unsigned char data, int channel, int mmData)
 {
 	if(_channels[channel].currentDelay > 0 && channel >= 0)
 	{
@@ -104,7 +104,7 @@ void SN76489Chip::Write( unsigned char data, int channel )
 		else if(_commands.back().delaySamples != _commands.back().originalDelay || (_commands.back().delaySamples != _channels[channel].currentDelay))
 			_commands.push_back(SN76489CommandCluster(_channels[channel].currentDelay));
 
-		_commands.back().commands.push_back(SN76489Command(data, channel));
+		_commands.back().commands.push_back(SN76489Command(data, channel, mmData));
 		_mutex.unlock();
 	}
 	else
@@ -115,7 +115,7 @@ void SN76489Chip::Write( unsigned char data, int channel )
 				_impl->SN76489_Write(data);
 
 			if (_hardwareMode)
-				_2612->SendMIDI(2, data, data);
+				_2612->SendMIDI(2, mmData >= 0 ? ((unsigned char)mmData) : data, mmData >= 0 ? ((unsigned char)mmData) : data);
 
 			if(_logger != nullptr && _logger->isLogging())
 				_logger->logWriteSN76489(data);
@@ -127,7 +127,7 @@ void SN76489Chip::Write( unsigned char data, int channel )
 //-------------------------------------------------------------------------
 
 //Writes a tone value to a channel
-void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env)
+void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env, int mmValue)
 {
 	unsigned char chan = channel % 4;
 	unsigned char ld = 1;
@@ -137,6 +137,14 @@ void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env)
 	unsigned char dat01 = value & 15;
 	unsigned char dat02 = (value & 1008) >> 4;
 
+	int dat01MM = -1;
+	int dat02MM = -1;
+	if (mmValue >= 0)
+	{
+		dat01MM = mmValue & 15;
+		dat02MM = (mmValue & 1008) >> 4;
+	}
+
 	if(channel == 3)
 	{
 		//Noise is different
@@ -145,12 +153,12 @@ void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env)
 	}
 	else
 	{
-		write = (((((ld << 2) | chan) << 1) | type) << 4) | dat01;
-		Write(write, channel);	
+		write = (((((ld << 2) | chan) << 1) | type) << 4);
+		Write(write | dat01, channel, dat01MM >= 0 ? (write | dat01MM) : -1);	
 
 		ld = 0;
-		write = (ld << 7) | dat02;
-		Write(write, channel);
+		write = (ld << 7);
+		Write(write | dat02, channel, dat02MM >= 0 ? (write | dat02MM) : -1);
 	}
 }
 
@@ -240,12 +248,13 @@ void SN76489Chip::writeFrequencies(int note, int velocity, int channel, SimpleEn
 	double musicalFrequency = pow(2.0, (((semitones + 1200) / 100.0) / 12.0)) * baseFrequency;
 	double freq = musicalFrequency;
 
-	float regF = (float)4000000 / (2.0f * freq * 16.0f);
-	unsigned short reg = (float)4000000 / (2.0f * freq * 16.0f);
-
+	unsigned short reg = (float)_clock / (2.0f * freq * 16.0f);
+	int regMM = -1;
+	if (_hardwareMode)
+		regMM = (float)SN76489Clock::SN76489_MEGAMIDI / (2.0f * freq * 16.0f);
 
 	if(channel != 3 || noteOnEvent)
-		WriteTone(channel, reg, env);
+		WriteTone(channel, reg, env, regMM);
 
 	_channels[channel].noteVelocity = (velocity / 127.0f);
 }

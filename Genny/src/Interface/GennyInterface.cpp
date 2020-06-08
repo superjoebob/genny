@@ -119,28 +119,31 @@ GennyInterface::~GennyInterface(void)
 void GennyInterface::dragEnd()
 {
 	_patchEditor->getInstrumentView()->dragEnd();
-}
+} 
 
 bool GennyInterface::open(void* ptr)
 {
 #ifdef BUILD_VST
-	AEffGUIEditor::open (ptr);
+	AEffGUIEditor::open(ptr);
 #else
-	PluginGUIEditor::open (ptr);
+	PluginGUIEditor::open(ptr); 
 #endif
 
-	CRect size (0, 0, 954, 552);
+
+
+	CRect size (0, 0, 954, 586);
 	VSTFrame* f = new VSTFrame (size, ptr, this);
-	f->SetOwner(this);
+	f->SetOwner(this); 
 	f->setBackgroundColor (kWhiteCColor);
 
 	this->rect.top=0;
 	this->rect.left=0;
-	this->rect.right=954;
-	this->rect.bottom=552;
+	this->rect.right=954; 
+	this->rect.bottom= 586;
+
 
 	UIBitmap back(PNG_VSTBACK);
-	CView* view = new CView( CRect( 0, 0, back.getWidth(), back.getHeight() ) );
+	CView* view = new CView( CRect( 0, 0, back.getWidth(), 586 ) );
 	view->setBackground (back);
 	f->addView(view);
 	frame = f;
@@ -155,8 +158,6 @@ bool GennyInterface::open(void* ptr)
 	_patchEditor = new UIPresetsAndInstrumentsPanel(CRect(416, 96, 416 + 426, 96 + 186), this);
 
 	_patchEditor->addConfirmDialog();
-
-
 
 	return true;
 }

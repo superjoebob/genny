@@ -14,8 +14,11 @@ WaveData* DrumSet::getDrum(int note)
 	return nullptr;
 }
 
-void DrumSet::setCurrentDrum(int drum)
+bool DrumSet::setCurrentDrum(int drum)
 {
+	if (_drumMap.find(drum) == _drumMap.end())
+		return false;
+
 	if(_currentDrum != drum && _currentDrum != -1 && _drumMap.find(_currentDrum) != _drumMap.end())
 	{
 		_drumMap[_currentDrum]->waitTime = 0.0f;
@@ -23,17 +26,15 @@ void DrumSet::setCurrentDrum(int drum)
 	}
 	_currentDrum = drum;
 
-	if(_drumMap.find(drum) != _drumMap.end())
-	{
-		_drumMap[drum]->waitTime = 0.0f;
+	_drumMap[drum]->waitTime = 0.0f;
 
-		if(_drumMap[drum]->loop)
-			_drumMap[drum]->audioPosition = 0;
-		else
-			_drumMap[drum]->audioPosition = _drumMap[drum]->startSample;
+	if(_drumMap[drum]->loop)
+		_drumMap[drum]->audioPosition = 0;
+	else
+		_drumMap[drum]->audioPosition = _drumMap[drum]->startSample;
 
-		_drumMap[drum]->flash = true;
-	}
+	_drumMap[drum]->flash = true;
+	return true;
 }
 
 WaveData* DrumSet::getCurrentDrum()

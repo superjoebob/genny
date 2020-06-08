@@ -21,6 +21,7 @@ IF "%arg1%" == "-v" (
 "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe" Genny.sln /build "Release|x64"
 "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe" Genny.sln /build "ReleaseFL|Win32"
 "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.exe" Genny.sln /build "ReleaseFL|x64"
+
 robocopy . "Genny\dist\genny" "genny_documentation.pdf"
 robocopy ".\installer" "Genny\dist\genny\fl"
 

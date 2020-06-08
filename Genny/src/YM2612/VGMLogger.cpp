@@ -38,7 +38,7 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 	_dataStream << (unsigned char)0x00;
 	_dataStream << (unsigned char)0x00;
 
-	int clock = SN76489_MEGAMIDI;
+	int clock = _snChip->_clock;
 	//SN76489 clock
 	_dataStream.write((const char*)&clock, 4);
 
@@ -69,7 +69,7 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 	//sn flags
 	_dataStream << (unsigned char)0;
 
-	clock = YM2612_GENNY;
+	clock = _ymChip->_clock;
 	//YM2612 clock
 	_dataStream.write((const char*)&clock, 4);
 

@@ -4,7 +4,7 @@ enum YM2612Clock
 {
 	YM2612_NTSC = 7670453,
 	YM2612_PAL = 7600489,
-	YM2612_GENNY = 8000000
+	YM2612_MEGAMIDI = 8000000
 };
 	  
 
@@ -21,10 +21,10 @@ enum YM2612Param
 	YM_DRUMTL = 3,
 	YM_KS = 4,
 	YM_AR = 5,
-	YM_DR = 6,
-	YM_SR = 7,
+	YM_DR = 6, //D1R
+	YM_SR = 7, //D2R
 	YM_AM = 8,
-	YM_SL = 9,
+	YM_SL = 9, //T1L, Sustain Level
 	YM_RR = 10,
 	YM_F1 = 11,
 	YM_F2 = 12,

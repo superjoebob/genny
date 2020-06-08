@@ -26,7 +26,7 @@ extern "C" TFruityPlug* _stdcall CreatePlugInstance(TFruityPlugHost *Host, int T
 #endif
 
 
-GennyVST::GennyVST(void):
+GennyVST::GennyVST(void) :
 	_editor(NULL),
 	_patchesInitialized(false),
 	_first(true),
@@ -34,6 +34,7 @@ GennyVST::GennyVST(void):
 	_switchingPreset(false),
 	megaMidiPort(0),
 	megaMidiVSTMute(false),
+	genMDMPort(7),
 	accurateEmulationMode(false)
 {
 	_core = new Genny2612(this);

@@ -1,11 +1,4 @@
-﻿  vstgui_win32.cpp
-c:\gamedev\genny_git\vstgui\src\vstgui\lib\platform\win32\direct2d\d2dfont.cpp(118): warning C4838: conversion from 'int' to 'UINT32' requires a narrowing conversion
-c:\gamedev\genny_git\vstgui\src\vstgui\lib\platform\win32\direct2d\d2dfont.cpp(123): warning C4838: conversion from 'int' to 'UINT32' requires a narrowing conversion
-  vstgui.cpp
-  vstplugmain.cpp
-  audioeffectx.cpp
-  audioeffect.cpp
-  Generating Code...
+﻿  vstgui.cpp
 vstgui.obj : warning LNK4006: "public: __thiscall VSTGUI::Animation::AlphaValueAnimation::AlphaValueAnimation(float,bool)" (??0AlphaValueAnimation@Animation@VSTGUI@@QAE@M_N@Z) already defined in vstgui_win32.obj; second definition ignored
 vstgui.obj : warning LNK4006: "public: __thiscall VSTGUI::Animation::Animator::Animation::Animation(class VSTGUI::CView *,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class VSTGUI::Animation::IAnimationTarget *,class VSTGUI::Animation::ITimingFunction *,class VSTGUI::CBaseObject *)" (??0Animation@Animator@0VSTGUI@@QAE@PAVCView@2@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PAVIAnimationTarget@02@PAVITimingFunction@02@PAVCBaseObject@2@@Z) already defined in vstgui_win32.obj; second definition ignored
 vstgui.obj : warning LNK4006: "public: __thiscall VSTGUI::Animation::Animator::Animator(void)" (??0Animator@Animation@VSTGUI@@QAE@XZ) already defined in vstgui_win32.obj; second definition ignored

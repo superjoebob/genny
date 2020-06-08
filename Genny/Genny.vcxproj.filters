@@ -263,6 +263,9 @@
     <ClCompile Include="src\gzip\gzclose.c">
       <Filter>zip</Filter>
     </ClCompile>
+    <ClCompile Include="src\Interface\UIOpKnob.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -588,6 +591,9 @@
     </ClInclude>
     <ClInclude Include="src\gzip\version.hpp">
       <Filter>zip</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIOpKnob.h">
+      <Filter>Interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -12,6 +12,7 @@
 enum SN76489Clock
 {
 	SN76489_MEGAMIDI = 4000000,
+	//SN76489_MEGAMIDI = 7600482,
 	SN76489_NTSC = 3579545,
 	SN76489_PAL = 7600482
 };
@@ -57,10 +58,12 @@ struct SN76489Command
 {
 	unsigned char data;
 	int channel;
-	SN76489Command(unsigned char vData, int vChannel)
+	int mmData;
+	SN76489Command(unsigned char vData, int vChannel, int vMMData = -1)
 	{
 		data = vData; 
 		channel = vChannel;
+		mmData = vMMData;
 	}
 };
 
@@ -96,8 +99,8 @@ public:
 	void Initialize( SN76489Clock clock = SN76489_NTSC, int soundRate = 44100 );
 	void Terminate();
 	void Update( float **buf, int length );
-	void Write( unsigned char data, int channel );
-	void WriteTone( int channel, int value, SimpleEnvelope env );
+	void Write( unsigned char data, int channel, int mmData = -1);
+	void WriteTone( int channel, int value, SimpleEnvelope env, int mmValue = -1 );
 	void WriteVolume( int channel, float value );
 
 	void setVolume(int channel, float volume);
@@ -120,9 +123,9 @@ public:
 	bool _emulationMute;
 	void clearCache();
 
+	SN76489Clock _clock;
 private:
 	I76489Impl* _impl;
-	SN76489Clock _clock;
 	int _soundRate;
 	float _freqs[12];
 	std::mutex _mutex;

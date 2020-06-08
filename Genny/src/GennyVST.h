@@ -83,6 +83,7 @@ public:
 	Genny2612* getCore() { return _core; }
 
 	unsigned char megaMidiPort;
+	unsigned char genMDMPort;
 	bool megaMidiVSTMute;
 	bool accurateEmulationMode;
 private:
