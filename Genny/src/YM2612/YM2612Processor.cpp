@@ -121,7 +121,7 @@ void YM2612Processor::update(float** buffer, int numSamples)
 		_snChip->updateEnvelopes();
 		_chip->updateDAC();
 
-		if (_chip->_emulationMute == false)
+		if (_chip->_emulationMute == false) 
 		{
 			int avail = 0;
 			do
@@ -133,6 +133,7 @@ void YM2612Processor::update(float** buffer, int numSamples)
 			} while (avail == 0);
 			int num = _resampler.Fir_Resampler_read(_samples, avail);
 
+			//_chip->Update(_samples, 1);
 
 			//_chip->getImplementation()->YM2612Update(_samples, 1);
 
