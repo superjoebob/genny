@@ -1,123 +1,117 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __iplatformframe__
-#define __iplatformframe__
+#pragma once
 
 /// @cond ignore
 
-#include "../cview.h"
-
-struct VstKeyCode;
+#include "../vstguifwd.h"
+#include "../dragging.h"
+#include "../optional.h"
+#include "../cstring.h"
+#include "iplatformframecallback.h"
 
 namespace VSTGUI {
-class IPlatformTextEdit;
-class IPlatformTextEditCallback;
-class IPlatformOptionMenu;
-class CGraphicsPath;
-class CDrawContext;
-class COffscreenContext;
-class CDragContainer;
-class CDropSource;
-struct CRect;
-struct CPoint;
+
+struct GenericOptionMenuTheme;
 
 //-----------------------------------------------------------------------------
-// Callback interface from IPlatformFrame implementations
-//-----------------------------------------------------------------------------
-class IPlatformFrameCallback
+class IPlatformFrame : public AtomicReferenceCounted
 {
 public:
-	virtual bool platformDrawRect (CDrawContext* context, const CRect& rect) = 0;
-	
-	virtual CMouseEventResult platformOnMouseDown (CPoint& where, const CButtonState& buttons) = 0;
-	virtual CMouseEventResult platformOnMouseMoved (CPoint& where, const CButtonState& buttons) = 0;
-	virtual CMouseEventResult platformOnMouseUp (CPoint& where, const CButtonState& buttons) = 0;
-	virtual CMouseEventResult platformOnMouseExited (CPoint& where, const CButtonState& buttons) = 0;
-	virtual bool platformOnMouseWheel (const CPoint &where, const CMouseWheelAxis &axis, const float &distance, const CButtonState &buttons) = 0;
+	/** get the top left position in global coordinates */
+	virtual bool getGlobalPosition (CPoint& pos) const = 0;
+	/** set size of platform representation relative to parent */
+	virtual bool setSize (const CRect& newSize) = 0;
+	/** get size of platform representation relative to parent */
+	virtual bool getSize (CRect& size) const = 0;
 
-	virtual bool platformOnDrop (CDragContainer* drag, const CPoint& where) = 0;
-	virtual void platformOnDragEnter (CDragContainer* drag, const CPoint& where) = 0;
-	virtual void platformOnDragLeave (CDragContainer* drag, const CPoint& where) = 0;
-	virtual void platformOnDragMove (CDragContainer* drag, const CPoint& where) = 0;
+	/** get current mouse position out of event stream */
+	virtual bool getCurrentMousePosition (CPoint& mousePosition) const = 0;
+	/** get current mouse buttons out of event stream */
+	virtual bool getCurrentMouseButtons (CButtonState& buttons) const = 0;
+	/** set mouse cursor shape */
+	virtual bool setMouseCursor (CCursorType type) = 0;
 
-	virtual bool platformOnKeyDown (VstKeyCode& keyCode) = 0;
-	virtual bool platformOnKeyUp (VstKeyCode& keyCode) = 0;
+	/** invalidates rect in platform representation*/
+	virtual bool invalidRect (const CRect& rect) = 0;
+	/** blit scroll the src rect by distance, return false if not supported */
+	virtual bool scrollRect (const CRect& src, const CPoint& distance) = 0;
 
-	virtual void platformOnActivate (bool state) = 0;
+	/** show tooltip */
+	virtual bool showTooltip (const CRect& rect, const char* utf8Text) = 0;
+	/** hide tooltip */
+	virtual bool hideTooltip () = 0;
 
-//------------------------------------------------------------------------------------
-};
+	/** TODO: remove this call later when everything is done */
+	virtual void* getPlatformRepresentation () const = 0;
 
-//-----------------------------------------------------------------------------
-class IPlatformFrame : public CBaseObject
-{
-public:
-	static IPlatformFrame* createPlatformFrame (IPlatformFrameCallback* frame, const CRect& size, void* parent);	///< create platform representation
-	static uint32_t getTicks ();
+	/** create a native text edit control */
+	virtual SharedPointer<IPlatformTextEdit>
+	createPlatformTextEdit (IPlatformTextEditCallback* textEdit) = 0;
+	/** create a native popup menu */
+	virtual SharedPointer<IPlatformOptionMenu> createPlatformOptionMenu () = 0;
+#if VSTGUI_OPENGL_SUPPORT
+	/** create a native opengl sub view */
+	virtual SharedPointer<IPlatformOpenGLView> createPlatformOpenGLView () = 0;
+#endif // VSTGUI_OPENGL_SUPPORT
 
-	virtual bool getGlobalPosition (CPoint& pos) const = 0;	///< get the top left position in global coordinates
-	virtual bool setSize (const CRect& newSize) = 0;	///< set size of platform representation relative to parent
-	virtual bool getSize (CRect& size) const = 0;	///< get size of platform representation relative to parent
-	
-	virtual bool getCurrentMousePosition (CPoint& mousePosition) const = 0;	///< get current mouse position out of event stream
-	virtual bool getCurrentMouseButtons (CButtonState& buttons) const = 0;	///< get current mouse buttons out of event stream
-	virtual bool setMouseCursor (CCursorType type) = 0;	///< set mouse cursor shape
-	
-	virtual bool invalidRect (const CRect& rect) = 0;	///< invalidates rect in platform representation
-	virtual bool scrollRect (const CRect& src, const CPoint& distance) = 0; ///< blit scroll the src rect by distance, return false if not supported
+	/** create a native view layer, may return 0 if not supported */
+	virtual SharedPointer<IPlatformViewLayer> createPlatformViewLayer (
+		IPlatformViewLayerDelegate* drawDelegate, IPlatformViewLayer* parentLayer = nullptr) = 0;
 
-	virtual bool showTooltip (const CRect& rect, const char* utf8Text) = 0; ///< show tooltip
-	virtual bool hideTooltip () = 0;	///< hide tooltip
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+	/** start a drag operation */
+	virtual DragResult doDrag (IDataPackage* source, const CPoint& offset, CBitmap* dragBitmap) = 0;
+#endif
+	/** start a drag operation
+	 *
+	 *	optional callback will be remembered until the drag is droped or canceled
+	 */
+	virtual bool doDrag (const DragDescription& dragDescription,
+						 const SharedPointer<IDragCallback>& callback) = 0;
 
-	virtual void* getPlatformRepresentation () const = 0;	// TODO: remove this call later when everything is done
+	/** */
+	virtual PlatformType getPlatformType () const = 0;
 
-	virtual IPlatformTextEdit* createPlatformTextEdit (IPlatformTextEditCallback* textEdit) = 0; ///< create a native text edit control
-	virtual IPlatformOptionMenu* createPlatformOptionMenu () = 0; ///< create a native popup menu
-	
-	virtual COffscreenContext* createOffscreenContext (CCoord width, CCoord height) = 0; ///< create an offscreen draw device
+	/** called from IPlatformFrameCallback when it's closed */
+	virtual void onFrameClosed () = 0;
 
-	virtual CView::DragResult doDrag (CDropSource* source, const CPoint& offset, CBitmap* dragBitmap) = 0; ///< start a drag operation
+	/** when called from a key down/up event converts the event to the actual text. */
+	virtual Optional<UTF8String> convertCurrentKeyEventToText () = 0;
 
-//-----------------------------------------------------------------------------
+	/** setup to use (or not) the generic option menu and optionally set the theme to use */
+	virtual bool setupGenericOptionMenu (bool use, GenericOptionMenuTheme* theme = nullptr) = 0;
+
+	//-----------------------------------------------------------------------------
 protected:
-	IPlatformFrame (IPlatformFrameCallback* frame = 0) : frame (frame) {}
+	explicit IPlatformFrame (IPlatformFrameCallback* frame) : frame (frame) {}
 	IPlatformFrameCallback* frame;
 };
 
-} // namespace
+//-----------------------------------------------------------------------------
+/* Extension to support Mac TouchBar */
+//-----------------------------------------------------------------------------
+class ITouchBarCreator : public AtomicReferenceCounted
+{
+public:
+	/** must return an instance of NSTouchBar or nullptr. */
+	virtual void* createTouchBar () = 0;
+};
+
+//-----------------------------------------------------------------------------
+class IPlatformFrameTouchBarExtension /* Extents IPlatformFrame */
+{
+public:
+	virtual ~IPlatformFrameTouchBarExtension () noexcept = default;
+
+	/** set the touchbar creator. */
+	virtual void setTouchBarCreator (const SharedPointer<ITouchBarCreator>& creator) = 0;
+	/** forces the touchbar to be recreated. */
+	virtual void recreateTouchBar () = 0;
+};
+
+} // VSTGUI
 
 /// @endcond
-
-#endif // __iplatformframe__

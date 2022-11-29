@@ -5,7 +5,7 @@
 #include "GennyLoaders.h"
 class UIPresetElement;
 struct GennyPatch;
-class UIPresetsPanel : public CControl, public CControlListener, public GennyInterfaceObject
+class UIPresetsPanel : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner);
@@ -17,7 +17,7 @@ public:
 
 	UIPresetsAndInstrumentsPanel* getOwner() { return _owner; }
 	CFrame* getFrame() { return _owner->getFrame(); }
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);		
+	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
 
 	void copyPatch(GennyPatch* patch);
 	void pastePatch();

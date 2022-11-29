@@ -6,10 +6,13 @@
 #include "UIContextMenu.h"
 #include "lib/platform/win32/win32frame.h"
 
-UICheckbox::UICheckbox (const CRect& size, CControlListener* listener, int32_t tag, UTF8StringPtr title, GennyInterface* iface, CBitmap* bitmap, int32_t style)
+UICheckbox::UICheckbox (const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr title, GennyInterface* iface, CBitmap* bitmap, int32_t style)
 	:CCheckBox(size, listener, tag, title, bitmap, style),
-	 GennyInterfaceObject(iface)
+	 GennyInterfaceObject(iface),
+	 _showHints(true),
+	controlModifier(false)
 {
+	this->setWheelInc(1.0f);
 	ContextMenu = CreatePopupMenu();
 }
 
@@ -25,52 +28,58 @@ UICheckbox::~UICheckbox()
 }
 
 
-CMouseEventResult UICheckbox::onMouseUp (CPoint& where, const CButtonState& buttons)
+CMouseEventResult UICheckbox::onMouseUp(CPoint& where, const CButtonState& buttons)
 {
-#if !BUILD_VST
-	
-	//if(_interface != nullptr)
-	//{
-	//	VSTBase* b = getVst()->getBase(); 
-	//	int col = -1;
-	//	char* result = new char[255];
-	//	//b->PlugHost->PromptEdit(-1, -1, "BABA", result, col); 
-	//	//b->PlugHost->Dispatcher(b->HostTag, FHD_SetNewColor, 0, 5);
-	//}
-	
-	if(_interface != nullptr && buttons.isRightButton())
+	if (buttons.getModifierState() == CButton::kControl)
+		controlModifier = true;
+	else
+		controlModifier = false;
+
+
+	if (buttons.isRightButton())
 	{
-		VSTBase* b = getVst()->getBase(); 
-
-		Win32Frame* winFrame = (Win32Frame*)_interface->getFrame()->getPlatformFrame();
-		CPoint mousePos, globalPos;
-		winFrame->getCurrentMousePosition(mousePos);
-		winFrame->getGlobalPosition(globalPos);
-		mousePos = mousePos + globalPos;
-
-		GennyPatch* patch0 = static_cast<GennyPatch*>(getVst()->getPatch(0));
-		int numParams = GennyPatch::getNumParameters();
-		int patchNum = patch0->SelectedInstrument;
-		int paramTag = (numParams * patchNum) + tag;
-		
-		int param = 0;
-		b->AdjustParamPopup(ContextMenu, paramTag, 0, DefaultMenuID);
-
-		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow() , NULL);
-		if (r) 
-			b->PlugHost->Dispatcher(b->HostTag, FHD_ParamMenu, paramTag, r-DefaultMenuID);
-
+		onMouseUpContext(tag);
 		return kMouseEventHandled;
 	}
 	else
-#endif
+	{
 		return CCheckBox::onMouseUp(where, buttons);
+	}
 }
 
-CMouseEventResult UICheckbox::onMouseDown (CPoint& where, const CButtonState& buttons)
+CMouseEventResult UICheckbox::onMouseMoved(CPoint& where, const CButtonState& buttons)
 {
-	if(_interface != nullptr && buttons.isRightButton())
+	if (buttons.isRightButton())
 		return kMouseEventHandled;
-	else 
+
+	return __super::onMouseMoved(where, buttons);
+}
+
+CMouseEventResult UICheckbox::onMouseDown(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+		return kMouseEventHandled;
+	else
 		return CCheckBox::onMouseDown(where, buttons);
+}
+
+CMouseEventResult UICheckbox::onMouseEntered(CPoint& where, const CButtonState& buttons)
+{
+	if(_showHints)
+		getInterface()->hoverControl(this);
+
+	return __super::onMouseEntered(where, buttons);
+}
+
+CMouseEventResult UICheckbox::onMouseExited(CPoint& where, const CButtonState& buttons)
+{
+	if (_showHints)
+		getInterface()->unhoverControl(this);
+
+	return __super::onMouseExited(where, buttons);
+}
+
+bool UICheckbox::onWheel(const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
+{
+	return __super::onWheel(where, axis, distance, buttons);
 }

@@ -37,9 +37,9 @@ bool UIImportPanel::attached (CView* parent)
 	bool returnValue = CControl::attached(parent);
 
 	CFrame* frame = _owner->getFrame();
-	frame->addView(this);
+	//frame->addView(this);
 	setTag(kPresetControlIndex);
-	setMax(10000.0f);
+	setMax(1000.0f);
 
 	_selectedInstrument = new CTextLabel(CRect(644 + 82, 118, 644 + 82 + 180, 121 + 16), "Poopy Doody Balls");
 	_selectedInstrument->setFont(kNormalFont);

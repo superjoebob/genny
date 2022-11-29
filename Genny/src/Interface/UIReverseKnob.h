@@ -7,10 +7,10 @@
 #include "UIKnob.h"
 
 class UIOperator;
-class UIReverseKnob : public UIKnob, public CControlListener
+class UIReverseKnob : public UIKnob, public IControlListener
 {
 public:
-	UIReverseKnob(const CRect& size, CControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
+	UIReverseKnob(const CRect& size, IControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
 	~UIReverseKnob(void);
 	void setValue(float val);
 	float getValue() const;
@@ -23,6 +23,6 @@ public:
 
 
 	UIDigitDisplay* _display;
-	CControlListener* _realListener;
+	IControlListener* _realListener;
 };
 

@@ -20,10 +20,10 @@ UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* 
 	_loggingMode(false),
 	_category("")
 {
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	frame->addView(this);
 	setTag(kPresetControlIndex);
-	setMax(10000.0f);
+	setMax(1000.0f);
 
 	IndexBaron* baron = getIndexBaron();
 
@@ -32,7 +32,7 @@ UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* 
 
 	for(int i = 1; i < numPresets + 1; i++)
 	{
-		int top = (int)size.top + ((i - 1) * 16);
+		int top = (int)size.top + ((i - 1) * 18);
 		UIPresetElement* element = new UIPresetElement(CPoint(size.left, top), this, nullptr, i);
 		frame->addView(element);
 		_elements.push_back(element);
@@ -40,13 +40,13 @@ UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* 
 
 	setDirty(true);
 
-	_scrollBar = new CSlider(CRect(822 + 88, 134, 822 + 88 + 14, 134 + 130), this, 999999, 134, 134 + 130 - 20, UIBitmap(PNG_SCROLLHANDLE), NULL, CPoint(), kTop | kVertical);
+	_scrollBar = new CSlider(CRect(822 + 88, 134, 822 + 88 + 14, 134 + 150), this, 999999, 134, 134 + 130, UIBitmap(PNG_SCROLLHANDLE), NULL, CPoint(), CSliderBase::Style::kTop | CSliderBase::Style::kVertical);
 	frame->addView(_scrollBar);
 
 	_upArrow = new CKickButton(CRect(824 + 88, 118, 824 + 88 + 10, 118 + 16), this, 9999999, 16, UIBitmap(PNG_UPBUTTON));
 	frame->addView(_upArrow);
 
-	_downArrow = new CKickButton(CRect(824 + 88, 264, 824 + 88 + 10, 264 + 16), this, 99999999, 16, UIBitmap(PNG_DOWNBUTTON));
+	_downArrow = new CKickButton(CRect(824 + 88, 264 + 20, 824 + 88 + 10, 264 + 16 + 20), this, 99999999, 16, UIBitmap(PNG_DOWNBUTTON));
 	frame->addView(_downArrow);
 
 	reconnect();
@@ -56,24 +56,32 @@ void UIPresetsPanel::addConfirmDialog()
 {
 	CFrame* frame = _owner->getFrame();
 
-	UIImage* image = new UIImage(CRect(416, 96, 416 + 508, 96 + 186), PNG_COPYDIALOG);
+	UIImage* image = new UIImage(CRect(416, 96, 416 + 508, 96 + 206), PNG_COPYDIALOG);
 	image->setVisible(false);
-	image->setTransparency(true);
+	//image->setTransparency(true);
 	frame->addView(image);
 	_confirmDialog.push_back(image);
 
-	image = new UIImage(CRect(416, 96, 416 + 508, 96 + 186), PNG_LOGGINGDIALOG);
+	//image->setMouseableArea(CRect(416, 96, 416 + 508, 96 + 206));
+	//image->setMouseEnabled(true);
+
+	 
+	image = new UIImage(CRect(416, 96, 416 + 508, 96 + 206), PNG_LOGGINGDIALOG);
 	image->setVisible(false);
-	image->setTransparency(true);
+	//image->setTransparency(true);
 	frame->addView(image);
+
+	//image->setMouseableArea(CRect(416, 96, 416 + 508, 96 + 206));
+	//image->setMouseEnabled(true);
+
 	_confirmDialog.push_back(image);
 
-	CKickButton* confirmOKButton = new CKickButton(CRect(416 + 146, 96 + 119, 416 + 146 + 102, 96 + 119 + 34), this, kConfirmOKButton, UIBitmap(PNG_COPYOKBUTTON));
+	CKickButton* confirmOKButton = new CKickButton(CRect(416 + 146, 96 + 137, 416 + 146 + 102, 96 + 137 + 34), this, kConfirmOKButton, UIBitmap(PNG_COPYOKBUTTON));
 	confirmOKButton->setVisible(false);
 	frame->addView(confirmOKButton);
 	_confirmDialog.push_back(confirmOKButton);
 
-	CKickButton* confirmCancelButton = new CKickButton(CRect(416 + 259, 96 + 119, 416 + 259 + 102, 96 + 119 + 34), this, kConfirmCancelButton, UIBitmap(PNG_COPYCANCELBUTTON));
+	CKickButton* confirmCancelButton = new CKickButton(CRect(416 + 259, 96 + 137, 416 + 259 + 102, 96 + 137 + 34), this, kConfirmCancelButton, UIBitmap(PNG_COPYCANCELBUTTON));
 	confirmCancelButton->setVisible(false);
 	frame->addView(confirmCancelButton);
 	_confirmDialog.push_back(confirmCancelButton);
@@ -114,19 +122,17 @@ void UIPresetsPanel::valueChanged (CControl* control)
 			if(_copyData.data != nullptr)
 			{
 				_copyData.dataPos = 0;
-				GennyPatch* newPatch = GennyLoaders::loadGEN(_copyName, "", getCurrentPatch(), &_copyData, false);
+				GennyLoaders::loadGEN(getCurrentPatch(), &_copyData);
 				IndexBaron* baron = getIndexBaron();
 				int count = GennyPatch::getNumParameters();
 				getCurrentPatch()->Name = _copyName;
-				for(int i = 0; i < count; i++)
+
+				for (int i = 0; i < 6; i++)
 				{
-#ifdef BUILD_VST
-					_owner->getOwner()->getEffect()->setParameterAutomated(i,  newPatch->getFromBaron(baron->getIndex(i)));
-#else
-					TFruityPlug* plug = static_cast<TFruityPlug*>(getInterface()->getEffect());
-					plug->ProcessParam(i + 100000, static_cast<int>(newPatch->getFromBaron(baron->getIndex(i))), REC_UpdateValue);
-#endif
+					if (getVst()->getCore()->getChannelPatch(i) == getVst()->getCurrentPatch())
+						getVst()->getCore()->clearChannelPatch(i);
 				}
+
 				getVst()->rejiggerInstruments(true); 
 				getInterface()->reconnect();
 			}
@@ -307,7 +313,7 @@ void UIPresetsPanel::reorganize()
 	}
 }
 
-bool UIPresetsPanel::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+bool UIPresetsPanel::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
 {
 	if (_scrollBar->isVisible())
 	{

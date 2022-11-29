@@ -6,6 +6,7 @@
 #include "YM2612/SN76489Chip.h"
 #include "VGMLogger.h"
 #include "DrumSet.h"
+#include "GennyExtParam.h"
 
 class IndexBaron;
 class IBInsParam;
@@ -69,6 +70,9 @@ enum GennyInstrumentParam
 	GIP_Delay = 53,
 	GIP_SelectedDrum = 54,
 
+	GIP_Ch3OpOctave = 55,
+	GIP_Ch3OpTranspose = 56,
+
 	GIP_None
 };
 
@@ -84,6 +88,9 @@ static unsigned char GennyInstrumentParam_getRange(GennyInstrumentParam param)
 		case GIP_RangeHigh:			return 127;
 		case GIP_Delay:				return 32;
 		case GIP_SelectedDrum:		return 20;
+
+		case GIP_Ch3OpOctave:		return 6;
+		case GIP_Ch3OpTranspose:	return 22;
 
 	}
 	return 0;
@@ -108,12 +115,33 @@ namespace GIType
 		SN,
 		SNDRUM,
 		DAC,
+		SNSPECIAL
 	};
 };
 
+
 struct GennyInstrument
 {
-	GennyInstrument()
+	std::map<GEParam, GennyExtParam*> _extendedParamMap;
+	void mapExtParam(GEParam eParam, std::string sName, std::function <float(GennyInstrument*)> fGet, std::function<void(GennyInstrument*, float)> fSet, float fMin, float fMax, int op = 0, ParamDisplayType eType = ParamDisplayType::Integer)
+	{
+		_extendedParamMap.insert(std::pair<GEParam, GennyExtParam*>((GEParam)(((int)eParam) + op), new GennyExtParam((GEParam)(((int)eParam) + op), sName, this, fGet, fSet, fMin, fMax, eType)));
+	}
+
+	GennyExtParam* getExt(GEParam p, int op = 0) 
+	{ 
+		auto it = _extendedParamMap.find((GEParam)((int)p + op));
+		if (it != _extendedParamMap.end())
+			return (*it).second;
+
+		return nullptr;
+	}
+	float getExtParam(GEParam p, int op = 0) { return _extendedParamMap[(GEParam)(((int)p) + op)]->get(); }
+	void setExtParam(GEParam p, float v, int op = 0) { _extendedParamMap[(GEParam)(((int)p) + op)]->set(v); }
+
+	int patchIndex;
+	GennyInstrument(int iPatchIndex)
+		:patchIndex(iPatchIndex)
 	{
 		memset(Channels, 1, sizeof(bool) * 10);
 		Channels[6] = false;
@@ -125,6 +153,9 @@ struct GennyInstrument
 		Transpose = 11;
 		Panning = 127;
 
+		PingPongPanIndex = 0;
+		PingPongString = "Off";
+
 		HighRange = 0;
 		LowRange = 127;
 		Delay = 0;
@@ -135,9 +166,112 @@ struct GennyInstrument
 		OperatorVelocity[2] = false;
 		OperatorVelocity[3] = true;
 
+		for (int i = 0; i < 4; i++)
+		{
+			OperatorEnable[i] = true;
+			OperatorMidiChannel[i] = 0;
+			OperatorTranspose[i] = 11;
+			OperatorOctave[i] = 3;
+			OperatorDetune[i] = 50;
+		}
+
+
+		Detune = 50;
+
+
+		snMelodicEnable = false;
+		soloMode = false;
+		legatoMode = true;
+		glide = 0;
+		Ch3Special = false;
+		LFOEnable = false;
+		DACSampleRate = 1;
+
+		EnableL = true;
+		EnableR = true;
+		Enable = true;
+
 		memset(DACSamplePath, 0, sizeof(int) * 32);
 		memset(DrumSampleData, 0, sizeof(char*) * 20);
 
+		for (int i = 0; i < 4; i++)
+		{
+			int opNum = i;
+			if (opNum == 1)
+				opNum = 2;
+			else if (opNum == 2)
+				opNum = 1;
+
+			mapExtParam(GEParam::OpEnable, "Enable Operator (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorEnable[i] ? 1.0f : 0.0f; }, [i](auto ins, float val) { ins->OperatorEnable[i] = (val > 0.5f ? true : false); }, 0.0f, 1.0f, i, ParamDisplayType::Bool);
+			mapExtParam(GEParam::OpVelocity, "Operator TL Velocity Link (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorVelocity[i] ? 1.0f : 0.0f; }, [i](auto ins, float val) { ins->OperatorVelocity[i] = (val > 0.5f ? true : false); }, 0.0f, 1.0f, i, ParamDisplayType::Bool);
+		}
+
+		for (int i = 0; i < 10; i++)
+		{
+			if(i < 6)
+				mapExtParam(GEParam::ChEnable, "Enable FM Channel " + std::to_string(i + 1), [i](auto ins) { return ins->Channels[i] ? 1.0f : 0.0f; }, [i](auto ins, float val) { ins->Channels[i] = (val > 0.5f ? true : false); }, 0.0f, 1.0f, i, ParamDisplayType::Bool);
+			else if(i < 9)
+				mapExtParam(GEParam::ChEnable, "Enable PSG Channel " + std::to_string((i - 6) + 1),[i](auto ins) { return ins->Channels[i] ? 1.0f : 0.0f; }, [i](auto ins, float val) { ins->Channels[i] = (val > 0.5f ? true : false); }, 0.0f, 1.0f, i, ParamDisplayType::Bool);
+			else
+				mapExtParam(GEParam::ChEnable, "Enable PSG Fuzz Channel", [i](auto ins) { return ins->Channels[i] ? 1.0f : 0.0f; }, [i](auto ins, float val) { ins->Channels[i] = (val > 0.5f ? true : false); }, 0.0f, 1.0f, i, ParamDisplayType::Bool);
+		}
+
+		mapExtParam(GEParam::InsMidiChannel, "Midi Channel", [](auto ins) { return ins->MidiChannel; }, [](auto ins, float val) { ins->MidiChannel = (int)val; }, 0.0f, 15.0f, 0, ParamDisplayType::MidiChannel);
+		mapExtParam(GEParam::InsTranspose, "Transpose Semitone", [](auto ins) { return ins->Transpose; }, [](auto ins, float val) { ins->Transpose = (int)val; }, 0.0f, 22.0f, 0, (ParamDisplayType)((int)ParamDisplayType::Semitone | (int)ParamDisplayType::Centered));
+		mapExtParam(GEParam::InsOctave, "Transpose Octave", [](auto ins) { return ins->Octave; }, [](auto ins, float val) { ins->Octave = (int)val; }, 0.0f, 6.0f, 0, (ParamDisplayType)((int)ParamDisplayType::Octave | (int)ParamDisplayType::Centered));
+		mapExtParam(GEParam::InsPan, "Panning", [](auto ins) { return ins->Panning; }, [](auto ins, float val) { ins->Panning = (int)val; }, 0.0f, 255.0f, 0, ParamDisplayType::Panning);
+		mapExtParam(GEParam::InsRangeLow, "Range Low", [](auto ins) { return ins->LowRange; }, [](auto ins, float val) { ins->LowRange = (int)val; }, 0.0f, 127.0f, 0, ParamDisplayType::MidiRange);
+		mapExtParam(GEParam::InsRangeHigh, "Range High", [](auto ins) { return ins->HighRange; }, [](auto ins, float val) { ins->HighRange = (int)val; }, 0.0f, 127.0f, 0, ParamDisplayType::MidiRange);
+		mapExtParam(GEParam::InsSoloMode, "Solo Mode", [](auto ins) { return ins->soloMode ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->soloMode = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+		mapExtParam(GEParam::InsSoloLegato, "Solo Mode Legato", [](auto ins) { return ins->legatoMode ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->legatoMode = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+		mapExtParam(GEParam::InsGlide, "Glide", [](auto ins) { return ins->glide; }, [](auto ins, float val) { ins->glide = (int)val; }, 0.0f, 32.0f);
+		mapExtParam(GEParam::InsDelay, "Delay", [](auto ins) { return ins->Delay; }, [](auto ins, float val) { ins->Delay = (int)val; }, 0.0f, 32.0f);
+		mapExtParam(GEParam::InsDetune, "Detune", [](auto ins) { return ins->Detune; }, [](auto ins, float val) { ins->Detune = (int)val; }, 0.0f, 100.0f, 0, (ParamDisplayType)((int)ParamDisplayType::Cents | (int)ParamDisplayType::Centered));
+		mapExtParam(GEParam::SnMelodicEnable, "Enable PSG CH3-Fuzz Link", [](auto ins) { return ins->snMelodicEnable ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->snMelodicEnable = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+
+		mapExtParam(GEParam::Op3Special, "Channel 3 Special Mode", [](auto ins) { return ins->Ch3Special ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->Ch3Special = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+		mapExtParam(GEParam::LFOEnable, "LFO Enable", [](auto ins) { return ins->LFOEnable ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->LFOEnable = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+
+		mapExtParam(GEParam::InsEnableL, "Enable L", [](auto ins) { return ins->EnableL ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->EnableL = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+		mapExtParam(GEParam::InsEnableR, "Enable R", [](auto ins) { return ins->EnableR ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->EnableR = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+		mapExtParam(GEParam::InsEnable, "Enable Ins " + std::to_string(patchIndex + 1), [](auto ins) { return ins->Enable ? 1.0f : 0.0f; }, [](auto ins, float val) { ins->Enable = (val > 0.5f ? true : false); }, 0.0f, 1.0f, 0, ParamDisplayType::Bool);
+
+		for (int i = 0; i < 4; i++)
+		{
+			int opNum = i;
+			if (opNum == 1)
+				opNum = 2;
+			else if (opNum == 2)
+				opNum = 1;
+
+			mapExtParam(GEParam::Op3SpecialMidi, "CH3 Special Midi Channel (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorMidiChannel[i]; }, [i](auto ins, float val) { ins->OperatorMidiChannel[i] = (char)val; }, 0.0f, 16.0f, i, ParamDisplayType::MidiChannel);
+			mapExtParam(GEParam::Op3SpecialTranspose, "CH3 Special Semitone (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorTranspose[i]; }, [i](auto ins, float val) { ins->OperatorTranspose[i] = (char)val; }, 0.0f, 22.0f, i, (ParamDisplayType)((int)ParamDisplayType::Semitone | (int)ParamDisplayType::Centered));
+			mapExtParam(GEParam::Op3SpecialOctave, "CH3 Special Octave (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorOctave[i]; }, [i](auto ins, float val) { ins->OperatorOctave[i] = (char)val; }, 0.0f, 6.0f, i, (ParamDisplayType)((int)ParamDisplayType::Octave | (int)ParamDisplayType::Centered));
+			mapExtParam(GEParam::Op3SpecialDetune, "CH3 Special Detune (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorDetune[i]; }, [i](auto ins, float val) { ins->OperatorDetune[i] = (char)val; }, 0.0f, 100.0f, i, (ParamDisplayType)((int)ParamDisplayType::Cents | (int)ParamDisplayType::Centered));
+		}
+
+		mapExtParam(GEParam::DACSamplerate, "Drums Samplerate", [](auto ins) { return ins->DACSampleRate; }, [](auto ins, float val) { ins->DACSampleRate = val; }, 0.0f, 3.0f, 0, ParamDisplayType::SampleRate);
+	}
+
+
+	~GennyInstrument()
+	{
+		for (auto it = _extendedParamMap.begin(); it != _extendedParamMap.end(); it++)
+		{
+			delete (*it).second;
+		}
+	}
+
+	void initializeInstrumentSettings()
+	{
+		MidiChannel = 0;
+		Octave = 3;
+		Transpose = 11;
+		Panning = 127;
+		HighRange = 0;
+		LowRange = 127;
+		Delay = 0;
+		SelectedDrum = 0;
 	}
 	
 	//bool DAC;
@@ -189,6 +323,31 @@ struct GennyInstrument
 	static bool loadingOldPanning;
 	GIType::GIType Type;
 	bool OperatorVelocity[4];
+	bool OperatorEnable[4];
+	char OperatorMidiChannel[4];
+	char OperatorTranspose[4];
+	char OperatorOctave[4];
+	unsigned char OperatorDetune[4];
+	bool snMelodicEnable;
+	bool soloMode;
+	bool legatoMode;
+	unsigned char glide;
+	bool Ch3Special;
+	unsigned char Detune;
+	bool LFOEnable;
+	unsigned char DACSampleRate;
+
+	bool EnableL;
+	bool EnableR;
+	bool Enable;
+
+	std::string PingPongString;
+	std::vector<PingPongPan> PingPongPanning;
+	int PingPongPanIndex;
+	PingPongPan getAndIncrementPingPongPanning();
+
+	void parsePanString(std::string setting);
+
 
 	std::map<int, std::vector<int>> _midiLearn;
 };
@@ -213,15 +372,113 @@ struct GennyPatch : VSTPatch
 	int SelectedInstrument;
 
 	bool Channels[10];
+	GennyExtParam* getExt(GEParam p, int op = 0) { return InstrumentDef.getExt(p, op); }
+	float getExtParam(GEParam p, int op = 0) { return InstrumentDef.getExtParam(p, op); }
+	void setExtParam(GEParam p, float v, int op = 0) { InstrumentDef.setExtParam(p, v, op); }
 
 	//Actual instrument definitions for all but first patch
 	GennyInstrument InstrumentDef;
 
-	//Tells the first 16 patches which instrument mode they're in
-	GIType::GIType InstrumentMode;
+	void setInstrumentMode(GIType::GIType mode, bool alterChannels)
+	{
+		if (mode != _instrumentMode)
+		{
+			if (alterChannels)
+			{
+				if (mode == GIType::SN)
+				{
+					InstrumentDef.Channels[0] = false;
+					InstrumentDef.Channels[1] = false;
+					InstrumentDef.Channels[2] = false;
+					InstrumentDef.Channels[3] = false;
+					InstrumentDef.Channels[4] = false;
+					InstrumentDef.Channels[5] = false;
+					InstrumentDef.Channels[6] = true;
+					InstrumentDef.Channels[7] = true;
+					InstrumentDef.Channels[8] = true;
+					InstrumentDef.Channels[9] = false;
+					InstrumentDef.snMelodicEnable = false;
+				}
+				else if (mode == GIType::SNDRUM)
+				{
+					InstrumentDef.Channels[0] = false;
+					InstrumentDef.Channels[1] = false;
+					InstrumentDef.Channels[2] = false;
+					InstrumentDef.Channels[3] = false;
+					InstrumentDef.Channels[4] = false;
+					InstrumentDef.Channels[5] = false;
+					InstrumentDef.Channels[6] = false;
+					InstrumentDef.Channels[7] = false;
+					InstrumentDef.Channels[8] = false;
+					InstrumentDef.Channels[9] = true;
+					InstrumentDef.snMelodicEnable = false;
+				}
+				else if (mode == GIType::SNSPECIAL)
+				{
+					InstrumentDef.Channels[0] = false;
+					InstrumentDef.Channels[1] = false;
+					InstrumentDef.Channels[2] = false;
+					InstrumentDef.Channels[3] = false;
+					InstrumentDef.Channels[4] = false;
+					InstrumentDef.Channels[5] = false;
+					InstrumentDef.Channels[6] = false;
+					InstrumentDef.Channels[7] = false;
+					InstrumentDef.Channels[8] = true;
+					InstrumentDef.Channels[9] = true;
+					InstrumentDef.snMelodicEnable = true;
+				}
+				else if (mode == GIType::SNSPECIAL)
+				{
+					InstrumentDef.Channels[0] = false;
+					InstrumentDef.Channels[1] = false;
+					InstrumentDef.Channels[2] = false;
+					InstrumentDef.Channels[3] = false;
+					InstrumentDef.Channels[4] = false;
+					InstrumentDef.Channels[5] = false;
+					InstrumentDef.Channels[6] = false;
+					InstrumentDef.Channels[7] = false;
+					InstrumentDef.Channels[8] = true;
+					InstrumentDef.Channels[9] = true;
+					InstrumentDef.snMelodicEnable = true;
+				}
+				else if (mode == GIType::DAC)
+				{
+					InstrumentDef.Channels[0] = false;
+					InstrumentDef.Channels[1] = false;
+					InstrumentDef.Channels[2] = false;
+					InstrumentDef.Channels[3] = false;
+					InstrumentDef.Channels[4] = false;
+					InstrumentDef.Channels[5] = true;
+					InstrumentDef.Channels[6] = false;
+					InstrumentDef.Channels[7] = false;
+					InstrumentDef.Channels[8] = false;
+					InstrumentDef.Channels[9] = false;
+					InstrumentDef.snMelodicEnable = false;
+				}
+				else if (mode == GIType::FM)
+				{
+					InstrumentDef.Channels[0] = true;
+					InstrumentDef.Channels[1] = true;
+					InstrumentDef.Channels[2] = true;
+					InstrumentDef.Channels[3] = true;
+					InstrumentDef.Channels[4] = true;
+					InstrumentDef.Channels[5] = true;
+					InstrumentDef.Channels[6] = false;
+					InstrumentDef.Channels[7] = false;
+					InstrumentDef.Channels[8] = false;
+					InstrumentDef.Channels[9] = false;
+					InstrumentDef.snMelodicEnable = false;
+				}
+			}
+			
+			_instrumentMode = mode;
+		}
+	}
 
-	GennyPatch() { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; InstrumentMode = GIType::NONE; }
-	GennyPatch(const std::string& name) : VSTPatch(name) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; InstrumentMode = GIType::NONE; }
+	int lastPortaNote;
+
+	GennyPatch(int patchIndex) : InstrumentDef(patchIndex) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; _instrumentMode = GIType::NONE; lastPortaNote = -1; }
+	GennyPatch(const std::string& name) : VSTPatch(name), InstrumentDef(-1) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; _instrumentMode = GIType::NONE; lastPortaNote = -1; }
 
 	static unsigned int getNumParameters()
 	{
@@ -231,254 +488,47 @@ struct GennyPatch : VSTPatch
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
 	float getFromBaron(IBIndex* param);
+
+private:	
+	//Tells the first 16 patches which instrument mode they're in
+	GIType::GIType _instrumentMode;
+};
+  
+struct SoloNoteInfo
+{
+	SoloNoteInfo(int noteVal, void* pNoteData)
+	{
+		note = noteVal;
+		noteData = pNoteData;
+	}
+	int note;
+	void* noteData;
 };
 
-//struct GennySerializable
-//{
-//	virtual void serialize(GennyData& pData) = 0;
-//	virtual void deserialize(GennyData& pData) = 0;
-//};
-//
-//struct GennyOperator : GennySerializable //YMOperatorParameter
-//{
-//	enum Param
-//	{
-//		YMO_DT = 0,
-//		YMO_MUL = 1,
-//		YMO_TL = 2,
-//		YMO_DRUMTL = 3,
-//		YMO_KS = 4,
-//		YMO_AR = 5,
-//		YMO_DR = 6,
-//		YMO_SR = 7,
-//		YMO_AM = 8,
-//		YMO_SL = 9,
-//		YMO_RR = 10,
-//		YMO_F1 = 11,
-//		YMO_F2 = 12,
-//		YMO_SSG = 13,
-//		YMO_END = 14
-//	};
-//
-//	//values is a list of values for operator parameters, Param values
-//	//work as indexes into this list. For example: values[YMO_DT] = 5;
-//	unsigned char values[YMO_END];
-//	GennyOperator()
-//	{
-//		memset(&values, 0, YMO_END);
-//	}
-//
-//	virtual void serialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < YMO_END; i++)
-//			pData.writeByte(values[i]);
-//	}
-//
-//	virtual void deserialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < YMO_END; i++)
-//			values[i] = pData.readByte();
-//	}
-//};
-//
-//struct GennyFMChannel : GennySerializable
-//{
-//	enum Param
-//	{
-//		YMC_AMS = 0,
-//		YMC_FMS = 1,
-//		YMC_L_EN = 2,
-//		YMC_R_EN = 3,
-//		YMC_FB = 4,
-//		YMC_ALG = 5,
-//		YMC_LFO_EN = 6,
-//		YMC_LFO = 7,
-//		YMC_CH3SPECIAL = 8,
-//		YMC_END = 9
-//	};
-//
-//	GennyOperator operators[4];
-//	unsigned char values[YMC_END];
-//	GennyFMChannel()
-//	{
-//		memset(&values, 0, YMC_END);
-//	}
-//
-//	virtual void serialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < 4; i++)
-//			operators[i].serialize(pData);
-//
-//		for (int i = 0; i < YMC_END; i++)
-//			pData.writeByte(values[i]);
-//	}
-//
-//	virtual void deserialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < 4; i++)
-//			operators[i].deserialize(pData);
-//
-//		for (int i = 0; i < YMC_END; i++)
-//			values[i] = pData.readByte();
-//	}
-//};
-//
-//
-//struct GennySNChannel : GennySerializable
-//{
-//	enum Param
-//	{
-//		SN_DUTYCYCLE = 0,
-//		SN_PERIODIC = 1,
-//		SN_DETUNE = 2,
-//		SN_LEVEL = 3,
-//		SN_END = 4
-//	};
-//
-//	unsigned char values[SN_END];
-//	GennySNChannel()
-//	{
-//		memset(&values, 0, SN_END);
-//	}
-//
-//	virtual void serialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < SN_END; i++)
-//			pData.writeByte(values[i]);
-//	}
-//
-//	virtual void deserialize(GennyData& pData)
-//	{
-//		for (int i = 0; i < SN_END; i++)
-//			values[i] = pData.readByte();
-//	}
-//};
-//
-//
-//struct GennyDMChannel : GennySerializable
-//{
-//	GennyDMChannel()
-//	{
-//	}	
-//	
-//	//void mapDrum(int note, WaveData* drum) { _drumMap[note] = drum; }
-//	//WaveData* getDrum(int note);
-//
-//	//void setCurrentDrum(int drum);
-//	//WaveData* getCurrentDrum();
-//
-//	virtual void serialize(GennyData& pData)
-//	{
-//	}
-//
-//	virtual void deserialize(GennyData& pData)
-//	{
-//	}
-//private:
-//	std::map<int, WaveData*> _drumMap;
-//	int _currentDrum;
-//};
-//
-//
-//struct GennyPatchNew : VSTPatch, GennySerializable
-//{
-//	GIType::GIType type;
-//	GennyFMChannel fm;
-//	GennySNChannel square;
-//	GennyDMChannel drums;
-//
-//	char midiChannel;
-//	char octave;
-//	char transpose;
-//	unsigned char panning;
-//
-//	char delay;
-//	unsigned char lowRange;
-//	unsigned char highRange;
-//	char selectedDrum;
-//
-//	bool operatorVelocity[4];
-//
-//	GennyPatchNew()
-//	{
-//		type = GIType::FM;
-//
-//		midiChannel = 0;
-//		octave = 3;
-//		transpose = 11;
-//		panning = 127;
-//
-//		highRange = 0;
-//		lowRange = 127;
-//		delay = 0;
-//		selectedDrum = 0;
-//
-//		operatorVelocity[0] = false;
-//		operatorVelocity[1] = false;
-//		operatorVelocity[2] = false;
-//		operatorVelocity[3] = true;
-//	}
-//
-//	virtual void serialize(GennyData& pData)
-//	{
-//		pData.writeByte((char)type);
-//		fm.serialize(pData);
-//
-//		pData.writeByte(midiChannel);
-//		pData.writeByte(octave);
-//		pData.writeByte(transpose);
-//		pData.writeByte(panning);
-//
-//		pData.writeByte(highRange);
-//		pData.writeByte(lowRange);
-//		pData.writeByte(delay);
-//		pData.writeByte(selectedDrum);
-//
-//		pData.writeByte(operatorVelocity[0]);
-//		pData.writeByte(operatorVelocity[1]);
-//		pData.writeByte(operatorVelocity[2]);
-//		pData.writeByte(operatorVelocity[3]);
-//	}
-//
-//	virtual void deserialize(GennyData& pData)
-//	{
-//		type = (GIType::GIType)pData.readByte();
-//		fm.deserialize(pData);
-//
-//		midiChannel = pData.readByte();
-//		octave = pData.readByte();
-//		transpose = pData.readByte();
-//		panning = pData.readByte();
-//
-//		highRange = pData.readByte();
-//		lowRange = pData.readByte();
-//		delay = pData.readByte();
-//		selectedDrum = pData.readByte();
-//
-//		operatorVelocity[0] = pData.readByte();
-//		operatorVelocity[1] = pData.readByte();
-//		operatorVelocity[2] = pData.readByte();
-//		operatorVelocity[3] = pData.readByte();
-//	}
-//
-//
-//	//STUBBS, trying to kill the Baron
-//	void catalogue(IndexBaron* baron) {}
-//	void setFromBaron(IBIndex* param, float val) { }
-//	float getFromBaron(IBIndex* param) { return 0.0f; }
-//};
-
-  
 struct NoteInfo
 {
-	NoteInfo() :note(-1), num(0), channel(-1), release(0), noteData(nullptr), instrumentPatch(nullptr), velocity(0), detune(0), patch(nullptr), floatVelocity(0.0f){}
+	NoteInfo() :note(-1), age(0), operatorChannel(-1), triggerUnsetOperators(false), num(0), channel(-1), release(0), noteData(nullptr), instrumentPatch(nullptr), velocity(0), detune(0), patch(nullptr), delay(0), panning(0), noteGlideFrom(-1), noteGlideCurrent(-1), glideSpeed(0), glideSamplesRun(0){}
 	int note;
+	int noteGlideFrom;
+	int noteGlideCurrent;
+	int glideSpeed;
+	int glideSamplesRun;
+
+	std::vector<SoloNoteInfo> noteStack; //For solo mode
+
+	bool triggerUnsetOperators;
+	int operatorChannel;
 	int num;
+	
+	//How old this note is (in samples)
+	int age; 
+
 	int release;
 	int channel;
-	int velocity;
-	float floatVelocity;
+	float velocity;
 	int detune;
+	int delay;
+	float panning;
 	void* noteData;
 	GennyPatch* instrumentPatch;
 	GennyPatch* patch;
@@ -493,9 +543,10 @@ struct VibratoInfo
 	void* noteData;
 	float vibratoPhase;
 	float vibratoInc;
-	void Calculate(float tempo, int samples);
+	void Calculate(float tempo, int samples, float sampleRate);
 };
 
+const int kNumNoteChannels = 14;
 class Genny2612
 {
 public:
@@ -503,25 +554,27 @@ public:
 	Genny2612(GennyVST* owner);
 	~Genny2612(void);
 	void initialize();
+	void setSampleRate(double rate);
+
 	void update(float** buffer, int numSamples);
-	void noteOn(int note, float velocity, unsigned char channel, float panning, void* data = nullptr);
-	void updateNote(void* noteData);
-	void noteOff(int note, int channel, void* noteData = nullptr);
+	void noteOn(const int note, float velocity, unsigned char channel, float panning, void* data = nullptr, bool soloTrigger = false);
+	void updateNote(void* noteData, int samples);
+	void noteOff(const int note, int channel, void* noteData = nullptr);
+	void clearNotes();
+
 	void writeParams(int channel) {_chip.writeParams(channel);}
 	void startNote(int channel, int pan);
 	void midiTick();
-	
 	bool getTrueStereo() { return _chip.getImplementation()->fm_enablePerNotePanning; }
 	void setTrueStereo(bool pValue) { _chip.getImplementation()->fm_enablePerNotePanning = pValue; _chip.getImplementation2()->fm_enablePerNotePanning = pValue;}
 
 	IndexBaron* getIndexBaron() { return _indexBaron; }
-	void setFromBaron(IBIndex* param, int channel, float val, bool pForceDACWrite = false);
+	void setFromBaron(IBIndex* param, int channel, float val);
 	//void setFromBaronGlobal(IBIndex* param, int channel, float val);
 	GennyPatch* getChannelPatch(int channel) { return _channelPatches[channel]; }
+	void clearChannelPatch(int channel) { _channelPatches[channel] = nullptr; }
 	GennyPatch* getInstrumentPatch(int channel) { return _channels[channel].instrumentPatch; }
 	void setMasterVolume(float volume) {_processor.setMasterVolume(volume);}
-	virtual void getParameterName(int index, char* text);
-	virtual void getParameterValue(int index, char* text);
 	void setFrequencyTable(double* table) 
 	{ 
 		if(_frequencyTable != NULL && _frequencyTable != _defaultFrequencyTable)
@@ -546,18 +599,22 @@ public:
 	void startLogging(std::string file);
 	void stopLogging();
 
-	static bool channelDirty[10];
+	bool channelDirty[kNumNoteChannels];
 
 	void clearCache();
-	void lfoChanged();
+	void paramChanged(GennyPatch* patch, YM2612Param param, int channel, int op = 0);
+	void panningChanged(GennyPatch* instrument, int channel);
+
+
+	YM2612 _chip;
 
 private:
-	GennyPatch _patches[12];
+	//GennyPatch _patches[12];
 	IndexBaron* _indexBaron;
-	YM2612 _chip;
 	SN76489Chip _snChip;
 	YM2612Processor _processor;
 	GennyVST* _owner;
+	bool _initializedChannels = false;
 
 	// A number that increments every time a note is pressed
 	int _numNotes;
@@ -565,9 +622,9 @@ private:
 	// A number that increments every time a note is released
 	int _releases;
 
-	NoteInfo _channels[10];
+	NoteInfo _channels[kNumNoteChannels];
 	std::vector<VibratoInfo> _vibratoNotes;
-	GennyPatch* _channelPatches[10];
+	GennyPatch* _channelPatches[kNumNoteChannels];
 	VGMLogger _logger;
 
 	bool _logging;

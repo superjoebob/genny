@@ -8,13 +8,13 @@
 #include "UIDigitDisplay.h"
 #include "UIInstrumentsPanel.h"
 
-UIRangeSlider::UIRangeSlider(const CPoint& vPosition, int vWidth, UIPESelectedInstrument* vOwner, bool vLow):
-	CControl(CRect(), vOwner),
+UIRangeSlider::UIRangeSlider(const CPoint& vPosition, int vWidth, GennyInterfaceObject* vOwner, IControlListener* listener, bool vLow, bool flipRight):
+	CControl(CRect(), listener),
 	GennyInterfaceObject(vOwner),
-	_owner(vOwner),
 	_low(vLow),
 	_width(vWidth),
-	_position(vPosition)
+	_position(vPosition),
+	_flipRight(flipRight)
 {
 
 }
@@ -28,17 +28,17 @@ bool UIRangeSlider::attached (CView* parent)
 {
 	bool returnValue = CControl::attached(parent);
 
-	CFrame* frame = _owner->getOwner()->getFrame();
+	CFrame* frame = getFrame();
 	IndexBaron* baron = getIndexBaron();
 
-	UIBitmap sliderKnob(_low ? PNG_SLIDERRIGHT : PNG_SLIDERLEFT);
+	UIBitmap sliderKnob(_flipRight ? PNG_SAMPLESLIDERKNOB : (_low ? PNG_SLIDERLEFT : PNG_SLIDERRIGHT));
 
 	setMax(100);
 	
 	int index = baron->getInsParamIndex(_low ? GIP_RangeHigh : GIP_RangeLow);
-	CRect sliderSize = CRect(0, 0, _width , _low ? 10 : 14);
+	CRect sliderSize = CRect(0, 0, _width + 2, 14);
 	sliderSize.offset(_position.x, _position.y);
-	_slider = new UISlider(sliderSize, this, index, _position.x, _position.x + (_width - 16), sliderKnob, NULL, getInterface());
+	_slider = new UISlider(sliderSize, this, index, _position.x, _position.x + (_width - (_flipRight ? 18 : 16)), sliderKnob, NULL, getInterface());
 	frame->addView(_slider);
 	_slider->setBackground(NULL);
 
@@ -63,12 +63,19 @@ float UIRangeSlider::getValue() const
 
 void UIRangeSlider::valueChanged (CControl* control)
 {
-	_owner->valueChanged(this);
+	listener->valueChanged(this);
+	setDirty(true);
 }
 
 void UIRangeSlider::draw (CDrawContext* pContext)
 {
 	CControl::setDirty(false);
+}
+
+void UIRangeSlider::setVisible(bool visible)
+{
+	__super::setVisible(visible);
+	_slider->setVisible(visible);
 }
 
 void UIRangeSlider::reconnect()
@@ -80,7 +87,7 @@ void UIRangeSlider::reconnect()
 	int selection = getInstrumentIndex(getPatch(0)->SelectedInstrument);
 	GennyPatch* selectedPatch = (GennyPatch*)getVst()->getPatch(selection);
 
-
+	 
 	index = baron->getInsParamIndex(_low ? GIP_RangeHigh : GIP_RangeLow);
 	setValue(selectedPatch->getFromBaron(baron->getIndex(index)));
 	tag = (_low ? kRangeHighStart : kRangeLowStart) + selection;

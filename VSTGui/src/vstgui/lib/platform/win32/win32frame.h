@@ -1,77 +1,61 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __win32frame__
-#define __win32frame__
+#pragma once
 
-#include "../../cframe.h"
+#include "../platform_win32.h"
 
 #if WINDOWS
 
-#include <windows.h>
+#include "../../cframe.h"
 
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
-class Win32Frame : public IPlatformFrame
+class Win32Frame final : public IPlatformFrame, public IWin32PlatformFrame
 {
 public:
-	Win32Frame (IPlatformFrameCallback* frame, const CRect& size, HWND parent);
-	~Win32Frame ();
+	Win32Frame (IPlatformFrameCallback* frame, const CRect& size, HWND parent, PlatformType parentType);
+	~Win32Frame () noexcept;
 
+	HWND getHWND () const override { return windowHandle; }
 	HWND getPlatformWindow () const { return windowHandle; }
 	HWND getParentPlatformWindow () const { return parentWindow; }
 	HWND getOuterWindow () const;
 	IPlatformFrameCallback* getFrame () const { return frame; }
 	
-	// IPlatformFrame
-	bool getGlobalPosition (CPoint& pos) const;
-	bool setSize (const CRect& newSize);
-	bool getSize (CRect& size) const;
-	bool getCurrentMousePosition (CPoint& mousePosition) const;
-	bool getCurrentMouseButtons (CButtonState& buttons) const;
-	bool setMouseCursor (CCursorType type);
-	bool invalidRect (const CRect& rect);
-	bool scrollRect (const CRect& src, const CPoint& distance);
-	bool showTooltip (const CRect& rect, const char* utf8Text);
-	bool hideTooltip ();
-	void* getPlatformRepresentation () const { return windowHandle; }
-	IPlatformTextEdit* createPlatformTextEdit (IPlatformTextEditCallback* textEdit);
-	IPlatformOptionMenu* createPlatformOptionMenu ();
-	COffscreenContext* createOffscreenContext (CCoord width, CCoord height);
-	CView::DragResult doDrag (CDropSource* source, const CPoint& offset, CBitmap* dragBitmap);
+	CCursorType getLastSetCursor () const { return lastSetCursor; }
 
+	// IPlatformFrame
+	bool getGlobalPosition (CPoint& pos) const override;
+	bool setSize (const CRect& newSize) override;
+	bool getSize (CRect& size) const override;
+	bool getCurrentMousePosition (CPoint& mousePosition) const override;
+	bool getCurrentMouseButtons (CButtonState& buttons) const override;
+	bool setMouseCursor (CCursorType type) override;
+	bool invalidRect (const CRect& rect) override;
+	bool scrollRect (const CRect& src, const CPoint& distance) override;
+	bool showTooltip (const CRect& rect, const char* utf8Text) override;
+	bool hideTooltip () override;
+	void* getPlatformRepresentation () const override { return windowHandle; }
+	SharedPointer<IPlatformTextEdit> createPlatformTextEdit (IPlatformTextEditCallback* textEdit) override;
+	SharedPointer<IPlatformOptionMenu> createPlatformOptionMenu () override;
+#if VSTGUI_OPENGL_SUPPORT
+	SharedPointer<IPlatformOpenGLView> createPlatformOpenGLView () override;
+#endif
+	SharedPointer<IPlatformViewLayer> createPlatformViewLayer (IPlatformViewLayerDelegate* drawDelegate, IPlatformViewLayer* parentLayer = nullptr) override { return nullptr; } // not yet supported
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+	DragResult doDrag (IDataPackage* source, const CPoint& offset, CBitmap* dragBitmap) override;
+#endif
+	bool doDrag (const DragDescription& dragDescription, const SharedPointer<IDragCallback>& callback) override;
+
+	PlatformType getPlatformType () const override { return PlatformType::kHWND; }
+	void onFrameClosed () override;
+	Optional<UTF8String> convertCurrentKeyEventToText () override { return {}; }
+	bool setupGenericOptionMenu (bool use, GenericOptionMenuTheme* theme = nullptr) override;
+
+	LONG_PTR WINAPI proc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 //-----------------------------------------------------------------------------
 protected:
 	void initTooltip ();
@@ -85,20 +69,20 @@ protected:
 	HWND parentWindow;
 	HWND windowHandle;
 	HWND tooltipWindow;
+	HWND oldFocusWindow;
 
-	COffscreenContext* backBuffer;
+	SharedPointer<COffscreenContext> backBuffer;
 	CDrawContext* deviceContext;
+	std::unique_ptr<GenericOptionMenuTheme> genericOptionMenuTheme;
 
+	bool inPaint;
 	bool mouseInside;
 
 	RGNDATA* updateRegionList;
 	DWORD updateRegionListSize;
-
-	HWND prevFocus;
+	CCursorType lastSetCursor;
 };
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS
-
-#endif // __win32frame__

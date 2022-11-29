@@ -1,41 +1,15 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cfontchooser.h"
 #include "../cdatabrowser.h"
 #include "cbuttons.h"
 #include "ctextedit.h"
+#include "cscrollbar.h"
+#include "../cstring.h"
+#include "../platform/platformfactory.h"
+#include "../platform/iplatformfont.h"
 #include <list>
 #include <cmath>
 
@@ -48,8 +22,8 @@ namespace CFontChooserInternal {
 class FontPreviewView : public CView
 {
 public:
-	FontPreviewView (const CRect& size, const CColor& color = kWhiteCColor) : CView (size), font (0), fontColor (color) {}
-	~FontPreviewView () { if (font) font->forget (); }
+	FontPreviewView (const CRect& size, const CColor& color = kWhiteCColor) : CView (size), font (nullptr), fontColor (color) {}
+	~FontPreviewView () noexcept override { if (font) font->forget (); }
 	
 	void setFont (CFontRef newFont)
 	{
@@ -61,7 +35,7 @@ public:
 		invalid ();
 	}
 
-	void draw (CDrawContext *context)
+	void draw (CDrawContext *context) override
 	{
 		context->setFontColor (fontColor);
 		context->setFont (font);
@@ -87,15 +61,9 @@ public:
 	}
 	
 protected:
-	CColor fontColor;
 	CFontRef font;
+	CColor fontColor;
 };
-
-static bool stringToValue (UTF8StringPtr txt, float& result, void* userData)
-{
-	result = (float)strtod (txt, 0);
-	return true;
-}
 
 enum {
 	kFontChooserSizeTag,
@@ -105,7 +73,7 @@ enum {
 	kFontChooserStrikeoutTag
 };
 
-} // namespace CFontChooserInternal
+} // CFontChooserInternal
 
 /// @endcond
 
@@ -114,23 +82,26 @@ enum {
 //-----------------------------------------------------------------------------
 CFontChooser::CFontChooser (IFontChooserDelegate* delegate, CFontRef initialFont, const CFontChooserUIDefinition& uiDef)
 : CViewContainer (CRect (0, 0, 300, 500))
-, delegate (0)
-, selFont (0)
-, fontBrowser (0)
+, delegate (nullptr)
+, fontBrowser (nullptr)
+, selFont (nullptr)
 {
 	std::list<std::string> fnList;
-	IPlatformFont::getAllPlatformFontFamilies (fnList);
+	getPlatformFactory ().getAllFontFamilies ([&fnList] (const std::string& name) {
+		fnList.push_back (name);
+		return true;
+	});
 	fnList.sort ();
 	std::list<std::string>::const_iterator it = fnList.begin ();
 	while (it != fnList.end ())
 	{
-		fontNames.push_back (*it);
-		it++;
+		fontNames.emplace_back (*it);
+		++it;
 	}
-	GenericStringListDataBrowserSource* dbSource = new GenericStringListDataBrowserSource (&fontNames, this);
+	auto* dbSource = new GenericStringListDataBrowserSource (&fontNames, this);
 	dbSource->setupUI (uiDef.selectionColor, uiDef.fontColor, uiDef.rowlineColor, uiDef.rowBackColor, uiDef.rowAlternateBackColor, uiDef.font, uiDef.rowHeight);
-	int32_t dbStyle = CDataBrowser::kDrawRowLines | CScrollView::kVerticalScrollbar | CScrollView::kDontDrawFrame;
-	fontBrowser = new CDataBrowser (CRect (0, 0, 200, 500), 0, dbSource, dbStyle, uiDef.scrollbarWidth);
+	int32_t dbStyle = CDataBrowser::kDrawRowLines | CScrollView::kVerticalScrollbar | CScrollView::kDontDrawFrame | CScrollView::kOverlayScrollbars;
+	fontBrowser = new CDataBrowser (CRect (0, 0, 200, 500), dbSource, dbStyle, uiDef.scrollbarWidth);
 	dbSource->forget ();
 	fontBrowser->setAutosizeFlags (kAutosizeLeft | kAutosizeTop | kAutosizeBottom);
 	fontBrowser->setTransparency (true);
@@ -143,7 +114,7 @@ CFontChooser::CFontChooser (IFontChooserDelegate* delegate, CFontRef initialFont
 	}
 	addView (fontBrowser);
 	CRect controlRect (210, 0, 300, 20);
-	CTextLabel* label = new CTextLabel (controlRect, "Size:");
+	auto* label = new CTextLabel (controlRect, "Size:");
 	label->setFont (uiDef.font);
 	label->setFontColor (uiDef.fontColor);
 	label->sizeToFit ();
@@ -164,7 +135,7 @@ CFontChooser::CFontChooser (IFontChooserDelegate* delegate, CFontRef initialFont
 	sizeEdit->setMin (6);
 	sizeEdit->setValue (2000);
 	sizeEdit->sizeToFit ();
-	sizeEdit->setStringToValueProc (CFontChooserInternal::stringToValue, 0);
+	sizeEdit->setStringToValueFunction ([] (UTF8StringPtr txt, float& result, CTextEdit* textEdit) { result = UTF8StringView (txt).toFloat (); return true; });
 	addView (sizeEdit);
 	controlRect.offset (0, 20);
 	boldBox = new CCheckBox (controlRect, this, CFontChooserInternal::kFontChooserBoldTag, "Bold");
@@ -211,7 +182,7 @@ CFontChooser::CFontChooser (IFontChooserDelegate* delegate, CFontRef initialFont
 }
 
 //-----------------------------------------------------------------------------
-CFontChooser::~CFontChooser ()
+CFontChooser::~CFontChooser () noexcept
 {
 	if (selFont)
 		selFont->forget ();
@@ -226,12 +197,12 @@ void CFontChooser::setFont (CFontRef font)
 			selFont->forget ();
 		selFont = new CFontDesc (*font);
 		sizeEdit->setValue ((float)font->getSize ());
-		boldBox->setValue (font->getStyle () & kBoldFace ? 1.f : 0.f);
-		italicBox->setValue (font->getStyle () & kItalicFace ? 1.f : 0.f);
-		underlineBox->setValue (font->getStyle () & kUnderlineFace ? 1.f : 0.f);
-		strikeoutBox->setValue (font->getStyle () & kStrikethroughFace ? 1.f : 0.f);
+		boldBox->setValue ((font->getStyle () & kBoldFace) ? 1.f : 0.f);
+		italicBox->setValue ((font->getStyle () & kItalicFace) ? 1.f : 0.f);
+		underlineBox->setValue ((font->getStyle () & kUnderlineFace) ? 1.f : 0.f);
+		strikeoutBox->setValue ((font->getStyle () & kStrikethroughFace) ? 1.f : 0.f);
 
-		std::vector<std::string>::const_iterator it = fontNames.begin ();
+		auto it = fontNames.begin ();
 		int32_t row = 0;
 		while (it != fontNames.end ())
 		{
@@ -240,7 +211,7 @@ void CFontChooser::setFont (CFontRef font)
 				fontBrowser->setSelectedRow (row, true);
 				break;
 			}
-			it++;
+			++it;
 			row++;
 		}
 		static_cast<CFontChooserInternal::FontPreviewView*> (fontPreviewView)->setFont (selFont);
@@ -251,7 +222,7 @@ void CFontChooser::setFont (CFontRef font)
 //-----------------------------------------------------------------------------
 void CFontChooser::valueChanged (CControl* pControl)
 {
-	if (selFont == 0)
+	if (selFont == nullptr)
 		return;
 
 	switch (pControl->getTag ())
@@ -303,7 +274,8 @@ void CFontChooser::valueChanged (CControl* pControl)
 //-----------------------------------------------------------------------------
 void CFontChooser::dbSelectionChanged (int32_t selectedRow, GenericStringListDataBrowserSource* source)
 {
-	selFont->setName (fontNames[selectedRow].c_str ());
+	if (selectedRow >= 0 && static_cast<size_t> (selectedRow) <= fontNames.size ())
+		selFont->setName (fontNames[static_cast<size_t> (selectedRow)].data ());
 	static_cast<CFontChooserInternal::FontPreviewView*> (fontPreviewView)->setFont (selFont);
 	if (delegate)
 		delegate->fontChanged (this, selFont);
@@ -326,4 +298,4 @@ int32_t CFontChooser::onKeyDown (VstKeyCode& keyCode)
 	return fontBrowser->onKeyDown (keyCode);
 }
 
-} // namespace
+} // VSTGUI

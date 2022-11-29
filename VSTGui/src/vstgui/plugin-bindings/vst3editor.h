@@ -1,46 +1,22 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __vst3editor__
-#define __vst3editor__
+#pragma once
 
 #include "public.sdk/source/vst/vstguieditor.h"
 #include "pluginterfaces/vst/ivstplugview.h"
 #include "../uidescription/uidescription.h"
+#include "../uidescription/icontroller.h"
+#include "../lib/controls/icommandmenuitemtarget.h"
 #include <string>
+#include <vector>
 #include <map>
-#include <deque>
+
+#if VST_VERSION >= 0x030607
+#include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
+#define VST3_CONTENT_SCALE_SUPPORT
+#endif
 
 namespace VSTGUI {
 class ParameterChangeListener;
@@ -55,104 +31,136 @@ class VST3EditorDelegate
 public:
 	virtual ~VST3EditorDelegate () {}
 	
-	virtual CView* createCustomView (UTF8StringPtr name, const UIAttributes& attributes, IUIDescription* description, VST3Editor* editor) { return 0; } ///< create a custom view
+	virtual CView* createCustomView (UTF8StringPtr name, const UIAttributes& attributes, const IUIDescription* description, VST3Editor* editor) { return nullptr; } ///< create a custom view
+	virtual CView* verifyView (CView* view, const UIAttributes& attributes, const IUIDescription* description, VST3Editor* editor) { return view; } ///< verify a view after it was created
 	virtual bool findParameter (const CPoint& pos, Steinberg::Vst::ParamID& paramID, VST3Editor* editor) { return false; } ///< find a parameter
 	virtual bool isPrivateParameter (const Steinberg::Vst::ParamID paramID) { return false; } ///< check if parameter ID is private and should not be exposed to the host
 	virtual void didOpen (VST3Editor* editor) {}	///< called after the editor was opened
 	virtual void willClose (VST3Editor* editor) {}	///< called before the editor will close
+	virtual COptionMenu* createContextMenu (const CPoint& pos, VST3Editor* editor) { return nullptr; }	///< create the context menu for the editor, will be added to the host menu
 
 	/** called when a sub controller should be created.
-	    The controller is now owned by the editor, which will call forget() if it is a CBaseObject, release() if it is a Steinberg::FObject or it will be simply deleted if the frame gets closed. */
-	virtual IController* createSubController (UTF8StringPtr name, IUIDescription* description, VST3Editor* editor) { return 0; } ///< create a sub controller
+	    The controller is now owned by the editor, which will call forget() if it is a CBaseObject,
+	   release() if it is a Steinberg::FObject or it will be simply deleted if the frame gets
+	   closed. */
+	virtual IController* createSubController (UTF8StringPtr name, const IUIDescription* description,
+	                                          VST3Editor* editor)
+	{
+		return nullptr;
+	} ///< create a sub controller
 };
 
 //-----------------------------------------------------------------------------
 //! @brief VST3 Editor with automatic parameter binding
 //! @ingroup new_in_4_0
 //-----------------------------------------------------------------------------
-class VST3Editor : public Steinberg::Vst::VSTGUIEditor, public Steinberg::Vst::IParameterFinder, public IController, public IViewAddedRemovedObserver, public IMouseObserver
+class VST3Editor : public Steinberg::Vst::VSTGUIEditor,
+                   public Steinberg::Vst::IParameterFinder,
+                   public IController,
+                   public IViewAddedRemovedObserver,
+                   public IMouseObserver,
+                   public CommandMenuItemTargetAdapter
+#ifdef VST3_CONTENT_SCALE_SUPPORT
+				 , public Steinberg::IPlugViewContentScaleSupport
+#endif
 {
 public:
 	VST3Editor (Steinberg::Vst::EditController* controller, UTF8StringPtr templateName, UTF8StringPtr xmlFile);
-	VST3Editor (UIDescription* desc, Steinberg::Vst::EditController* controller, UTF8StringPtr templateName, UTF8StringPtr xmlFile = 0);
+	VST3Editor (UIDescription* desc, Steinberg::Vst::EditController* controller, UTF8StringPtr templateName, UTF8StringPtr xmlFile = nullptr);
 
 	bool exchangeView (UTF8StringPtr templateName);
 	void enableTooltips (bool state);
 
+	bool setEditorSizeConstrains (const CPoint& newMinimumSize, const CPoint& newMaximumSize);
+	void getEditorSizeConstrains (CPoint& minimumSize, CPoint& maximumSize) const;
+	bool requestResize (const CPoint& newSize);
+
+	void setZoomFactor (double factor);
+	double getZoomFactor () const { return zoomFactor; }
+	
+	void setAllowedZoomFactors (std::vector<double> zoomFactors) { allowedZoomFactors = zoomFactors; }
+
 //-----------------------------------------------------------------------------
 	DELEGATE_REFCOUNT(Steinberg::Vst::VSTGUIEditor)
-	Steinberg::tresult PLUGIN_API queryInterface (const ::Steinberg::TUID iid, void** obj);
+	Steinberg::tresult PLUGIN_API queryInterface (const ::Steinberg::TUID iid, void** obj) override;
 protected:
-	~VST3Editor ();
+	~VST3Editor () override;
 	void init ();
-	ParameterChangeListener* getParameterChangeListener (int32_t tag);
+	double getAbsScaleFactor () const;
+	ParameterChangeListener* getParameterChangeListener (int32_t tag) const;
 	void recreateView ();
 
-	#if VSTGUI_LIVE_EDITING
-	void runNewTemplateDialog (IdStringPtr baseViewName);
-	void runTemplateSettingsDialog ();
 	void syncParameterTags ();
-	#endif // VSTGUI_LIVE_EDITING
-	
-	bool PLUGIN_API open (void* parent);
-	void PLUGIN_API close ();
+	void save (bool saveAs = false);
+	bool enableEditing (bool state);
 
-	void beginEdit (int32_t index);
-	void endEdit (int32_t index);
+	bool PLUGIN_API open (void* parent, const PlatformType& type) override;
+	void PLUGIN_API close () override;
 
-	CView* createView (const UIAttributes& attributes, IUIDescription* description);
-	CView* verifyView (CView* view, const UIAttributes& attributes, IUIDescription* description);
+	void beginEdit (int32_t index) override;
+	void endEdit (int32_t index) override;
 
-	CMessageResult notify (CBaseObject* sender, IdStringPtr message);
+	CView* createView (const UIAttributes& attributes, const IUIDescription* description) override;
+	CView* verifyView (CView* view, const UIAttributes& attributes, const IUIDescription* description) override;
+	IController* createSubController (UTF8StringPtr name, const IUIDescription* description) override;
 
-	Steinberg::tresult PLUGIN_API onSize (Steinberg::ViewRect* newSize);
-	Steinberg::tresult PLUGIN_API canResize ();
-	Steinberg::tresult PLUGIN_API checkSizeConstraint (Steinberg::ViewRect* rect);
+	CMessageResult notify (CBaseObject* sender, IdStringPtr message) override;
+
+	bool beforeSizeChange (const CRect& newSize, const CRect& oldSize) override;
+
+	Steinberg::tresult PLUGIN_API onSize (Steinberg::ViewRect* newSize) override;
+	Steinberg::tresult PLUGIN_API canResize () override;
+	Steinberg::tresult PLUGIN_API checkSizeConstraint (Steinberg::ViewRect* rect) override;
 
 	// IParameterFinder
-	Steinberg::tresult PLUGIN_API findParameter (Steinberg::int32 xPos, Steinberg::int32 yPos, Steinberg::Vst::ParamID& resultTag);
+	Steinberg::tresult PLUGIN_API findParameter (Steinberg::int32 xPos, Steinberg::int32 yPos, Steinberg::Vst::ParamID& resultTag) override;
 
-	// CControlListener
-	virtual void valueChanged (CControl* pControl);
-	virtual void controlBeginEdit (CControl* pControl);
-	virtual void controlEndEdit (CControl* pControl);
-	virtual void controlTagWillChange (CControl* pControl);
-	virtual void controlTagDidChange (CControl* pControl);
+	// IControlListener
+	virtual void valueChanged (CControl* pControl) override;
+	virtual void controlBeginEdit (CControl* pControl) override;
+	virtual void controlEndEdit (CControl* pControl) override;
+	virtual void controlTagWillChange (CControl* pControl) override;
+	virtual void controlTagDidChange (CControl* pControl) override;
 
 	// IViewAddedRemovedObserver
-	void onViewAdded (CFrame* frame, CView* view);
-	void onViewRemoved (CFrame* frame, CView* view);
+	void onViewAdded (CFrame* frame, CView* view) override;
+	void onViewRemoved (CFrame* frame, CView* view) override;
 
 	// IMouseObserver
-	void onMouseEntered (CView* view, CFrame* frame) {}
-	void onMouseExited (CView* view, CFrame* frame) {}
-	CMouseEventResult onMouseMoved (CFrame* frame, const CPoint& where, const CButtonState& buttons) { return kMouseEventNotHandled; }
-	CMouseEventResult onMouseDown (CFrame* frame, const CPoint& where, const CButtonState& buttons);
+	void onMouseEntered (CView* view, CFrame* frame) override {}
+	void onMouseExited (CView* view, CFrame* frame) override {}
+	CMouseEventResult onMouseMoved (CFrame* frame, const CPoint& where, const CButtonState& buttons) override { return kMouseEventNotHandled; }
+	CMouseEventResult onMouseDown (CFrame* frame, const CPoint& where, const CButtonState& buttons) override;
 
-	// @cond ignore
-	struct SubController
-	{
-		IController* controller;
-		std::string name;
-		
-		SubController (IController* c, const std::string& n) : controller (c), name (n) {}
-	};
-	// @endcond
+	// CommandMenuItemTargetAdapter
+	bool validateCommandMenuItem (CCommandMenuItem* item) override;
+	bool onCommandMenuItemSelected (CCommandMenuItem* item) override;
 
-	UIDescription* description;
-	VST3EditorDelegate* delegate;
-	std::map<int32_t, ParameterChangeListener*> paramChangeListeners;
-	std::deque<SubController> subControllerStack;
-	std::list<IController*> subControllers;
+#ifdef VST3_CONTENT_SCALE_SUPPORT
+	Steinberg::tresult PLUGIN_API setContentScaleFactor (ScaleFactor factor) override;
+#endif
+
+	struct KeyboardHook;
+	KeyboardHook* keyboardHook {nullptr};
+	UIDescription* description {nullptr};
+	VST3EditorDelegate* delegate {nullptr};
+	IController* originalController {nullptr};
+	using ParameterChangeListenerMap = std::map<int32_t, ParameterChangeListener*>;
+	ParameterChangeListenerMap paramChangeListeners;
 	std::string viewName;
 	std::string xmlFile;
-	bool tooltipsEnabled;
-	bool doCreateView;
+	bool tooltipsEnabled {true};
+	bool doCreateView {false};
+	bool editingEnabled {false};
+	bool requestResizeGuard {false};
+
+	double contentScaleFactor {1.};
+	double zoomFactor {1.};
+	std::vector<double> allowedZoomFactors;
 	
 	CPoint minSize;
 	CPoint maxSize;
+	CRect nonEditRect;
 };
 
 } // namespace
-
-#endif

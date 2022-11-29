@@ -1,53 +1,27 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __win32support__
-#define __win32support__
+#pragma once
 
 #include "../../vstguibase.h"
 
 #if WINDOWS
 
+struct IUnknown;
+
 #include "../../cbitmap.h"
-
+#include "../../optional.h"
+#include "../iplatformresourceinputstream.h"
+#include <algorithm>
 #include <windows.h>
-
-#include <objidl.h>
-#include <gdiplus.h>
+#include <combaseapi.h>
 
 interface ID2D1Factory;
 interface IDWriteFactory;
+interface IWICImagingFactory;
+
+struct VstKeyCode;
 
 namespace VSTGUI {
 
@@ -62,34 +36,23 @@ namespace VSTGUI {
 class CDrawContext;
 
 extern HINSTANCE GetInstance ();
-extern const OSVERSIONINFOEX& getSystemVersion ();
 extern ID2D1Factory* getD2DFactory ();
+extern IWICImagingFactory* getWICImageingFactory ();
+extern void useD2D ();
+extern void unuseD2D ();
 extern IDWriteFactory* getDWriteFactory ();
 extern CDrawContext* createDrawContext (HWND window, HDC device, const CRect& surfaceRect);
-
-/// @cond ignore
-class GDIPlusGlobals : public CBaseObject
-{
-public:
-	static void enter ();
-	static void exit ();
-protected:
-	GDIPlusGlobals ();
-	~GDIPlusGlobals ();
-
-	static GDIPlusGlobals* gInstance;
-	ULONG_PTR gdiplusToken;
-};
+extern Optional<VstKeyCode> keyMessageToKeyCode (WPARAM wParam, LPARAM lParam);
 
 class UTF8StringHelper
 {
 public:
-	UTF8StringHelper (const char* utf8Str) : utf8Str (utf8Str), allocWideStr (0), allocStrIsWide (true) {}
-	UTF8StringHelper (const WCHAR* wideStr) : wideStr (wideStr), allocUTF8Str (0), allocStrIsWide (false) {}
-	~UTF8StringHelper ()
+	UTF8StringHelper (const char* utf8Str, int numChars = -1) : utf8Str (utf8Str), allocWideStr (nullptr), allocStrIsWide (true), numCharacters (numChars) {}
+	UTF8StringHelper (const WCHAR* wideStr, int numChars = -1) : wideStr (wideStr), allocUTF8Str (nullptr), allocStrIsWide (false), numCharacters (numChars) {}
+	~UTF8StringHelper () noexcept
 	{
 		if (allocUTF8Str)
-			::free (allocUTF8Str);
+			std::free (allocUTF8Str);
 	}
 
 	operator const char* () { return getUTF8String (); }
@@ -103,11 +66,15 @@ public:
 		{
 			if (!allocWideStr && utf8Str)
 			{
-				int numChars = MultiByteToWideChar (CP_UTF8, 0, utf8Str, -1, 0, 0);
-				allocWideStr = (WCHAR*)::malloc ((numChars+1)*2);
-				if (MultiByteToWideChar (CP_UTF8, 0, utf8Str, -1, allocWideStr, numChars) == 0)
+				int numChars = MultiByteToWideChar (CP_UTF8, 0, utf8Str, numCharacters, nullptr, 0);
+				allocWideStr = (WCHAR*)::std::malloc ((static_cast<size_t> (numChars)+1)*sizeof (WCHAR));
+				if (allocWideStr)
 				{
-					allocWideStr[0] = 0;
+					if (MultiByteToWideChar (CP_UTF8, 0, utf8Str, numCharacters, allocWideStr,
+											 numChars) == 0)
+						allocWideStr[0] = 0;
+					else
+						allocWideStr[numChars] = 0;
 				}
 			}
 			return allocWideStr;
@@ -121,11 +88,15 @@ public:
 		{
 			if (!allocUTF8Str && wideStr)
 			{
-				int allocSize = WideCharToMultiByte (CP_UTF8, 0, wideStr, -1, 0, 0, 0, 0);
-				allocUTF8Str = (char*)::malloc (allocSize+1);
-				if (WideCharToMultiByte (CP_UTF8, 0, wideStr, -1, allocUTF8Str, allocSize, 0, 0) == 0)
+				int allocSize = WideCharToMultiByte (CP_UTF8, 0, wideStr, numCharacters, nullptr, 0, nullptr, nullptr);
+				allocUTF8Str = (char*)::std::malloc (static_cast<size_t> (allocSize)+1);
+				if (allocUTF8Str)
 				{
-					allocUTF8Str[0] = 0;
+					if (WideCharToMultiByte (CP_UTF8, 0, wideStr, numCharacters, allocUTF8Str,
+											 allocSize, nullptr, nullptr) == 0)
+						allocUTF8Str[0] = 0;
+					else
+						allocUTF8Str[allocSize] = 0;
 				}
 			}
 			return allocUTF8Str;
@@ -142,41 +113,11 @@ protected:
 	};
 
 	bool allocStrIsWide;
-};
-
-class ResourceStream : public IStream
-{
-public:
-	ResourceStream ();
-
-	bool open (const CResourceDescription& resourceDesc, const char* type);
-
-	virtual HRESULT STDMETHODCALLTYPE Read (void *pv, ULONG cb, ULONG *pcbRead);
-    virtual HRESULT STDMETHODCALLTYPE Write (const void *pv, ULONG cb, ULONG *pcbWritten);
-    virtual HRESULT STDMETHODCALLTYPE Seek (LARGE_INTEGER dlibMove, DWORD dwOrigin, ULARGE_INTEGER *plibNewPosition);    
-    virtual HRESULT STDMETHODCALLTYPE SetSize (ULARGE_INTEGER libNewSize);
-    virtual HRESULT STDMETHODCALLTYPE CopyTo (IStream *pstm, ULARGE_INTEGER cb, ULARGE_INTEGER *pcbRead, ULARGE_INTEGER *pcbWritten);
-    virtual HRESULT STDMETHODCALLTYPE Commit (DWORD grfCommitFlags);
-    virtual HRESULT STDMETHODCALLTYPE Revert (void);
-    virtual HRESULT STDMETHODCALLTYPE LockRegion (ULARGE_INTEGER libOffset, ULARGE_INTEGER cb, DWORD dwLockType);
-    virtual HRESULT STDMETHODCALLTYPE UnlockRegion (ULARGE_INTEGER libOffset, ULARGE_INTEGER cb, DWORD dwLockType);
-    virtual HRESULT STDMETHODCALLTYPE Stat (STATSTG *pstatstg, DWORD grfStatFlag);
-    virtual HRESULT STDMETHODCALLTYPE Clone (IStream **ppstm);
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void ** ppvObject);
-    virtual ULONG STDMETHODCALLTYPE AddRef(void);
-    virtual ULONG STDMETHODCALLTYPE Release(void);
-
-protected:
-	HGLOBAL resData;
-	uint32_t streamPos;
-	uint32_t resSize;
-	LONG _refcount;
+	int numCharacters {-1};
 };
 
 /// @endcond
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS
-
-#endif

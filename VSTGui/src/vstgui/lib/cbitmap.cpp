@@ -1,39 +1,13 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cbitmap.h"
 #include "cdrawcontext.h"
+#include "ccolor.h"
+#include "platform/iplatformbitmap.h"
+#include "platform/platformfactory.h"
+#include <cassert>
 
 namespace VSTGUI {
 
@@ -64,80 +38,156 @@ CBitmap* bitmap2 = new CBitmap ("RealFileName.png"); // string
 */
 //-----------------------------------------------------------------------------
 CBitmap::CBitmap ()
-: platformBitmap (0)
 {
 }
 
 //-----------------------------------------------------------------------------
 CBitmap::CBitmap (const CResourceDescription& desc)
-: platformBitmap (0)
-, resourceDesc (desc)
+: resourceDesc (desc)
 {
-	platformBitmap = IPlatformBitmap::create ();
-	if (platformBitmap && !platformBitmap->load (desc))
+	if (auto platformBitmap = getPlatformFactory().createBitmap(desc))
 	{
-		platformBitmap->forget ();
-		platformBitmap = 0;
+		bitmaps.emplace_back(platformBitmap);
+
+		//Skinning WIP
+		/*auto pixelAccess = platformBitmap->lockPixels(true);
+		auto size = platformBitmap->getSize();
+		int numPixels = size.x * size.y;
+
+		int replace = 8 | (8 << 8) | (8 << 16) | (255 << 24);
+		int replaceWith = 255 | (255 << 8) | (255 << 16) | (255 << 24);
+		for (int i = 0; i < numPixels; i++)
+		{
+			int* col = ((int*)(pixelAccess->getAddress() + (i * 4)));
+			if (*col == replace)
+				*col = replaceWith;
+		}*/
 	}
 }
 
 //-----------------------------------------------------------------------------
 CBitmap::CBitmap (CCoord width, CCoord height)
-: platformBitmap (0)
 {
-	CPoint p (width, height);
-	platformBitmap = IPlatformBitmap::create (&p);
+	if (auto platformBitmap = getPlatformFactory ().createBitmap ({width, height}))
+		bitmaps.emplace_back (platformBitmap);
+}
+
+//------------------------------------------------------------------------
+CBitmap::CBitmap (CPoint size, double scaleFactor)
+{
+	size.x *= scaleFactor;
+	size.y *= scaleFactor;
+	size.makeIntegral ();
+	if (auto platformBitmap = getPlatformFactory ().createBitmap (size))
+	{
+		platformBitmap->setScaleFactor (scaleFactor);
+		bitmaps.emplace_back (platformBitmap);
+	}
 }
 
 //-----------------------------------------------------------------------------
-CBitmap::CBitmap (IPlatformBitmap* platformBitmap)
-: platformBitmap (platformBitmap)
+CBitmap::CBitmap (const PlatformBitmapPtr& platformBitmap)
 {
-	if (platformBitmap)
-		platformBitmap->remember ();
-}
-
-//-----------------------------------------------------------------------------
-CBitmap::~CBitmap ()
-{
-	if (platformBitmap)
-		platformBitmap->forget ();
+	bitmaps.emplace_back (platformBitmap);
 }
 
 //-----------------------------------------------------------------------------
 void CBitmap::draw (CDrawContext* context, const CRect& rect, const CPoint& offset, float alpha)
 {
-	CRect clipRect;
-	context->getClipRect (clipRect);
-	clipRect.bound (rect);
-	if (!clipRect.isEmpty ())
+	drawClipped (context, rect, [&] () {
 		context->drawBitmap (this, rect, offset, alpha);
+	});
 }
 
 //-----------------------------------------------------------------------------
 CCoord CBitmap::getWidth () const
 {
-	if (platformBitmap)
-		return platformBitmap->getSize ().x;
+	if (auto pb = getPlatformBitmap ())
+		return pb->getSize ().x / pb->getScaleFactor ();
 	return 0;
 }
 
 //-----------------------------------------------------------------------------
 CCoord CBitmap::getHeight () const
 {
-	if (platformBitmap)
-		return platformBitmap->getSize ().y;
+	if (auto pb = getPlatformBitmap ())
+		return pb->getSize ().y / pb->getScaleFactor ();
 	return 0;
 }
 
-//-----------------------------------------------------------------------------
-void CBitmap::setPlatformBitmap (IPlatformBitmap* bitmap)
+//------------------------------------------------------------------------
+CPoint CBitmap::getSize () const
 {
-	if (platformBitmap)
-		platformBitmap->forget ();
-	platformBitmap = bitmap;
-	if (platformBitmap)
-		platformBitmap->remember ();
+	CPoint p;
+	if (auto pb = getPlatformBitmap ())
+	{
+		auto scaleFactor = pb->getScaleFactor ();
+		p = pb->getSize ();
+		p.x /= scaleFactor;
+		p.y /= scaleFactor;
+	}
+	return p;
+}
+
+//-----------------------------------------------------------------------------
+auto CBitmap::getPlatformBitmap () const -> PlatformBitmapPtr
+{
+	return bitmaps.empty () ? nullptr : bitmaps[0];
+}
+
+//-----------------------------------------------------------------------------
+void CBitmap::setPlatformBitmap (const PlatformBitmapPtr& bitmap)
+{
+	if (bitmaps.empty ())
+		bitmaps.emplace_back (bitmap);
+	else
+		bitmaps[0] = bitmap;
+}
+
+//-----------------------------------------------------------------------------
+bool CBitmap::addBitmap (const PlatformBitmapPtr& platformBitmap)
+{
+	double scaleFactor = platformBitmap->getScaleFactor ();
+	CPoint size = getSize ();
+	CPoint bitmapSize = platformBitmap->getSize ();
+	bitmapSize.x /= scaleFactor;
+	bitmapSize.y /= scaleFactor;
+	if (size != bitmapSize)
+	{
+		vstgui_assert (size == bitmapSize, "wrong bitmap size");
+		return false;
+	}
+	for (const auto& bitmap : bitmaps)
+	{
+		if (bitmap->getScaleFactor () == scaleFactor || bitmap == platformBitmap)
+		{
+			vstgui_assert (bitmap->getScaleFactor () != scaleFactor && bitmap != platformBitmap);
+			return false;
+		}
+	}
+	bitmaps.emplace_back (platformBitmap);
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+auto CBitmap::getBestPlatformBitmapForScaleFactor (double scaleFactor) const -> PlatformBitmapPtr
+{
+	if (bitmaps.empty ())
+		return nullptr;
+	auto bestBitmap = bitmaps[0];
+	double bestDiff = std::abs (scaleFactor - bestBitmap->getScaleFactor ());
+	for (const auto& bitmap : bitmaps)
+	{
+		if (bitmap->getScaleFactor () == scaleFactor)
+			return bitmap;
+		else if (std::abs (scaleFactor - bitmap->getScaleFactor ()) <= bestDiff && bitmap->getScaleFactor () > bestBitmap->getScaleFactor ())
+		{
+			bestBitmap = bitmap;
+			bestDiff = std::abs (scaleFactor - bitmap->getScaleFactor ());
+		}
+	}
+
+	return bestBitmap;
 }
 
 //-----------------------------------------------------------------------------
@@ -171,112 +221,34 @@ A nine-part tiled bitmap is tiled in nine parts which are drawing according to i
 
 */
 //-----------------------------------------------------------------------------
-CNinePartTiledBitmap::CNinePartTiledBitmap (const CResourceDescription& desc, const PartOffsets& offsets)
+CNinePartTiledBitmap::CNinePartTiledBitmap (const CResourceDescription& desc, const CNinePartTiledDescription& offsets)
 : CBitmap (desc)
 , offsets (offsets)
 {
 }
 
 //-----------------------------------------------------------------------------
-CNinePartTiledBitmap::CNinePartTiledBitmap (IPlatformBitmap* platformBitmap, const PartOffsets& offsets)
+CNinePartTiledBitmap::CNinePartTiledBitmap (const PlatformBitmapPtr& platformBitmap, const CNinePartTiledDescription& offsets)
 : CBitmap (platformBitmap)
 , offsets (offsets)
 {
 }
 
 //-----------------------------------------------------------------------------
-CNinePartTiledBitmap::~CNinePartTiledBitmap ()
-{
-}
-
-//-----------------------------------------------------------------------------
 void CNinePartTiledBitmap::draw (CDrawContext* inContext, const CRect& inDestRect, const CPoint& offset, float inAlpha)
 {
-	drawParts (inContext, inDestRect, inAlpha);
-}
-
-//-----------------------------------------------------------------------------
-void CNinePartTiledBitmap::drawParts (CDrawContext* inContext, const CRect& inDestRect, float inAlpha)
-{
-	CRect	myBitmapBounds (0, 0, getWidth (), getHeight ());
-	CRect	mySourceRect [kPartCount];
-	CRect	myDestRect [kPartCount];
-	
-	calcPartRects (myBitmapBounds, offsets, mySourceRect);
-	calcPartRects (inDestRect, offsets, myDestRect);
-	
-	for (size_t i = 0; i < kPartCount; i++)
-		drawPart (inContext, mySourceRect[i], myDestRect[i], inAlpha);
-}
-
-//-----------------------------------------------------------------------------
-void CNinePartTiledBitmap::calcPartRects(const CRect& inBitmapRect, const PartOffsets& inPartOffset, CRect* outRect)
-{
-	// Center
-	CRect myCenter = outRect[kPartCenter]	(inBitmapRect.left		+ inPartOffset.left,
-											 inBitmapRect.top		+ inPartOffset.top,
-											 inBitmapRect.right		- inPartOffset.right,
-											 inBitmapRect.bottom	- inPartOffset.bottom);
-	
-	// Edges
-	outRect[kPartTop]			(myCenter.left,		inBitmapRect.top,	myCenter.right,		myCenter.top);
-	outRect[kPartLeft]			(inBitmapRect.left,	myCenter.top,		myCenter.left,		myCenter.bottom);
-	outRect[kPartRight]			(myCenter.right,	myCenter.top,		inBitmapRect.right,	myCenter.bottom);
-	outRect[kPartBottom]		(myCenter.left,		myCenter.bottom,	myCenter.right,		inBitmapRect.bottom);
-	
-	// Corners
-	outRect[kPartTopLeft]		(inBitmapRect.left,	inBitmapRect.top,	myCenter.left,		myCenter.top);
-	outRect[kPartTopRight]		(myCenter.right,	inBitmapRect.top,	inBitmapRect.right,	myCenter.top);
-	outRect[kPartBottomLeft]	(inBitmapRect.left,	myCenter.bottom,	myCenter.left,		inBitmapRect.bottom);
-	outRect[kPartBottomRight]	(myCenter.right,	myCenter.bottom,	inBitmapRect.right,	inBitmapRect.bottom);
-}
-
-//-----------------------------------------------------------------------------
-void CNinePartTiledBitmap::drawPart (CDrawContext* inContext, const CRect& inSourceRect, const CRect& inDestRect, float inAlpha)
-{
-	if (	(inSourceRect.width()	<= 0)
-		||	(inSourceRect.height()	<= 0)
-		||	(inDestRect.width()		<= 0)
-		||	(inDestRect.height()	<= 0))
-		return;
-	
-	CCoord	myLeft;
-	CCoord	myTop;
-	CPoint	mySourceOffset (inSourceRect.left, inSourceRect.top);
-	CRect	myPartRect;
-	
-	for (myTop = inDestRect.top; myTop < inDestRect.bottom; myTop += inSourceRect.height ())
-	{
-		myPartRect.top		= myTop;
-		myPartRect.bottom	= myTop + inSourceRect.height ();
-		if (myPartRect.bottom > inDestRect.bottom)
-			myPartRect.bottom = inDestRect.bottom;
-		// The following should never be true, I guess
-		if (myPartRect.height () > inSourceRect.height ())
-			myPartRect.setHeight (inSourceRect.height ());
-		
-		for (myLeft = inDestRect.left; myLeft < inDestRect.right; myLeft += inSourceRect.width ())
-		{
-			myPartRect.left		= myLeft;
-			myPartRect.right	= myLeft + inSourceRect.width ();
-			if (myPartRect.right > inDestRect.right)
-				myPartRect.right = inDestRect.right;
-			// The following should never be true, I guess
-			if (myPartRect.width () > inSourceRect.width ())
-				myPartRect.setWidth (inSourceRect.width ());
-			
-			CBitmap::draw (inContext, myPartRect, mySourceOffset, inAlpha);
-		}
-	}
+	inContext->drawBitmapNinePartTiled (this, inDestRect, offsets, inAlpha);
 }
 
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 CBitmapPixelAccess::CBitmapPixelAccess ()
-: bitmap (0)
-, pixelAccess (0)
-, currentPos (0)
+: bitmap (nullptr)
+, pixelAccess (nullptr)
+, currentPos (nullptr)
+, address (nullptr)
+, bytesPerRow (0)
 , maxX (0)
 , maxY (0)
 , x (0)
@@ -285,50 +257,15 @@ CBitmapPixelAccess::CBitmapPixelAccess ()
 }
 
 //------------------------------------------------------------------------
-CBitmapPixelAccess::~CBitmapPixelAccess ()
-{
-	if (pixelAccess)
-		pixelAccess->forget ();
-}
-
-//------------------------------------------------------------------------
 void CBitmapPixelAccess::init (CBitmap* _bitmap, IPlatformBitmapPixelAccess* _pixelAccess)
 {
 	bitmap = _bitmap;
 	pixelAccess = _pixelAccess;
-	currentPos = pixelAccess->getAddress ();
-	maxX = (uint32_t)(bitmap->getWidth ())-1;
-	maxY = (uint32_t)(bitmap->getHeight ())-1;
-}
-
-//------------------------------------------------------------------------
-bool CBitmapPixelAccess::operator++ ()
-{
-	if (x < maxX)
-	{
-		x++;
-		currentPos += 4;
-		return true;
-	}
-	else if (y < maxY)
-	{
-		y++;
-		x = 0;
-		currentPos = pixelAccess->getAddress () + y * pixelAccess->getBytesPerRow ();
-		return true;
-	}
-	return false;
-}
-
-//------------------------------------------------------------------------
-bool CBitmapPixelAccess::setPosition (uint32_t _x, uint32_t _y)
-{
-	if (_x >= maxX || _y >= maxY)
-		return false;
-	x = _x;
-	y = _y;
-	currentPos = pixelAccess->getAddress () + y * pixelAccess->getBytesPerRow () + x * 4;
-	return true;
+	address = currentPos = pixelAccess->getAddress ();
+	bytesPerRow = pixelAccess->getBytesPerRow ();
+	auto size = bitmap->getPlatformBitmap ()->getSize ();
+	maxX = static_cast<uint32_t> (size.x) - 1;
+	maxY = static_cast<uint32_t> (size.y) - 1;
 }
 
 /// @cond ignore
@@ -339,14 +276,14 @@ template <int32_t redPosition, int32_t greenPosition, int32_t bluePosition, int3
 class CBitmapPixelAccessOrder : public CBitmapPixelAccess
 {
 public:
-	void getColor (CColor& c) const
+	void getColor (CColor& c) const override
 	{
 		c.red = currentPos[redPosition];
 		c.green = currentPos[greenPosition];
 		c.blue = currentPos[bluePosition];
 		c.alpha = currentPos[alphaPosition];
 	}
-	void setColor (const CColor& c)
+	void setColor (const CColor& c) override
 	{
 		currentPos[redPosition] = c.red;
 		currentPos[greenPosition] = c.green;
@@ -359,12 +296,12 @@ public:
 //------------------------------------------------------------------------
 CBitmapPixelAccess* CBitmapPixelAccess::create (CBitmap* bitmap, bool alphaPremultiplied)
 {
-	if (bitmap == 0 || bitmap->getPlatformBitmap () == 0)
-		return 0;
-	IPlatformBitmapPixelAccess* pixelAccess = bitmap->getPlatformBitmap ()->lockPixels (alphaPremultiplied);
-	if (pixelAccess == 0)
-		return 0;
-	CBitmapPixelAccess* result = 0;
+	if (bitmap == nullptr || bitmap->getPlatformBitmap () == nullptr)
+		return nullptr;
+	auto pixelAccess = bitmap->getPlatformBitmap ()->lockPixels (alphaPremultiplied);
+	if (pixelAccess == nullptr)
+		return nullptr;
+	CBitmapPixelAccess* result = nullptr;
 	switch (pixelAccess->getPixelFormat ())
 	{
 		case IPlatformBitmapPixelAccess::kARGB: result = new CBitmapPixelAccessOrder<1,2,3,0> (); break;
@@ -377,5 +314,4 @@ CBitmapPixelAccess* CBitmapPixelAccess::create (CBitmap* bitmap, bool alphaPremu
 	return result;
 }
 
-} // namespace VSTGUI
-
+} // VSTGUI

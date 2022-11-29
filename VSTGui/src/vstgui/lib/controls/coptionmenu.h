@@ -1,48 +1,20 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __coptionmenu__
-#define __coptionmenu__
+#pragma once
 
 #include "cparamdisplay.h"
-#include <list>
-
-#include "../platform/iplatformoptionmenu.h"
+#include "icommandmenuitemtarget.h"
+#include "ioptionmenulistener.h"
+#include "../cstring.h"
+#include "../dispatchlist.h"
+#include "../cbitmap.h"
+#include <vector>
+#include <functional>
 
 namespace VSTGUI {
 
-class COptionMenu;
 //-----------------------------------------------------------------------------
 // CMenuItem Declaration
 //! @brief a menu item
@@ -52,68 +24,185 @@ class CMenuItem : public CBaseObject
 public:
 	enum Flags {
 		kNoFlags	= 0,
-		kDisabled	= 1 << 0,	///< item is gray and not selectable
-		kTitle		= 1 << 1,	///< item indicates a title and is not selectable
-		kChecked	= 1 << 2,	///< item has a checkmark
-		kSeparator	= 1 << 3	///< item is a separator
+		/** item is gray and not selectable */
+		kDisabled	= 1 << 0,
+		/** item indicates a title and is not selectable */
+		kTitle		= 1 << 1,
+		/** item has a checkmark */
+		kChecked	= 1 << 2,
+		/** item is a separator */
+		kSeparator	= 1 << 3
 	};
 
-	CMenuItem (UTF8StringPtr title, UTF8StringPtr keycode = 0, int32_t keyModifiers = 0, CBitmap* icon = 0, int32_t flags = kNoFlags);
-	CMenuItem (UTF8StringPtr title, COptionMenu* submenu, CBitmap* icon = 0);
-	CMenuItem (UTF8StringPtr title, int32_t tag);
+	CMenuItem (const UTF8String& title, const UTF8String& keycode = "", int32_t keyModifiers = 0, CBitmap* icon = nullptr, int32_t flags = kNoFlags);
+	CMenuItem (const UTF8String& title, COptionMenu* submenu, CBitmap* icon = nullptr);
+	CMenuItem (const UTF8String& title, int32_t tag);
 	CMenuItem (const CMenuItem& item);
 
 	//-----------------------------------------------------------------------------
 	/// @name CMenuItem Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual void setTitle (UTF8StringPtr title);							///< set title of menu item
-	virtual void setSubmenu (COptionMenu* submenu);						///< set submenu of menu item
-	virtual void setKey (UTF8StringPtr keyCode, int32_t keyModifiers = 0);	///< set keycode and key modifiers of menu item
-	virtual void setEnabled (bool state = true);						///< set menu item enabled state
-	virtual void setChecked (bool state = true);						///< set menu item checked state
-	virtual void setIsTitle (bool state = true);						///< set menu item title state
-	virtual void setIsSeparator (bool state = true);					///< set menu item separator state
-	virtual void setIcon (CBitmap* icon);								///< set menu item icon
-	virtual void setTag (int32_t tag);										///< set menu item tag
+	/** set title of menu item */
+	virtual void setTitle (const UTF8String& title);
+	/** set submenu of menu item */
+	virtual void setSubmenu (COptionMenu* submenu);
+	/** set keycode and key modifiers of menu item */
+	virtual void setKey (const UTF8String& keyCode, int32_t keyModifiers = 0);
+	/** set virtual keycode and key modifiers of menu item */
+	virtual void setVirtualKey (int32_t virtualKeyCode, int32_t keyModifiers = 0);
+	/** set menu item enabled state */
+	virtual void setEnabled (bool state = true);
+	/** set menu item checked state */
+	virtual void setChecked (bool state = true);
+	/** set menu item title state */
+	virtual void setIsTitle (bool state = true);
+	/** set menu item separator state */
+	virtual void setIsSeparator (bool state = true);
+	/** set menu item icon */
+	virtual void setIcon (CBitmap* icon);
+	/** set menu item tag */
+	virtual void setTag (int32_t tag);
 
-	bool isEnabled () const { return !(flags & kDisabled); }			///< returns whether the item is enabled or not
-	bool isChecked () const { return (flags & kChecked) != 0; }				///< returns whether the item is checked or not
-	bool isTitle () const { return (flags & kTitle) != 0; }					///< returns whether the item is a title item or not
-	bool isSeparator () const { return (flags & kSeparator) != 0; }			///< returns whether the item is a separator or not
+	/** returns whether the item is enabled or not */
+	bool isEnabled () const { return !hasBit (flags, kDisabled); }
+	/** returns whether the item is checked or not */
+	bool isChecked () const { return hasBit (flags, kChecked); }
+	/** returns whether the item is a title item or not */
+	bool isTitle () const { return hasBit (flags, kTitle); }
+	/** returns whether the item is a separator or not */
+	bool isSeparator () const { return hasBit (flags, kSeparator); }
 
-	UTF8StringPtr getTitle () const { return title; }						///< returns the title of the item
-	int32_t getKeyModifiers () const { return keyModifiers; }				///< returns the key modifiers of the item
-	UTF8StringPtr getKeycode () const { return keycode; }					///< returns the keycode of the item
-	COptionMenu* getSubmenu () const { return submenu; }				///< returns the submenu of the item
-	CBitmap* getIcon () const { return icon; }							///< returns the icon of the item
-	int32_t getTag () const { return tag; }								///< returns the tag of the item
+	/** returns the title of the item */
+	const UTF8String& getTitle () const { return title; }
+	/** returns the key modifiers of the item */
+	int32_t getKeyModifiers () const { return keyModifiers; }
+	/** returns the keycode of the item */
+	const UTF8String& getKeycode () const { return keyCode; }
+	/** returns the virtual keycode of the item */
+	int32_t getVirtualKeyCode () const { return virtualKeyCode; }
+	/** returns the submenu of the item */
+	COptionMenu* getSubmenu () const { return submenu; }
+	/** returns the icon of the item */
+	CBitmap* getIcon () const { return icon; }
+	/** returns the tag of the item */
+	int32_t getTag () const { return tag; }
 	//@}
 
 //------------------------------------------------------------------------
 protected:
-	~CMenuItem ();
+	~CMenuItem () noexcept override = default;
 
-	UTF8StringBuffer title;
-	UTF8StringBuffer keycode;
-	COptionMenu* submenu;
-	CBitmap* icon;
-	int32_t flags;
-	int32_t keyModifiers;
-	int32_t tag;
+	UTF8String title;
+	UTF8String keyCode;
+	SharedPointer<COptionMenu> submenu;
+	SharedPointer<CBitmap> icon;
+	int32_t flags {0};
+	int32_t keyModifiers {0};
+	int32_t virtualKeyCode {0};
+	int32_t tag {-1};
 };
 
 //-----------------------------------------------------------------------------
-class CMenuItemList : public std::list<CMenuItem*>
+// CCommandMenuItem Declaration
+/// @brief a command menu item
+/// @ingroup new_in_4_1
+//-----------------------------------------------------------------------------
+class CCommandMenuItem : public CMenuItem
 {
 public:
-	CMenuItemList () {}
-	CMenuItemList (const CMenuItemList& inList) : std::list<CMenuItem*> (inList) {}
+	struct Desc
+	{
+		UTF8String title;
+		UTF8String commandCategory;
+		UTF8String commandName;
+		UTF8String keycode;
+		SharedPointer<ICommandMenuItemTarget> target;
+		SharedPointer<CBitmap> icon;
+		int32_t keyModifiers {0};
+		int32_t flags {kNoFlags};
+		
+		Desc () = default;
+		~Desc () noexcept = default;
+
+		Desc (const UTF8String& title, const UTF8String& keycode = nullptr,
+		                 int32_t keyModifiers = 0, CBitmap* icon = nullptr,
+		                 int32_t flags = kNoFlags, ICommandMenuItemTarget* target = nullptr,
+		                 const UTF8String& commandCategory = nullptr,
+		                 const UTF8String& commandName = nullptr)
+		: title (title)
+		, commandCategory (commandCategory)
+		, commandName (commandName)
+		, keycode (keycode)
+		, target (target)
+		, icon (icon)
+		, keyModifiers (keyModifiers)
+		, flags (flags)
+		{
+		}
+
+		Desc (const UTF8String& title, int32_t tag,
+		                 ICommandMenuItemTarget* target = nullptr,
+		                 const UTF8String& commandCategory = nullptr,
+		                 const UTF8String& commandName = nullptr)
+		: title (title)
+		, commandCategory (commandCategory)
+		, commandName (commandName)
+		, target (target)
+		{
+		}
+
+		Desc (const UTF8String& title, ICommandMenuItemTarget* target,
+		                 const UTF8String& commandCategory = nullptr,
+		                 const UTF8String& commandName = nullptr)
+		: title (title)
+		, commandCategory (commandCategory)
+		, commandName (commandName)
+		, target (target)
+		{
+		}
+	};
+
+	CCommandMenuItem (Desc&& args);
+	CCommandMenuItem (const Desc& args);
+	CCommandMenuItem (const CCommandMenuItem& item);
+	~CCommandMenuItem () noexcept override = default;
+
+	//-----------------------------------------------------------------------------
+	/// @name CCommandMenuItem Methods
+	//-----------------------------------------------------------------------------
+	//@{
+	void setCommandCategory (const UTF8String& category);
+	const UTF8String& getCommandCategory () const { return commandCategory; }
+	bool isCommandCategory (const UTF8String& category) const;
+	
+	void setCommandName (const UTF8String& name);
+	const UTF8String& getCommandName () const { return commandName; }
+	bool isCommandName (const UTF8String& name) const;
+
+	void setItemTarget (ICommandMenuItemTarget* target);
+	ICommandMenuItemTarget* getItemTarget () const { return itemTarget; }
+
+	using ValidateCallbackFunction = std::function<void(CCommandMenuItem* item)>;
+	using SelectedCallbackFunction = std::function<void(CCommandMenuItem* item)>;
+
+	void setActions (SelectedCallbackFunction&& selected, ValidateCallbackFunction&& validate = [](CCommandMenuItem*){});
+	//@}
+
+	void execute ();
+	void validate ();
+
+protected:
+	ValidateCallbackFunction validateFunc;
+	SelectedCallbackFunction selectedFunc;
+	UTF8String commandCategory;
+	UTF8String commandName;
+	SharedPointer<ICommandMenuItemTarget> itemTarget;
 };
 
-typedef std::list<CMenuItem*>::iterator CMenuItemIterator;
-typedef std::list<CMenuItem*>::const_iterator CConstMenuItemIterator;
-
+using CMenuItemList = std::vector<SharedPointer<CMenuItem>>;
+using CMenuItemIterator = CMenuItemList::iterator;
+using CConstMenuItemIterator = CMenuItemList::const_iterator;
 
 //-----------------------------------------------------------------------------
 // COptionMenu Declaration
@@ -122,77 +211,130 @@ typedef std::list<CMenuItem*>::const_iterator CConstMenuItemIterator;
 //-----------------------------------------------------------------------------
 class COptionMenu : public CParamDisplay
 {
+private:
+	enum StyleEnum
+	{
+		StylePopup = CParamDisplay::LastStyle,
+		StyleCheck,
+		StyleMultipleCheck,
+	};
 public:
 	COptionMenu ();
-	COptionMenu (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background = 0, CBitmap* bgWhenClick = 0, const int32_t style = 0);
+	COptionMenu (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background = nullptr, CBitmap* bgWhenClick = nullptr, const int32_t style = 0);
 	COptionMenu (const COptionMenu& menu);
-	~COptionMenu ();
+	~COptionMenu () noexcept override;
+
+	enum Style
+	{
+		kPopupStyle = 1 << StylePopup,
+		kCheckStyle = 1 << StyleCheck,
+		kMultipleCheckStyle = 1 << StyleMultipleCheck
+	};
+
+	bool isPopupStyle () const { return hasBit (getStyle (), kPopupStyle); }
+	bool isCheckStyle () const { return hasBit (getStyle (), kCheckStyle); }
+	bool isMultipleCheckStyle () const { return hasBit (getStyle (), kMultipleCheckStyle); }
 
 	//-----------------------------------------------------------------------------
 	/// @name COptionMenu Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual CMenuItem* addEntry (CMenuItem* item, int32_t index = -1);											///< add a new entry
-	virtual CMenuItem* addEntry (COptionMenu* submenu, UTF8StringPtr title);									///< add a new submenu entry
-	virtual CMenuItem* addEntry (UTF8StringPtr title, int32_t index = -1, int32_t itemFlags = CMenuItem::kNoFlags);	///< add a new entry
-	virtual CMenuItem* addSeparator (int32_t index = -1);														///< add a new separator entry
-	virtual CMenuItem* getCurrent () const;																	///< get current entry
+	/** add a new entry */
+	virtual CMenuItem* addEntry (CMenuItem* item, int32_t index = -1);
+	/** add a new submenu entry */
+	virtual CMenuItem* addEntry (COptionMenu* submenu, const UTF8String& title);
+	/** add a new entry */
+	virtual CMenuItem* addEntry (const UTF8String& title, int32_t index = -1, int32_t itemFlags = CMenuItem::kNoFlags);
+	/** add a new separator entry */
+	virtual CMenuItem* addSeparator (int32_t index = -1);
+	/** get current entry */
+	virtual CMenuItem* getCurrent () const;
+	/** TODO: Doc */
 	virtual int32_t getCurrentIndex (bool countSeparator = false) const;
-	virtual CMenuItem* getEntry (int32_t index) const;															///< get entry at index position
-	virtual int32_t getNbEntries () const;																		///< get number of entries
-	virtual	bool setCurrent (int32_t index, bool countSeparator = true);										///< set current entry
-	virtual	bool removeEntry (int32_t index);																	///< remove an entry
-	virtual	bool removeAllEntry ();																			///< remove all entries
+	/** get entry at index position */
+	virtual CMenuItem* getEntry (int32_t index) const;
+	/** get number of entries */
+	virtual int32_t getNbEntries () const;
+	/** set current entry */
+	virtual	bool setCurrent (int32_t index, bool countSeparator = true);
+	/** remove an entry */
+	virtual	bool removeEntry (int32_t index);
+	/** remove all entries */
+	virtual	bool removeAllEntry ();
 
-	virtual bool checkEntry (int32_t index, bool state);														///< change check state of entry at index
-	virtual bool checkEntryAlone (int32_t index);																///< check entry at index and uncheck every other item
-	virtual bool isCheckEntry (int32_t index) const;															///< get check state of entry at index
-	virtual void setNbItemsPerColumn (int32_t val) { nbItemsPerColumn = val; }									///< Windows only
-	virtual int32_t getNbItemsPerColumn () const { return nbItemsPerColumn; }									///< Windows only
+	/** change check state of entry at index */
+	virtual bool checkEntry (int32_t index, bool state);
+	/** check entry at index and uncheck every other item */
+	virtual bool checkEntryAlone (int32_t index);
+	/** get check state of entry at index */
+	virtual bool isCheckEntry (int32_t index) const;
+	/** Windows only */
+	virtual void setNbItemsPerColumn (int32_t val) { nbItemsPerColumn = val; }
+	/** Windows only */
+	virtual int32_t getNbItemsPerColumn () const { return nbItemsPerColumn; }
 
-	int32_t getLastResult () const { return lastResult; }														///< get last index of choosen entry
-	COptionMenu* getLastItemMenu (int32_t& idxInMenu) const;													///< get last menu and index of choosen entry
+	/** get last index of choosen entry */
+	int32_t getLastResult () const { return lastResult; }
+	/** get last menu and index of choosen entry */
+	COptionMenu* getLastItemMenu (int32_t& idxInMenu) const;
 
-	virtual void setPrefixNumbers (int32_t preCount);															///< set prefix numbering
-	int32_t getPrefixNumbers () const { return prefixNumbers; }												///< get prefix numbering
+	/** set prefix numbering */
+	virtual void setPrefixNumbers (int32_t preCount);
+	/** get prefix numbering */
+	int32_t getPrefixNumbers () const { return prefixNumbers; }
 
-	COptionMenu* getSubMenu (int32_t idx) const;																///< get a submenu
+	/** get a submenu */
+	COptionMenu* getSubMenu (int32_t idx) const;
 
-	bool popup ();																							///< pops up menu
-	bool popup (CFrame* frame, const CPoint& frameLocation);												///< pops up menu at frameLocation
+	/** popup callback function */
+	using PopupCallback = std::function<void (COptionMenu* menu)>;
+
+	/** pops up the menu */
+	bool popup (const PopupCallback& callback = {});
+	/** pops up the menu at frameLocation */
+	bool popup (CFrame* frame, const CPoint& frameLocation, const PopupCallback& callback = {});
 
 	CMenuItemList* getItems () const { return menuItems; }
+
+	/** remove separators as first and last item and double separators */
+	void cleanupSeparators (bool deep);
+
+	void registerOptionMenuListener (IOptionMenuListener* listener);
+	void unregisterOptionMenuListener (IOptionMenuListener* listener);
 	//@}
 
 	// overrides
-	virtual void setValue (float val);
-	virtual void setMin (float val) {}
-	virtual float getMin () const { return 0; }
-	virtual void setMax (float val) {}
-	virtual float getMax () const { return (float)(menuItems->size () - 1); }
+	void setValue (float val) override;
+	void setMin (float val) override {}
+	float getMin () const override { return 0; }
+	void setMax (float val) override {}
+	float getMax () const override { return (float)(menuItems->size () - 1); }
 
-	virtual	void draw (CDrawContext* pContext);
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
+	void draw (CDrawContext* pContext) override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
 
-	virtual	void takeFocus ();
-	virtual	void looseFocus ();
+	void takeFocus () override;
+	void looseFocus () override;
 
 	CLASS_METHODS(COptionMenu, CParamDisplay)
 protected:
+	bool doPopup ();
+	void beforePopup ();
+	void afterPopup ();
 
 	CMenuItemList* menuItems;
 
-	bool     inPopup;
-	int32_t     currentIndex;
-	CButtonState     lastButton;
-	int32_t     nbItemsPerColumn;
-	int32_t	 lastResult;
-	int32_t	 prefixNumbers;
-	CBitmap* bgWhenClick;
-	COptionMenu* lastMenu;
+	bool inPopup {false};
+	int32_t currentIndex {-1};
+	CButtonState lastButton {0};
+	int32_t nbItemsPerColumn {-1};
+	int32_t lastResult {-1};
+	int32_t prefixNumbers {0};
+	SharedPointer<CBitmap> bgWhenClick;
+	COptionMenu* lastMenu {nullptr};
+	using MenuListenerList = DispatchList<IOptionMenuListener*>;
+	std::unique_ptr<MenuListenerList> listeners;
 };
 
-} // namespace
-
-#endif
+} // VSTGUI

@@ -10,7 +10,7 @@ UIAlgorithmSelector::UIAlgorithmSelector(const CRect& size, UIInstrument* owner)
 	GennyInterfaceObject(owner),
 	_owner(owner)
 {
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = owner->getIndexBaron();
 	int index = baron->getYMParamIndex(YM_ALG);
 	tag = index;
@@ -20,8 +20,8 @@ UIAlgorithmSelector::UIAlgorithmSelector(const CRect& size, UIInstrument* owner)
 	for(int i = 0; i < 8; i++)
 	{
 		CRect buttonSize = CRect(0, 0, 28, 28);
-		buttonSize.offset(168 + (i * 28), 146);
-		_algs.push_back(new UICheckBoxNum(buttonSize, i, this, i, buttonImage, _interface));
+		buttonSize.offset(170 + (i * 28), 138);
+		_algs.push_back(new UICheckBoxNum(buttonSize, i, this, i, buttonImage, _interface, false, 16L, 0, this));
 		frame->addView(_algs[i]);
 
 		if(i == 0)
@@ -29,7 +29,7 @@ UIAlgorithmSelector::UIAlgorithmSelector(const CRect& size, UIInstrument* owner)
 	}
 
 	CRect displaySize = CRect(0, 0, 220, 74);
-	displaySize.offset(164.0f, 152.0f + 44);
+	displaySize.offset(164, 178);
 	_algDisplay = new UIImage(displaySize, PNG_ALGVAL, true);
 	frame->addView(_algDisplay);
 
@@ -44,11 +44,35 @@ UIAlgorithmSelector::~UIAlgorithmSelector(void)
 
 }
 
+bool UIAlgorithmSelector::onWheel(const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
+{
+	IndexBaron* baron = _owner->getIndexBaron();
+	int index = baron->getYMParamIndex(YM_ALG);
+	if (distance > 0)
+	{
+		setValue(getCurrentPatch()->getFromBaron(baron->getIndex(index)) + 1);
+		_owner->valueChanged(this);
+	}
+	else if (distance < 0)
+	{
+		setValue(getCurrentPatch()->getFromBaron(baron->getIndex(index)) - 1);
+		_owner->valueChanged(this);
+	}
+
+	return __super::onWheel(where, axis, distance, buttons);
+}
+
+
 void UIAlgorithmSelector::setValue(float val)
 {
 	CControl::setValue(val);
 
 	int index = (int)(val + 0.5f);
+	if (index < 0)
+		index = 0;
+	if (index > 7)
+		index = 7;
+
 	for(int i = 0; i < 8; i++)
 	{
 		if(i != index)

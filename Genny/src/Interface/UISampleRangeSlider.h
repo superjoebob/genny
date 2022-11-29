@@ -6,7 +6,7 @@
 #include "YM2612Enum.h"
 #include "UISlider.h"
 class UIInstrument;
-class UISampleRangeSlider : public CControl, public CControlListener, public GennyInterfaceObject
+class UISampleRangeSlider : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UISampleRangeSlider(const CPoint& pos, int width, UIInstrument* owner, bool low);
@@ -24,12 +24,12 @@ public:
 
 	void reconnect();	
 	void setVisible(bool visible);
+	UISlider* _slider;
 
 	CLASS_METHODS(UISampleRangeSlider, CControl)
 
 private:
 	UIInstrument* _owner;
-	UISlider* _slider;
 	CPoint _pos;
 	float _wide;
 

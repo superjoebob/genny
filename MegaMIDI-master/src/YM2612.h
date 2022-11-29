@@ -30,6 +30,8 @@ private:
     unsigned char bank1[0xB7-0x30];
     Voice currentVoice;
 public:
+    volatile static bool interrupted;
+
     YM2612();
     Channel channels[MAX_CHANNELS_YM];
     bool lfoOn = false;
@@ -50,6 +52,13 @@ public:
     void ToggleLFO();
     void Reset();
     void send(unsigned char addr, unsigned char data, bool setA1=0);
+    void interruptSend(unsigned char addr, unsigned char data, bool setA1=0);
+
+    void sendUpper(unsigned char addr, unsigned char data);
+    void sendLower(unsigned char addr, unsigned char data);
+    void interruptSendLower(unsigned char addr, unsigned char data);
+
+    void shittySlowSend(unsigned char addr, unsigned char data, bool setA1=0);
     void DumpShadowRegisters();
     uint8_t GetShadowValue(uint8_t addr, bool bank);
 };

@@ -27,15 +27,16 @@ void UIImage::setDirty(bool dirty)
 
 void UIImage::draw (CDrawContext* pContext)
 {
+	CRect size = getViewSize();
 	setDirty(false);
 	if(_prevFrame != _frame && _lcd)
 	{
 		if(_oneMore == false)
 		{
 			CBitmap* map1 = _bitmap.getBase();
-			map1->draw(pContext, size, CPoint(0, size.height() * _prevFrame), 0.7f);
+			map1->draw(pContext, size, CPoint(0, size.getHeight() * _prevFrame), 0.7f);
 			CBitmap* map2 = _bitmap2.getBase();
-			map2->draw(pContext, size, CPoint(0, size.height() * _frame), 0.3f);
+			map2->draw(pContext, size, CPoint(0, size.getHeight() * _frame), 0.3f);
 
 			_oneMore = true;
 			setDirty(true);
@@ -43,9 +44,9 @@ void UIImage::draw (CDrawContext* pContext)
 		else
 		{
 			CBitmap* map1 = _bitmap.getBase();
-			map1->draw(pContext, size, CPoint(0, size.height() * _prevFrame), 0.3f);
+			map1->draw(pContext, size, CPoint(0, size.getHeight() * _prevFrame), 0.3f);
 			CBitmap* map2 = _bitmap2.getBase();
-			map2->draw(pContext, size, CPoint(0, size.height() * _frame), 0.7f);
+			map2->draw(pContext, size, CPoint(0, size.getHeight() * _frame), 0.7f);
 
 			setDirty(true);
 			_oneMore = false;
@@ -55,12 +56,12 @@ void UIImage::draw (CDrawContext* pContext)
 	else
 	{
 		CBitmap* map = _bitmap.getBase();
-		map->draw(pContext, size, CPoint(0, size.height() * _frame));
+		map->draw(pContext, size, CPoint(0, size.getHeight() * _frame));
 		setDirty(false);
-		if(_doOne)
-		{
-			invalid();
-			_doOne = false;
-		}
+		//if(_doOne)
+		//{
+		//	invalid();
+		//	_doOne = false;
+		//} 
 	}
 }

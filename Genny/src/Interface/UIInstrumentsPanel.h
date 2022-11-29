@@ -6,7 +6,7 @@
 class UIInstrumentElement;
 class UIPESelectedInstrument;
 class UIInstrumentElement;
-class UIInstrumentsPanel : public CControl, public CControlListener, public GennyInterfaceObject
+class UIInstrumentsPanel : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIInstrumentsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner);
@@ -34,20 +34,21 @@ public:
 
 	void setSolo(int idx);
 
+	void instrumentWasModified(int index);
 	void reconnect();
 	void setSelectedInstrumentIndex(int index);
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);		
+	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
 
 	CLASS_METHODS(UIInstrumentsPanel, CControl)
 		
 	UIPESelectedInstrument* _selectedInstrument;
+	int _currentDrag;
 private:
 	UIPresetsAndInstrumentsPanel* _owner;
 	std::vector<UIInstrumentElement*> _elements;
 	int _selection;
 	int _topItem;
 	bool _didScroll;
-	int _currentDrag;
 	void* _preparingToDrag;
 	bool _ignoreRescroll;
 

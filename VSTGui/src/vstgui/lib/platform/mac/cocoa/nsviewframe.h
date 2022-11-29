@@ -1,44 +1,18 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __nsviewframe__
-#define __nsviewframe__
+#pragma once
 
-#include "../../../cframe.h"
+#include "../../../vstguifwd.h"
 
-#if MAC_COCOA
+#if MAC_COCOA && !TARGET_OS_IPHONE
 
+#include "../../platform_macos.h"
+#include "../../../cview.h"
+#include "../../../cinvalidrectlist.h"
+#include "../../../idatapackage.h"
+#include "nsviewdraggingsession.h"
 #include <list>
 
 #ifdef __OBJC__
@@ -46,58 +20,106 @@
 #else
 struct NSView;
 struct NSRect;
+struct NSDraggingSession;
+struct NSEvent;
+struct CALayer;
 #endif
 
 namespace VSTGUI {
 class CocoaTooltipWindow;
+struct NSViewDraggingSession;
 
 //-----------------------------------------------------------------------------
-class NSViewFrame : public IPlatformFrame
+class NSViewFrame : public IPlatformFrame, public ICocoaPlatformFrame, public IPlatformFrameTouchBarExtension
 {
 public:
-	NSViewFrame (IPlatformFrameCallback* frame, const CRect& size, NSView* parent);
-	~NSViewFrame ();
+	NSViewFrame (IPlatformFrameCallback* frame, const CRect& size, NSView* parent, IPlatformFrameConfig* config);
+	~NSViewFrame () noexcept override;
 
-	NSView* getPlatformControl () const { return nsView; }
+	NSView* getNSView () const override { return nsView; }
 	IPlatformFrameCallback* getFrame () const { return frame; }
-	
-	void setLastDragOperationResult (CView::DragResult result) { lastDragOperationResult = result; }
+	void* makeTouchBar () const;
+	NSViewDraggingSession* getDraggingSession () const { return draggingSession; }
+	void clearDraggingSession () { draggingSession = nullptr; }
+	void setNeedsDisplayInRect (NSRect r);
+
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+	void setLastDragOperationResult (DragResult result) { lastDragOperationResult = result; }
+#endif
 	void setIgnoreNextResignFirstResponder (bool state) { ignoreNextResignFirstResponder = state; }
 	bool getIgnoreNextResignFirstResponder () const { return ignoreNextResignFirstResponder; }
 
+	void setDragDataPackage (SharedPointer<IDataPackage>&& package) { dragDataPackage = std::move (package); }
+	const SharedPointer<IDataPackage>& getDragDataPackage () const { return dragDataPackage; }
+
+	void initTrackingArea ();
+	void scaleFactorChanged (double newScaleFactor);
+	void cursorUpdate ();
 	virtual void drawRect (NSRect* rect);
+	bool onMouseDown (NSEvent* evt);
+	bool onMouseUp (NSEvent* evt);
+	bool onMouseMoved (NSEvent* evt);
 
 	// IPlatformFrame
-	bool getGlobalPosition (CPoint& pos) const;
-	bool setSize (const CRect& newSize);
-	bool getSize (CRect& size) const;
-	bool getCurrentMousePosition (CPoint& mousePosition) const;
-	bool getCurrentMouseButtons (CButtonState& buttons) const;
-	bool setMouseCursor (CCursorType type);
-	bool invalidRect (const CRect& rect);
-	bool scrollRect (const CRect& src, const CPoint& distance);
-	bool showTooltip (const CRect& rect, const char* utf8Text);
-	bool hideTooltip ();
-	void* getPlatformRepresentation () const { return nsView; }
-	IPlatformTextEdit* createPlatformTextEdit (IPlatformTextEditCallback* textEdit);
-	IPlatformOptionMenu* createPlatformOptionMenu ();
-	COffscreenContext* createOffscreenContext (CCoord width, CCoord height);
-	CGraphicsPath* createGraphicsPath ();
-	CView::DragResult doDrag (CDropSource* source, const CPoint& offset, CBitmap* dragBitmap);
+	bool getGlobalPosition (CPoint& pos) const override;
+	bool setSize (const CRect& newSize) override;
+	bool getSize (CRect& size) const override;
+	bool getCurrentMousePosition (CPoint& mousePosition) const override;
+	bool getCurrentMouseButtons (CButtonState& buttons) const override;
+	bool setMouseCursor (CCursorType type) override;
+	bool invalidRect (const CRect& rect) override;
+	bool scrollRect (const CRect& src, const CPoint& distance) override;
+	bool showTooltip (const CRect& rect, const char* utf8Text) override;
+	bool hideTooltip () override;
+	void* getPlatformRepresentation () const override { return nsView; }
+	SharedPointer<IPlatformTextEdit> createPlatformTextEdit (IPlatformTextEditCallback* textEdit) override;
+	SharedPointer<IPlatformOptionMenu> createPlatformOptionMenu () override;
+#if VSTGUI_OPENGL_SUPPORT
+	SharedPointer<IPlatformOpenGLView> createPlatformOpenGLView () override;
+#endif
+	SharedPointer<IPlatformViewLayer> createPlatformViewLayer (IPlatformViewLayerDelegate* drawDelegate, IPlatformViewLayer* parentLayer = nullptr) override;
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+	DragResult doDrag (IDataPackage* source, const CPoint& offset, CBitmap* dragBitmap) override;
+#endif
+	bool doDrag (const DragDescription& dragDescription, const SharedPointer<IDragCallback>& callback) override;
+
+	PlatformType getPlatformType () const override { return PlatformType::kNSView; }
+	void onFrameClosed () override {}
+	Optional<UTF8String> convertCurrentKeyEventToText () override;
+	bool setupGenericOptionMenu (bool use, GenericOptionMenuTheme* theme = nullptr) override;
+
+	// IPlatformFrameTouchBarExtension
+	void setTouchBarCreator (const SharedPointer<ITouchBarCreator>& creator) override;
+	void recreateTouchBar () override;
 
 //-----------------------------------------------------------------------------
 protected:
+	void addDebugRedrawRect (CRect r, bool isClipBoundingBox = false);
+
 	static void initClass ();
 
-	IPlatformFrameCallback* frame;
 	NSView* nsView;
 	CocoaTooltipWindow* tooltipWindow;
-
-	CView::DragResult lastDragOperationResult;
+	SharedPointer<IDataPackage> dragDataPackage;
+	SharedPointer<ITouchBarCreator> touchBarCreator;
+	SharedPointer<NSViewDraggingSession> draggingSession;
+	std::unique_ptr<GenericOptionMenuTheme> genericOptionMenuTheme;
+	
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+	DragResult lastDragOperationResult;
+#endif
 	bool ignoreNextResignFirstResponder;
+	bool trackingAreaInitialized;
+	bool inDraw;
+	bool useInvalidRects {false};
+#if DEBUG
+	bool visualizeDirtyRects {false};
+#endif
+	CCursorType cursor;
+	CButtonState mouseDownButtonState {};
+	CInvalidRectList invalidRectList;
 };
 
-} // namespace
+} // VSTGUI
 
 #endif // MAC_COCOA
-#endif // __nsviewframe__

@@ -1,8 +1,19 @@
 #pragma once
 #ifdef BUILD_VST
-//#include "public.sdk/source/vst2.x/audioeffectx.h"
+#include "public.sdk/source/vst2.x/audioeffectx.h"
 #include "plugin-bindings/aeffguieditor.h"
-typedef AEffGUIEditor VSTEditor;
+#include <objidl.h>
+typedef void* VSTEditor;
+namespace VSTGUI { class PluginGUIEditor; }
+
+struct MidiNote
+{
+	MidiNote(int iNote, int iVelocity, int iChannel) : note(iNote), velocity(iVelocity), channel(iChannel) {}
+	int note;
+	int velocity; 
+	int channel;
+};
+
 
 class VirtualInstrument;
 class VSTBase : public AudioEffectX
@@ -16,7 +27,9 @@ public:
 	virtual void process (float** inputs, float** outputs, VstInt32 sampleFrames);
 	virtual void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames);
 	virtual VstInt32 processEvents (VstEvents* events);
-	virtual VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
+	virtual VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt); 
+	virtual void resume();
+	void sampleRateChanged(double newRate);
 
 	virtual VstInt32 getChunk (void** data, bool isPreset = false);
 	virtual VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false);
@@ -34,8 +47,9 @@ public:
 	virtual bool getProductString (char* text);
 	virtual bool getVendorString (char* text);
 
-	virtual void MidiLearn(int paramTag);
-	virtual void MidiForget(int paramTag);
+	virtual void MidiEraseLearnedParam(int paramTag, int legacyTag) {}
+	virtual void MidiLearn(int paramTag, int legacyTag);
+	virtual void MidiForget(int paramTag, int legacyTag);
 	virtual void MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort);
 	virtual void MidiFlush();
 
@@ -47,25 +61,25 @@ public:
 	virtual bool hasMidiProgramsChanged (VstInt32 channel);
 	virtual bool getMidiKeyName (VstInt32 channel, MidiKeyName* keyName);
 	int getSamplesPerTick() { return 1; }
+	
 
 	virtual bool getOutputProperties(VstInt32 index, VstPinProperties* properties);
 	virtual VstInt32 canDo (char* text);
 
 	float getTempo() { return _tempo; }
-	int _midiLearnParameter;
-	int _midiForgetParameter;
+	double _sampleRate;
+
 
 protected:
 	void FillProgram (VstInt32 channel, VstInt32 prg, MidiProgramName* mpn);
 	VirtualInstrument* _parent;
 	VstInt32 _channelPrograms[16];
 	float _tempo;
+	std::vector<MidiNote> _midiNotes;
 
 	VstEvents* _currentEvents;
 };
 #else
-
-
 #include "fp_cplug.h"
 #include <vector>
 typedef void* VSTEditor;
@@ -84,7 +98,7 @@ struct PlugVoice {
 };
 
 class VirtualInstrument;
-class PluginGUIEditor;
+namespace VSTGUI { class PluginGUIEditor; }
 struct VSTPatch;
 class VSTBase : public TCPPFruityPlug
 {
@@ -98,6 +112,7 @@ public:
 	//virtual void process (float** inputs, float** outputs, int sampleFrames);
 	//virtual void processReplacing (float** inputs, float** outputs, int sampleFrames);
 	virtual void setProgram(int program);
+	void sampleRateChanged(double newRate);
 
 	virtual void _stdcall SaveRestoreState(IStream *Stream, BOOL Save);
 	virtual TVoiceHandle _stdcall TriggerVoice(PVoiceParams VoiceParams, intptr_t SetTag);
@@ -118,6 +133,10 @@ public:
 	virtual void _stdcall MIDITick() {}
 	virtual void _stdcall MIDIIn(int &Msg);
 	virtual void _stdcall MsgIn(int Msg);
+
+	virtual void MidiEraseLearnedParam(int paramTag, int legacyTag) {}
+	virtual void MidiLearn(int paramTag, int legacyTag);
+	virtual void MidiForget(int paramTag, int legacyTag);
 	virtual void MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort);
 	virtual void MidiFlush();
 
@@ -130,6 +149,7 @@ public:
 
 	float getTempo() { return _tempo; }
 	int getSamplesPerTick() { return _samplesPerTick; }
+	double _sampleRate;
 
 	/*virtual VstInt32 processEvents (VstEvents* events);
 
@@ -155,16 +175,16 @@ public:
 	virtual bool getOutputProperties(VstInt32 index, VstPinProperties* properties);
 	virtual VstInt32 canDo (char* text);*/
 
+	int _totalParameters;
 protected:
 	VirtualInstrument* _parent;
 
-	PluginGUIEditor* _editor;
+	VSTGUI::PluginGUIEditor* _editor;
 	TFruityPlugHost* _host;
 
 	std::vector<PlugVoice*> _voices;
 	float _tempo;
 	int _samplesPerTick;
-	int _totalParameters;
 };
 #endif
 

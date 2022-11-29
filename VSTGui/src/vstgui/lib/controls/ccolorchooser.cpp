@@ -1,42 +1,15 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "ccolorchooser.h"
 #include "cslider.h"
 #include "ctextlabel.h"
+#include "ccontrol.h"
 #include "../cdrawcontext.h"
 #include "../cframe.h"
+#include "../idatapackage.h"
+#include "../dragging.h"
 #include <string>
 
 namespace VSTGUI {
@@ -48,18 +21,19 @@ namespace CColorChooserInternal {
 class Slider : public CSlider
 {
 public:
-	Slider (const CRect& size, CControlListener* listener = 0, int32_t tag = -1)
-	: CSlider (size, listener, tag, 0, 0, 0, 0)
+	Slider (const CRect& size, IControlListener* listener = nullptr, int32_t tag = -1)
+	: CSlider (size, listener, tag, 0, 0, nullptr, nullptr)
 	{
 		if (size.getWidth () > size.getHeight ())
-			heightOfSlider = widthOfSlider = size.getHeight ();
+			setHandleSizePrivate (size.getHeight (), size.getHeight ());
 		else
-			heightOfSlider = widthOfSlider = size.getWidth ();
-		CRect r (size);
+			setHandleSizePrivate (size.getWidth (), size.getWidth ());
+		const CRect& r (size);
 		setViewSize (r, false);
+		setWheelInc (10.f/255.f);
 	}
 
-	void draw (CDrawContext* context)
+	void draw (CDrawContext* context) override
 	{
 		CColor handleFillColor (kWhiteCColor);
 		CColor handleFrameColor (kBlackCColor);
@@ -70,7 +44,11 @@ public:
 		CCoord backgroundFrameWidth = 1;
 		CCoord handleFrameWidth = 1;
 
-		CRect backgroundRect (0, 0, widthControl, heightControl);
+		auto controlSize = getControlSizePrivate ();
+		auto sliderSize = getHandleSizePrivate ();
+
+		CRect backgroundRect;
+		backgroundRect.setSize (controlSize);
 		backgroundRect.offset (getViewSize ().left, getViewSize ().top);
 		context->setDrawMode (kAntiAliasing);
 		context->setFillColor (backgroundFillColor);
@@ -78,52 +56,26 @@ public:
 		context->setLineWidth (backgroundFrameWidth);
 		context->setLineStyle (kLineSolid);
 		context->drawRect (backgroundRect, kDrawFilledAndStroked);
-		if (style & kHorizontal)
+		
+		if (getStyle () & kHorizontal)
 		{
-			backgroundRect.left += offsetHandle.h + widthOfSlider / 2;
-			backgroundRect.right -= offsetHandle.h + widthOfSlider / 2;
-			backgroundRect.top += heightControl/2 - 2;
-			backgroundRect.bottom -= heightControl/2 - 2;
+			backgroundRect.left += getOffsetHandle ().x + sliderSize.x / 2;
+			backgroundRect.right -= getOffsetHandle ().x + sliderSize.x / 2;
+			backgroundRect.top += controlSize.y / 2 - 2;
+			backgroundRect.bottom -= controlSize.y / 2 - 2;
 		}
 		else
 		{
-			backgroundRect.left += widthControl/2 - 2;
-			backgroundRect.right -= widthControl/2 - 2;
-			backgroundRect.top += offsetHandle.v + heightOfSlider / 2;
-			backgroundRect.bottom -= offsetHandle.v + heightOfSlider / 2;
+			backgroundRect.left += controlSize.x / 2 - 2;
+			backgroundRect.right -= controlSize.x / 2 - 2;
+			backgroundRect.top += getOffsetHandle ().y + sliderSize.y / 2;
+			backgroundRect.bottom -= getOffsetHandle ().y + sliderSize.y / 2;
 		}
 		context->setFillColor (bandColor);
 		context->drawRect (backgroundRect, kDrawFilled);
 
-		float fValue = value;
-		if (style & kRight || style & kBottom)
-			fValue = 1.f - value;
-		
 		// calc new coords of slider
-		CRect rectNew;
-		if (style & kHorizontal)
-		{
-			rectNew.top    = offsetHandle.v;
-			rectNew.bottom = rectNew.top + heightOfSlider;	
-
-			rectNew.left   = offsetHandle.h + (int32_t)(fValue * rangeHandle);
-			rectNew.left   = (rectNew.left < minTmp) ? minTmp : rectNew.left;
-
-			rectNew.right  = rectNew.left + widthOfSlider;
-			rectNew.right  = (rectNew.right > maxTmp) ? maxTmp : rectNew.right;
-		}
-		else
-		{
-			rectNew.left   = offsetHandle.h;
-			rectNew.right  = rectNew.left + widthOfSlider;	
-
-			rectNew.top    = offsetHandle.v + (int32_t)(fValue * rangeHandle);
-			rectNew.top    = (rectNew.top < minTmp) ? minTmp : rectNew.top;
-
-			rectNew.bottom = rectNew.top + heightOfSlider;
-			rectNew.bottom = (rectNew.bottom > maxTmp) ? maxTmp : rectNew.bottom;
-		}
-		rectNew.offset (getViewSize ().left, getViewSize ().top);
+		CRect rectNew = calculateHandleRect (getValueNormalized ());
 
 		context->setFillColor (handleFillColor);
 		context->setFrameColor (handleFrameColor);
@@ -136,28 +88,31 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-class ColorView : public CControl
+class ColorView : public CControl, public IDropTarget
 {
 public:
-	ColorView (const CRect& r, const CColor& initialColor, CControlListener* listener = 0, int32_t tag = -1)
+	ColorView (const CRect& r, const CColor& initialColor, IControlListener* listener = nullptr, int32_t tag = -1, bool checkerBoardBack = true, const CColor& checkerBoardColor1 = kWhiteCColor, const CColor& checkerBoardColor2 = kBlackCColor)
 	: CControl (r, listener, tag)
 	, color (initialColor)
+	, checkerBoardColor1 (checkerBoardColor1)
+	, checkerBoardColor2 (checkerBoardColor2)
+	, checkerBoardBack (checkerBoardBack)
 	{
 	}
 	
-	void draw (CDrawContext* context)
+	void draw (CDrawContext* context) override
 	{
 		context->setDrawMode (kAliasing);
-		if (color.alpha != 255)
+		if (checkerBoardBack && color.alpha != 255)
 		{
-			context->setFillColor (kWhiteCColor);
+			context->setFillColor (checkerBoardColor1);
 			context->drawRect (getViewSize (), kDrawFilled);
-			context->setFillColor (kBlackCColor);
+			context->setFillColor (checkerBoardColor2);
 			CRect r (getViewSize ().left, getViewSize ().top, getViewSize ().left + 5, getViewSize ().top + 5);
 			for (int32_t x = 0; x < getViewSize ().getWidth (); x+=5)
 			{
 				r.left = getViewSize ().left + x;
-				r.top = x % 2 ? getViewSize ().top : getViewSize ().top + 5;
+				r.top = (x % 2) ? getViewSize ().top : getViewSize ().top + 5;
 				r.right = r.left + 5;
 				r.bottom = r.top + 5;
 				for (int32_t y = 0; y < getViewSize ().getHeight (); y+=10)
@@ -167,7 +122,7 @@ public:
 				}
 			}
 		}
-		
+		context->setLineWidth (1);
 		context->setFillColor (color);
 		context->setFrameColor (kBlackCColor);
 		context->drawRect (getViewSize (), kDrawFilledAndStroked);
@@ -183,14 +138,13 @@ public:
 	}
 
 	// we accept strings which look like : '#ff3355' (rgb) and '#ff3355bb' (rgba)
-	static bool dragContainerHasColor (CDragContainer* dragContainer, CColor* color)
+	static bool dragContainerHasColor (IDataPackage* drag, CColor* color)
 	{
-		int32_t size = 0; 
-		int32_t type = 0;
-		void* item = dragContainer->first (size, type);
-		if (type == CDragContainer::kUnicodeText)
+		IDataPackage::Type type;
+		const void* item;
+		if (drag->getData (0, item, type) > 0 && type == IDataPackage::kText)
 		{
-			UTF8StringPtr text = static_cast<UTF8StringPtr> (item);
+			auto text = static_cast<UTF8StringPtr> (item);
 			std::string colorString (text);
 			if (colorString.length () == 7)
 			{
@@ -201,9 +155,9 @@ public:
 						std::string rv (colorString.substr (1, 2));
 						std::string gv (colorString.substr (3, 2));
 						std::string bv (colorString.substr (5, 2));
-						color->red = (uint8_t)strtol (rv.c_str (), 0, 16);
-						color->green = (uint8_t)strtol (gv.c_str (), 0, 16);
-						color->blue = (uint8_t)strtol (bv.c_str (), 0, 16);
+						color->red = (uint8_t)strtol (rv.c_str (), nullptr, 16);
+						color->green = (uint8_t)strtol (gv.c_str (), nullptr, 16);
+						color->blue = (uint8_t)strtol (bv.c_str (), nullptr, 16);
 						color->alpha = 255;
 					}
 					return true;
@@ -219,10 +173,10 @@ public:
 						std::string gv (colorString.substr (3, 2));
 						std::string bv (colorString.substr (5, 2));
 						std::string av (colorString.substr (7, 2));
-						color->red = (uint8_t)strtol (rv.c_str (), 0, 16);
-						color->green = (uint8_t)strtol (gv.c_str (), 0, 16);
-						color->blue = (uint8_t)strtol (bv.c_str (), 0, 16);
-						color->alpha = (uint8_t)strtol (av.c_str (), 0, 16);
+						color->red = (uint8_t)strtol (rv.c_str (), nullptr, 16);
+						color->green = (uint8_t)strtol (gv.c_str (), nullptr, 16);
+						color->blue = (uint8_t)strtol (bv.c_str (), nullptr, 16);
+						color->alpha = (uint8_t)strtol (av.c_str (), nullptr, 16);
 					}
 					return true;
 				}
@@ -231,65 +185,83 @@ public:
 		return false;
 	}
 
-	bool onDrop (CDragContainer* drag, const CPoint& where)
+	SharedPointer<IDropTarget> getDropTarget () override { return this; }
+
+	bool onDrop (DragEventData data) override
 	{
-		CColor color;
-		if (dragContainerHasColor (drag, &color))
+		CColor dragColor;
+		if (dragContainerHasColor (data.drag, &dragColor))
 		{
-			setColor (color);
+			setColor (dragColor);
 			valueChanged ();
 			return true;
 		}
 		return false;
 	}
 	
-	void onDragEnter (CDragContainer* drag, const CPoint& where)
+	DragOperation onDragEnter (DragEventData data) override
 	{
-		if (dragContainerHasColor (drag, 0))
-			getFrame ()->setCursor (kCursorCopy);
-		else
-			getFrame ()->setCursor (kCursorNotAllowed);
+		dragOperation =
+		    dragContainerHasColor (data.drag, nullptr) ? DragOperation::Copy : DragOperation::None;
+		return dragOperation;
 	}
 	
-	void onDragLeave (CDragContainer* drag, const CPoint& where)
+	DragOperation onDragMove (DragEventData data) override
 	{
-		getFrame ()->setCursor (kCursorNotAllowed);
+		return dragOperation;
+	}
+
+	void onDragLeave (DragEventData data) override
+	{
+		dragOperation = DragOperation::None;
 	}
 	
 	CLASS_METHODS(ColorView, CControl)
 protected:
+	DragOperation dragOperation {DragOperation::None};
 	CColor color;
+	CColor checkerBoardColor1;
+	CColor checkerBoardColor2;
+	bool checkerBoardBack;
 };
 
-} // namespace CColorChooserInternal
+//-----------------------------------------------------------------------------
+static void setupParamDisplay (CParamDisplay* display, const CColorChooserUISettings& settings)
+{
+	display->setFont (settings.font);
+	display->setFontColor (settings.fontColor);
+	display->setTransparency (true);
+}
+
+} // CColorChooserInternal
 
 /// @endcond
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertNormalizedToString (float value, char string[256], void* userData)
+bool CColorChooser::convertNormalizedToString (float value, char string[256], CParamDisplay::ValueToStringUserData* userData)
 {
 	sprintf (string, "%.3f", value);
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertColorValueToString (float value, char string[256], void* userData)
+bool CColorChooser::convertColorValueToString (float value, char string[256], CParamDisplay::ValueToStringUserData* userData)
 {
 	sprintf (string, "%d", (int32_t)(value*255.f));
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertAngleToString (float value, char string[256], void* userData)
+bool CColorChooser::convertAngleToString (float value, char string[256], CParamDisplay::ValueToStringUserData* userData)
 {
-	sprintf (string, "%d%s", (int32_t)(value*360.f), kDegreeSymbol);
+	sprintf (string, "%d%s", (int32_t)(value*359.f), kDegreeSymbol);
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertNormalized (UTF8StringPtr string, float& output, void* userData)
+bool CColorChooser::convertNormalized (UTF8StringPtr string, float& output, CTextEdit::StringToValueUserData* userData)
 {
-	output = (float)strtod (string, 0);
+	output = UTF8StringView (string).toFloat ();
 	if (output < 0.f)
 		output = 0.f;
 	else if (output > 1.f)
@@ -298,9 +270,9 @@ bool CColorChooser::convertNormalized (UTF8StringPtr string, float& output, void
 }
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertColorValue (UTF8StringPtr string, float& output, void* userData)
+bool CColorChooser::convertColorValue (UTF8StringPtr string, float& output, CTextEdit::StringToValueUserData* userData)
 {
-	output = (float)strtod (string, 0);
+	output = UTF8StringView (string).toFloat ();
 	if (output < 0.f)
 		output = 0.f;
 	else if (output > 255.f)
@@ -310,45 +282,46 @@ bool CColorChooser::convertColorValue (UTF8StringPtr string, float& output, void
 }
 
 //-----------------------------------------------------------------------------
-bool CColorChooser::convertAngle (UTF8StringPtr string, float& output, void* userData)
+bool CColorChooser::convertAngle (UTF8StringPtr string, float& output, CTextEdit::StringToValueUserData* userData)
 {
-	output = (float)strtod (string, 0);
+	output = UTF8StringView (string).toFloat ();
 	if (output < 0.f)
 		output = 0.f;
-	else if (output > 360.f)
-		output = 360.f;
-	output /= 360.f;
+	else if (output > 359.f)
+		output = 359.f;
+	output /= 359.f;
 	return true;
 }
 
 //-----------------------------------------------------------------------------
-CColorChooser::CColorChooser (IColorChooserDelegate* delegate, const CColor& initialColor)
+CColorChooser::CColorChooser (IColorChooserDelegate* delegate, const CColor& initialColor, const CColorChooserUISettings& settings)
 : CViewContainer (CRect (0, 0, 0, 0))
 , delegate (delegate)
-, redSlider (0)
-, greenSlider (0)
-, blueSlider (0)
-, hueSlider (0)
-, saturationSlider (0)
-, brightnessSlider (0)
-, alphaSlider (0)
-, colorView (0)
 , color (initialColor)
+, redSlider (nullptr)
+, greenSlider (nullptr)
+, blueSlider (nullptr)
+, hueSlider (nullptr)
+, saturationSlider (nullptr)
+, brightnessSlider (nullptr)
+, alphaSlider (nullptr)
+, colorView (nullptr)
 {
 	setTransparency (true);
 	setAutosizeFlags (kAutosizeAll);
 
-	const CCoord controlHeight = 15;
+	const CCoord controlHeight = settings.font->getSize () + 2;
 	const CCoord controlWidth = 150;
 	const CCoord editWidth = 40;
 	const CCoord labelWidth = 40;
-	const CCoord margin = 5;
+	const CCoord xMargin = settings.margin.x;
+	const CCoord yMargin = settings.margin.y;
 	
-	colorView = new CColorChooserInternal::ColorView (CRect (1, 1, labelWidth + margin + controlWidth + margin + editWidth, 100), initialColor, this, kColorTag);
+	colorView = new CColorChooserInternal::ColorView (CRect (1, 1, labelWidth + xMargin + controlWidth + xMargin + editWidth, 100), initialColor, this, kColorTag, settings.checkerBoardBack, settings.checkerBoardColor1, settings.checkerBoardColor2);
 	colorView->setAutosizeFlags (kAutosizeAll);
 	addView (colorView);
 	CRect r (colorView->getViewSize ());
-	r.offset (labelWidth+margin, r.bottom + margin);
+	r.offset (labelWidth + xMargin, r.bottom + yMargin);
 	r.setWidth (controlWidth);
 	r.setHeight (controlHeight);
 
@@ -356,32 +329,32 @@ CColorChooser::CColorChooser (IColorChooserDelegate* delegate, const CColor& ini
 	redSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (redSlider);
 	
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	greenSlider = new CColorChooserInternal::Slider (r, this, kGreenTag);
 	greenSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (greenSlider);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	blueSlider = new CColorChooserInternal::Slider (r, this, kBlueTag);
 	blueSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (blueSlider);
 
-	r.offset (0, margin + margin + controlHeight);
+	r.offset (0, yMargin + yMargin + controlHeight);
 	hueSlider = new CColorChooserInternal::Slider (r, this, kHueTag);
 	hueSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (hueSlider);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	saturationSlider = new CColorChooserInternal::Slider (r, this, kSaturationTag);
 	saturationSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (saturationSlider);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	brightnessSlider = new CColorChooserInternal::Slider (r, this, kBrightnessTag);
 	brightnessSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (brightnessSlider);
 
-	r.offset (0, margin + margin + controlHeight);
+	r.offset (0, yMargin + yMargin + controlHeight);
 	alphaSlider = new CColorChooserInternal::Slider (r, this, kAlphaTag);
 	alphaSlider->setAutosizeFlags (kAutosizeLeft|kAutosizeRight|kAutosizeBottom);
 	addView (alphaSlider);
@@ -397,115 +370,110 @@ CColorChooser::CColorChooser (IColorChooserDelegate* delegate, const CColor& ini
 	setAutosizingEnabled (true);
 
 	r = colorView->getViewSize ();
-	r.offset (0, r.bottom + margin);
+	r.offset (0, r.bottom + yMargin);
 	r.setWidth (labelWidth);
 	r.setHeight (controlHeight);
-	CTextLabel* label = new CTextLabel (r, "Red");
+	auto* label = new CTextLabel (r, "Red");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	label = new CTextLabel (r, "Green");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	label = new CTextLabel (r, "Blue");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + margin + controlHeight);
+	r.offset (0, yMargin + yMargin + controlHeight);
 	label = new CTextLabel (r, "Hue");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	label = new CTextLabel (r, "Sat");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + controlHeight);
+	r.offset (0, yMargin + controlHeight);
 	label = new CTextLabel (r, "Value");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
-	r.offset (0, margin + margin + controlHeight);
+	r.offset (0, yMargin + yMargin + controlHeight);
 	label = new CTextLabel (r, "Alpha");
+	CColorChooserInternal::setupParamDisplay (label, settings);
 	label->setAutosizeFlags (kAutosizeLeft|kAutosizeBottom);
-	label->setTransparency (true);
 	addView (label);
 
 	r = colorView->getViewSize ();
-	r.offset (labelWidth + margin + controlWidth + margin, r.bottom + margin);
+	r.offset (labelWidth + xMargin + controlWidth + xMargin, r.bottom + yMargin);
 	r.setWidth (editWidth);
 	r.setHeight (controlHeight);
-	editFields[0] = new CTextEdit (r, this, kRedTag, 0);
+	editFields[0] = new CTextEdit (r, this, kRedTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[0], settings);
 	editFields[0]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[0]->setTransparency (true);
-	editFields[0]->setStringToValueProc (convertColorValue);
-	editFields[0]->setValueToStringProc (convertColorValueToString);
+	editFields[0]->setStringToValueFunction (convertColorValue);
+	editFields[0]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[0]);
 
-	r.offset (0, margin + controlHeight);
-	editFields[1] = new CTextEdit (r, this, kGreenTag, 0);
+	r.offset (0, yMargin + controlHeight);
+	editFields[1] = new CTextEdit (r, this, kGreenTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[1], settings);
 	editFields[1]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[1]->setTransparency (true);
-	editFields[1]->setStringToValueProc (convertColorValue);
-	editFields[1]->setValueToStringProc (convertColorValueToString);
+	editFields[1]->setStringToValueFunction (convertColorValue);
+	editFields[1]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[1]);
 
-	r.offset (0, margin + controlHeight);
-	editFields[2] = new CTextEdit (r, this, kBlueTag, 0);
+	r.offset (0, yMargin + controlHeight);
+	editFields[2] = new CTextEdit (r, this, kBlueTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[2], settings);
 	editFields[2]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[2]->setTransparency (true);
-	editFields[2]->setStringToValueProc (convertColorValue);
-	editFields[2]->setValueToStringProc (convertColorValueToString);
+	editFields[2]->setStringToValueFunction (convertColorValue);
+	editFields[2]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[2]);
 
-	r.offset (0, margin + margin + controlHeight);
-	editFields[3] = new CTextEdit (r, this, kHueTag, 0);
+	r.offset (0, yMargin + yMargin + controlHeight);
+	editFields[3] = new CTextEdit (r, this, kHueTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[3], settings);
 	editFields[3]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[3]->setTransparency (true);
-	editFields[3]->setStringToValueProc (convertAngle);
-	editFields[3]->setValueToStringProc (convertAngleToString);
+	editFields[3]->setStringToValueFunction (convertColorValue);
+	editFields[3]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[3]);
 
-	r.offset (0, margin + controlHeight);
-	editFields[4] = new CTextEdit (r, this, kSaturationTag, 0);
+	r.offset (0, yMargin + controlHeight);
+	editFields[4] = new CTextEdit (r, this, kSaturationTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[4], settings);
 	editFields[4]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[4]->setTransparency (true);
-	editFields[4]->setStringToValueProc (convertNormalized);
-	editFields[4]->setValueToStringProc (convertNormalizedToString);
+	editFields[4]->setStringToValueFunction (convertColorValue);
+	editFields[4]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[4]);
 
-	r.offset (0, margin + controlHeight);
-	editFields[5] = new CTextEdit (r, this, kBrightnessTag, 0);
+	r.offset (0, yMargin + controlHeight);
+	editFields[5] = new CTextEdit (r, this, kBrightnessTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[5], settings);
 	editFields[5]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[5]->setTransparency (true);
-	editFields[5]->setStringToValueProc (convertNormalized);
-	editFields[5]->setValueToStringProc (convertNormalizedToString);
+	editFields[5]->setStringToValueFunction (convertColorValue);
+	editFields[5]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[5]);
 
-	r.offset (0, margin + margin + controlHeight);
-	editFields[6] = new CTextEdit (r, this, kAlphaTag, 0);
+	r.offset (0, yMargin + yMargin + controlHeight);
+	editFields[6] = new CTextEdit (r, this, kAlphaTag, nullptr);
+	CColorChooserInternal::setupParamDisplay (editFields[6], settings);
 	editFields[6]->setAutosizeFlags (kAutosizeRight|kAutosizeBottom);
-	editFields[6]->setTransparency (true);
-	editFields[6]->setStringToValueProc (convertColorValue);
-	editFields[6]->setValueToStringProc (convertColorValueToString);
+	editFields[6]->setStringToValueFunction (convertColorValue);
+	editFields[6]->setValueToStringFunction (convertColorValueToString);
 	addView (editFields[6]);
 
 	updateState ();
-}
-
-//-----------------------------------------------------------------------------
-CColorChooser::~CColorChooser ()
-{
 }
 
 //-----------------------------------------------------------------------------
@@ -515,29 +483,29 @@ void CColorChooser::valueChanged (CControl* control)
 	{
 		case kRedTag:
 		{
-			color.red = (uint8_t) (control->getValue () * 255.f);
+			color.setNormRed (control->getValue ());
 			break;
 		}
 		case kGreenTag:
 		{
-			color.green = (uint8_t) (control->getValue () * 255.f);
+			color.setNormGreen (control->getValue ());
 			break;
 		}
 		case kBlueTag:
 		{
-			color.blue = (uint8_t) (control->getValue () * 255.f);
+			color.setNormBlue (control->getValue ());
 			break;
 		}
 		case kAlphaTag:
 		{
-			color.alpha = (uint8_t) (control->getValue () * 255.f);
+			color.setNormAlpha (control->getValue ());
 			break;
 		}
 		case kHueTag:
 		{
 			double hue, saturation, value;
 			color.toHSV (hue, saturation, value);
-			hue = control->getValue () * 360.;
+			hue = control->getValue () * 359.;
 			color.fromHSV (hue, saturation, value);
 			break;
 		}
@@ -568,6 +536,20 @@ void CColorChooser::valueChanged (CControl* control)
 }
 
 //-----------------------------------------------------------------------------
+void CColorChooser::controlBeginEdit (CControl* pControl)
+{
+	if (delegate)
+		delegate->onBeginColorChange (this);
+}
+
+//-----------------------------------------------------------------------------
+void CColorChooser::controlEndEdit (CControl* pControl)
+{
+	if (delegate)
+		delegate->onEndColorChange (this);
+}
+
+//-----------------------------------------------------------------------------
 void CColorChooser::setColor (const CColor& newColor)
 {
 	color = newColor;
@@ -579,11 +561,11 @@ void CColorChooser::updateState ()
 {
 	double hue, saturation, value;
 	color.toHSV (hue, saturation, value);
-	redSlider->setValue (color.red / 255.f);
-	greenSlider->setValue (color.green / 255.f);
-	blueSlider->setValue (color.blue / 255.f);
-	alphaSlider->setValue (color.alpha / 255.f);
-	hueSlider->setValue ((float)(hue / 360.));
+	redSlider->setValue (color.normRed<float> ());
+	greenSlider->setValue (color.normGreen<float> ());
+	blueSlider->setValue (color.normBlue<float> ());
+	alphaSlider->setValue (color.normAlpha<float> ());
+	hueSlider->setValue ((float)(hue / 359.));
 	saturationSlider->setValue ((float)saturation);
 	brightnessSlider->setValue ((float)value);
 	colorView->setColor (color);
@@ -609,5 +591,4 @@ void CColorChooser::updateState ()
 	colorView->invalid ();
 }
 
-} // namespace
-
+} // VSTGUI

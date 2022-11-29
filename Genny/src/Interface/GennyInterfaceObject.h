@@ -13,9 +13,13 @@ public:
 	GennyVST* getVst() { return _vst; }
 	GennyPatch* getPatch(int index);
 	GennyPatch* getCurrentPatch();
+	GennyPatch* getCurrentInstrument();
 	int getPatchIndex(VSTPatch* patch);
 	IndexBaron* getIndexBaron();
 	virtual void childValueChanged() {}
+
+	virtual void onMouseUpContext(int tag);
+	virtual void onMouseDownContext(int tag);
 
 	int getInstrumentIndex(int index);
 
@@ -27,5 +31,6 @@ protected:
 	GennyInterface* _interface;
 	GennyVST* _vst;
 	IndexBaron* _indexBaron;
+	void* ContextMenu;
 };
 

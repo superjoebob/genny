@@ -6,6 +6,7 @@
 #include "UIImage.h"
 #include "UIPresetsPanel.h"
 #include "GennyLoaders.h"
+#include "lib/platform/win32/win32frame.h"
 
 //Constructor stuff
 //======================================================================================
@@ -13,7 +14,7 @@ const int kCopyButton = 9990;
 const int kPasteButton = 9991;
 const int kElementWidth = 186;
 UIPresetElement::UIPresetElement(const CPoint& vPosition, UIPresetsPanel* vOwner, GennyPatch* vPatch, int vIndex):
-	CCheckBox(CRect(vPosition.x, vPosition.y, vPosition.x + kElementWidth, vPosition.y + 14), nullptr, vIndex, "", UIBitmap(PNG_PRESETELEMENT), 0),
+	CCheckBox(CRect(vPosition.x, vPosition.y, vPosition.x + kElementWidth, vPosition.y + 16), nullptr, vIndex, "", UIBitmap(PNG_PRESETELEMENT), 0),
 	GennyInterfaceObject(vOwner),
 	_owner(vOwner),
 	_selected(false),
@@ -31,18 +32,20 @@ UIPresetElement::~UIPresetElement(void)
 
 bool UIPresetElement::attached (CView* parent)
 {
+	CRect size = getViewSize();
 	bool returnValue = CCheckBox::attached(parent);
 		
 	CFrame* frame = _owner->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
-	_typeDisplay = new CMovieBitmap(CRect(size.left + 2, size.top + 2, size.left + 15, size.top + 15), this, -1, UIBitmap(IDB_PNG15));
+	_typeDisplay = new UIImage(CRect(size.left + 2, size.top + 2, size.left + 15, size.top + 14), IDB_PNG15);
+	_typeDisplay->setMouseEnabled(false);
 	_typeDisplay->setMouseableArea(CRect(0, 0, 0, 0));
 	frame->addView(_typeDisplay);
 
 
 
-	_label = new CTextLabel(CRect(size.left + 4, size.top - 2, size.left + 180, size.top + 15), "");
+	_label = new CTextLabel(CRect(size.left + 4, size.top, size.left + 180, size.top + 15), "");
 	_label->setFont(kNormalFont);
 	_label->setHoriAlign(kLeftText);
 	_label->getFont()->setStyle(kBoldFace);
@@ -53,12 +56,12 @@ bool UIPresetElement::attached (CView* parent)
 	frame->addView(_label);
 
 	UIBitmap copyImage =  UIBitmap(PNG_COPY);
-	_copyButton = new CKickButton(CRect(size.left + 158, size.top + 2, size.left + 158 + copyImage.getWidth(), size.top + 2 + (copyImage.getHeight() / 2)), this, kCopyButton, copyImage);
+	_copyButton = new CKickButton(CRect(size.left + 158, size.top + 3, size.left + 158 + copyImage.getWidth(), size.top + 3 + (copyImage.getHeight() / 2)), this, kCopyButton, copyImage);
 	_owner->getFrame()->addView(_copyButton);
 	_copyButton->setVisible(false);
 	
 	UIBitmap pasteImage =  UIBitmap(PNG_PASTE);
-	_pasteButton = new CKickButton(CRect(size.left + 172, size.top + 2, size.left + 172 + pasteImage.getWidth(), size.top + 4 + (pasteImage.getHeight() / 2)), this, kPasteButton, pasteImage);
+	_pasteButton = new CKickButton(CRect(size.left + 172, size.top + 3, size.left + 172 + pasteImage.getWidth(), size.top + 3 + (pasteImage.getHeight() / 2)), this, kPasteButton, pasteImage);
 	_owner->getFrame()->addView(_pasteButton);
 	_pasteButton->setVisible(false);
 
@@ -68,19 +71,53 @@ bool UIPresetElement::attached (CView* parent)
 }
 //======================================================================================
 
-bool UIPresetElement::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+bool UIPresetElement::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)	
 {
-	_owner->onWheel(where, distance, buttons);
+	_owner->onWheel(where, axis, distance, buttons);
 	return true;
+}
+
+GennyPatch* editingPatchName = nullptr;
+char szItemName[80];
+BOOL CALLBACK RenameItemProc(HWND hwndDlg,
+	UINT message,
+	WPARAM wParam,
+	LPARAM lParam)
+{
+	if (editingPatchName == nullptr)
+		return TRUE;
+
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		SetDlgItemTextA(hwndDlg, IDC_EDIT1, editingPatchName->Name.c_str());
+		return TRUE;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDOK:
+			if (!GetDlgItemTextA(hwndDlg, IDC_EDIT1, szItemName, 80))
+				*szItemName = 0;
+			else
+				editingPatchName->Name = szItemName;
+
+			// Fall through. 
+		case IDCANCEL:
+			EndDialog(hwndDlg, wParam);
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 CMouseEventResult UIPresetElement::onMouseDown (CPoint& where, const CButtonState& buttons)
 {
 	if(buttons.isRightButton())
 	{
-#if !BUILD_VST	
 		if(_owner->getInterface() != nullptr)
 		{
+#if !BUILD_VST
 			VSTBase* b = _owner->getInterface()->getVst()->getBase();
 			int col = -1;
 			char* result = new char[255];
@@ -93,8 +130,21 @@ CMouseEventResult UIPresetElement::onMouseDown (CPoint& where, const CButtonStat
 
 
 			//b->PlugHost->Dispatcher(b->HostTag, FHD_SetNewColor, 0, 5);
+#else
+			LPWSTR str = MAKEINTRESOURCEW(IDD_DIALOG1);
+
+			MEMORY_BASIC_INFORMATION mbi;
+			static int dummyVariable;
+			VirtualQuery(&dummyVariable, &mbi, sizeof(mbi));
+			HMODULE hMod = (HMODULE)mbi.AllocationBase;
+
+			Win32Frame* winFrame = (Win32Frame*)_interface->getFrame()->getPlatformFrame();
+
+			editingPatchName = getPatchLink();
+			if (DialogBoxW(hMod, str, winFrame->getPlatformWindow(), (DLGPROC)RenameItemProc) == IDOK)
+				_owner->getOwner()->reconnect();
+#endif
 		}
-#endif	
 	}
 	else
 		return CCheckBox::onMouseDown(where, buttons);	
@@ -152,13 +202,13 @@ void UIPresetElement::setPatchLink(GennyPatch* patch)
 	_patch = patch;
 	if(_patch == nullptr)
 	{
-		setVisible(false);
+		//setVisible(false);
 		invalid();
 	}
 	else
 	{
 		_label->setText(patch->Name.c_str());
-		setVisible(true);
+		//setVisible(true);
 		invalid();
 	}
 }
@@ -169,7 +219,7 @@ void UIPresetElement::setVisible(bool visible)
 	_label->setVisible(visible);
 	_pasteButton->setVisible(visible);
 	_copyButton->setVisible(visible);
-	_typeDisplay->setValue(visible);
+	_typeDisplay->setVisible(visible);
 	CCheckBox::setVisible(visible);
 	CCheckBox::invalid();
 
@@ -188,7 +238,7 @@ void UIPresetElement::invalid()
 {
 	if(_patch != nullptr)
 	{
-		if(_patch->InstrumentDef.Type == GIType::FM)
+		if(_patch->InstrumentDef.Type == GIType::FM && !_patch->InstrumentDef.Ch3Special)
 		{
 			_label->setTextInset(CPoint(0, 0));
 			_typeDisplay->setVisible(false);
@@ -197,10 +247,12 @@ void UIPresetElement::invalid()
 		{		
 			_label->setTextInset(CPoint(12, 0));
 			_typeDisplay->setVisible(isVisible());
-			if(_patch->InstrumentDef.Type != GIType::DAC)
-				_typeDisplay->setValue(0.0f);
+			if(_patch->InstrumentDef.Type == GIType::DAC)
+				_typeDisplay->setFrame(1);
+			else if (_patch->InstrumentDef.Ch3Special)
+				_typeDisplay->setFrame(2);
 			else
-				_typeDisplay->setValue(1.0);
+				_typeDisplay->setFrame(0);
 		}	
 
 		_copyButton->setVisible(value == 1.0f);

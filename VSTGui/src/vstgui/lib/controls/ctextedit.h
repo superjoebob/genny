@@ -1,47 +1,17 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __ctextedit__
-#define __ctextedit__
+#pragma once
 
 #include "ctextlabel.h"
+#include "../dispatchlist.h"
 #include "../platform/iplatformtextedit.h"
+#include <functional>
 
 namespace VSTGUI {
-class CTextEdit;
 
-typedef bool (*CTextEditStringToValueProc) (UTF8StringPtr txt, float& result, void* userData);
+using CTextEditStringToValueProc = bool (*) (UTF8StringPtr txt, float& result, void* userData);
 
 //-----------------------------------------------------------------------------
 // CTextEdit Declaration
@@ -50,62 +20,103 @@ typedef bool (*CTextEditStringToValueProc) (UTF8StringPtr txt, float& result, vo
 //-----------------------------------------------------------------------------
 class CTextEdit : public CTextLabel, public IPlatformTextEditCallback
 {
+private:
+	enum StyleEnum
+	{
+		StyleDoubleClick = CParamDisplay::LastStyle,
+	};
 public:
-	CTextEdit (const CRect& size, CControlListener* listener, int32_t tag, UTF8StringPtr txt = 0, CBitmap* background = 0, const int32_t style = 0);
+	using PlatformTextEditPtr = SharedPointer<IPlatformTextEdit>;
+
+	CTextEdit (const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr txt = nullptr, CBitmap* background = nullptr, const int32_t style = 0);
 	CTextEdit (const CTextEdit& textEdit);
+
+	enum Style
+	{
+		kDoubleClickStyle = 1 << StyleDoubleClick,
+	};
+
+	bool isDoubleClickStyle () const { return hasBit (getStyle (), kDoubleClickStyle); }
 
 	//-----------------------------------------------------------------------------
 	/// @name CTextEdit Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual void setStringToValueProc (CTextEditStringToValueProc proc, void* userData = 0);
+	using StringToValueUserData = CTextEdit;
+
+	using StringToValueFunction = std::function<bool(UTF8StringPtr txt, float& result, CTextEdit* textEdit)>;
 	
-	virtual void setImmediateTextChange (bool state);	///< enable/disable immediate text change behaviour.
-	bool getImmediateTextChange () const { return immediateTextChange; }	///< get immediate text change behaviour
+	void setStringToValueFunction (const StringToValueFunction& stringToValueFunc);
+	void setStringToValueFunction (StringToValueFunction&& stringToValueFunc);
+	
+	/** enable/disable immediate text change behaviour */
+	virtual void setImmediateTextChange (bool state);
+	/** get immediate text change behaviour */
+	bool getImmediateTextChange () const { return immediateTextChange; }
+
+	/** enable/disable secure style */
+	void setSecureStyle (bool state);
+	/** get secure style */
+	bool getSecureStyle () const;
+	
+	virtual void setPlaceholderString (const UTF8String& str);
+	const UTF8String& getPlaceholderString () const { return placeholderString; }
+
+	void registerTextEditListener (ITextEditListener* listener);
+	void unregisterTextEditListener (ITextEditListener* listener);
 	//@}
 
 	// overrides
-	virtual void setText (UTF8StringPtr txt);
-	virtual void setValue (float val);
+	void setText (const UTF8String& txt) override;
+	void valueChanged () override;
+	void setValue (float val) override;
+	void setTextRotation (double angle) override { } // not supported
 
-	virtual	void draw (CDrawContext* pContext);
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
+	void draw (CDrawContext* pContext) override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
 
-	virtual	void takeFocus ();
-	virtual	void looseFocus ();
+	void takeFocus () override;
+	void looseFocus () override;
+	bool wantsFocus () const override;
 
-	virtual void setViewSize (const CRect& newSize, bool invalid = true);
-	virtual void parentSizeChanged ();
+	void setViewSize (const CRect& newSize, bool invalid = true) override;
+	void parentSizeChanged () override;
 
-	bool bWasReturnPressed;
+	bool bWasReturnPressed {false};
+
+	PlatformTextEditPtr getPlatformTextEdit () const { return platformControl; }
 
 	CLASS_METHODS(CTextEdit, CParamDisplay)
 protected:
-	~CTextEdit ();
+	~CTextEdit () noexcept override;
 
+	void createPlatformTextEdit ();
 	void updateText (IPlatformTextEdit* pte);
 
-	CColor platformGetBackColor () const { return getBackColor (); }
-	CColor platformGetFontColor () const { return getFontColor (); }
-	CFontRef platformGetFont () const { return getFont (); }
-	CHoriTxtAlign platformGetHoriTxtAlign () const { return getHoriAlign (); }
-	UTF8StringPtr platformGetText () const { return text; }
-	CRect platformGetSize () const;
-	CRect platformGetVisibleSize () const;
-	CPoint platformGetTextInset () const { return getTextInset (); }
-	void platformLooseFocus (bool returnPressed);
-	bool platformOnKeyDown (const VstKeyCode& key);
-	void platformTextDidChange ();
+	CColor platformGetBackColor () const override { return getBackColor (); }
+	CColor platformGetFontColor () const override { return getFontColor (); }
+	CFontRef platformGetFont () const override;
+	CHoriTxtAlign platformGetHoriTxtAlign () const override { return getHoriAlign (); }
+	const UTF8String& platformGetText () const override { return text; }
+	const UTF8String& platformGetPlaceholderText () const override { return placeholderString; }
+	CRect platformGetSize () const override;
+	CRect platformGetVisibleSize () const override;
+	CPoint platformGetTextInset () const override { return getTextInset (); }
+	void platformLooseFocus (bool returnPressed) override;
+	bool platformOnKeyDown (const VstKeyCode& key) override;
+	void platformTextDidChange () override;
+	bool platformIsSecureTextEdit () override;
 
-	IPlatformTextEdit* platformControl;
+	PlatformTextEditPtr platformControl;
 
-	CTextEditStringToValueProc textToValue;
-	void* textToValueUserData;
-	
-	bool immediateTextChange;
+	StringToValueFunction stringToValueFunction;
+
+	bool immediateTextChange {false};
+	bool secureStyle {false};
+	mutable SharedPointer<CFontDesc> platformFont;
+	UTF8String placeholderString;
+	DispatchList<ITextEditListener*> textEditListeners;
 };
 
-} // namespace
-
-#endif
+} // VSTGUI

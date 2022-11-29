@@ -1,41 +1,13 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins :
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistributions of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this
-//     software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED.
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cscrollview.h"
 #include "cvstguitimer.h"
 #include "cdrawcontext.h"
 #include "cframe.h"
+#include "dragging.h"
+#include "controls/cscrollbar.h"
 #include <cmath>
 
 /// @cond ignore
@@ -47,9 +19,9 @@ class CScrollContainer : public CViewContainer
 //-----------------------------------------------------------------------------
 {
 public:
-	CScrollContainer (const CRect &size, const CRect &containerSize, CFrame *pParent, CBitmap *pBackground = 0);
+	CScrollContainer (const CRect &size, const CRect &containerSize);
 	CScrollContainer (const CScrollContainer& v);
-	~CScrollContainer ();
+	~CScrollContainer () override = default;
 
 	void setScrollOffset (CPoint offset, bool withRedraw = false);
 	void getScrollOffset (CPoint& off) const { off = offset; }
@@ -58,17 +30,48 @@ public:
 	CRect getContainerSize () const { return containerSize; }
 	void setContainerSize (const CRect& cs);
 
-	bool isDirty () const;
+	bool isDirty () const override;
 
-	void onDragMove (CDragContainer* drag, const CPoint& where);
 	void setAutoDragScroll (bool state) { autoDragScroll = state; }
 
-	bool attached (CView* parent);
-	CMessageResult notify (CBaseObject* sender, IdStringPtr message);
+	bool attached (CView* parent) override;
+	CMessageResult notify (CBaseObject* sender, IdStringPtr message) override;
+
+	SharedPointer<IDropTarget> getDropTarget () override;
+	void onDragMove (CPoint where);
 
 	CLASS_METHODS(CScrollContainer, CViewContainer)
 //-----------------------------------------------------------------------------
 protected:
+	struct DropTarget : public IDropTarget, public NonAtomicReferenceCounted
+	{
+		DropTarget (CScrollContainer* scrollContainer, SharedPointer<IDropTarget>&& parent)
+		: scrollContainer (scrollContainer), parent (std::move (parent))
+		{
+		}
+
+		DragOperation onDragEnter (DragEventData data) override
+		{
+			return parent->onDragEnter (data);
+		}
+		DragOperation onDragMove (DragEventData data) override
+		{
+			scrollContainer->onDragMove (data.pos);
+			return parent->onDragMove (data);
+		}
+		void onDragLeave (DragEventData data) override
+		{
+			return parent->onDragLeave (data);
+		}
+		bool onDrop (DragEventData data) override
+		{
+			return parent->onDrop (data);
+		}
+
+		CScrollContainer* scrollContainer;
+		SharedPointer<IDropTarget> parent;
+	};
+
 	bool getScrollValue (const CPoint& where, float& x, float& y);
 
 	CRect containerSize;
@@ -80,8 +83,8 @@ protected:
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-CScrollContainer::CScrollContainer (const CRect &size, const CRect &containerSize, CFrame *pParent, CBitmap *pBackground)
-: CViewContainer (size, pParent, pBackground)
+CScrollContainer::CScrollContainer (const CRect &size, const CRect &containerSize)
+: CViewContainer (size)
 , containerSize (containerSize)
 , offset (CPoint (0, 0))
 , autoDragScroll (false)
@@ -95,15 +98,10 @@ CScrollContainer::CScrollContainer (const CScrollContainer& v)
 : CViewContainer (v)
 , containerSize (v.containerSize)
 , offset (v.offset)
+, autoDragScroll (v.autoDragScroll)
 , inScrolling (false)
 {
 }
-
-//-----------------------------------------------------------------------------
-CScrollContainer::~CScrollContainer ()
-{
-}
-
 
 //-----------------------------------------------------------------------------
 void CScrollContainer::setContainerSize (const CRect& cs)
@@ -117,15 +115,15 @@ void CScrollContainer::setScrollOffset (CPoint newOffset, bool redraw)
 {
 	newOffset.x = floor (newOffset.x + 0.5);
 	newOffset.y = floor (newOffset.y + 0.5);
-	if (containerSize.getWidth () >= getViewSize ().width ())
+	if (containerSize.getWidth () >= getViewSize ().getWidth ())
 	{
-		if (newOffset.x < containerSize.left - (containerSize.width () - getViewSize ().width ()))
-			newOffset.x = containerSize.left - (containerSize.width () - getViewSize ().width ());
+		if (newOffset.x < containerSize.left - (containerSize.getWidth () - getViewSize ().getWidth ()))
+			newOffset.x = containerSize.left - (containerSize.getWidth () - getViewSize ().getWidth ());
 	}
 	else
 	{
-		if (newOffset.x < containerSize.left - containerSize.width ())
-			newOffset.x = containerSize.left - containerSize.width ();
+		if (newOffset.x < containerSize.left - containerSize.getWidth ())
+			newOffset.x = containerSize.left - containerSize.getWidth ();
 	}
 	if (newOffset.x > containerSize.right)
 		newOffset.x = containerSize.right;
@@ -136,18 +134,18 @@ void CScrollContainer::setScrollOffset (CPoint newOffset, bool redraw)
 	CPoint diff ((int32_t)(newOffset.x - offset.x), (int32_t)(offset.y - newOffset.y));
 	if (diff.x == 0 && diff.y == 0)
 		return;
+	offset = newOffset;
 	inScrolling = true;
-	FOREACHSUBVIEW
-		CRect r;
-		pV->getViewSize (r);
+	for (const auto& pV : getChildren ())
+	{
+		CRect r = pV->getViewSize ();
+		CRect mr = pV->getMouseableArea ();
 		r.offset (diff.x , diff.y);
 		pV->setViewSize (r, false);
-		pV->getMouseableArea (r);
-		r.offset (diff.x , diff.y);
-		pV->setMouseableArea (r);
-	ENDFOREACHSUBVIEW
+		mr.offset (diff.x , diff.y);
+		pV->setMouseableArea (mr);
+	}
 	inScrolling = false;
-	offset = newOffset;
 	if (!isAttached ())
 		return;
 
@@ -184,16 +182,17 @@ bool CScrollContainer::isDirty () const
 	if (CView::isDirty ())
 		return true;
 
-	FOREACHSUBVIEW
+	for (const auto& pV : getChildren ())
+	{
 		if (pV->isDirty () && pV->isVisible ())
 		{
-			CRect r = pV->getVisibleSize ();
+			CRect r = pV->getVisibleViewSize ();
 			if (r.getWidth () > 0 && r.getHeight () > 0)
 				return true;
 			else
 				pV->setDirty (false);
 		}
-	ENDFOREACHSUBVIEW
+	}
 	return false;
 }
 
@@ -223,23 +222,30 @@ bool CScrollContainer::getScrollValue (const CPoint& where, float& x, float& y)
 }
 
 //-----------------------------------------------------------------------------
-void CScrollContainer::onDragMove (CDragContainer* drag, const CPoint& where)
+SharedPointer<IDropTarget> CScrollContainer::getDropTarget ()
 {
+	auto dropTarget = CViewContainer::getDropTarget ();
 	if (autoDragScroll)
 	{
-		float x, y;
-		if (getScrollValue (where, x, y))
+		return makeOwned<DropTarget> (this, std::move (dropTarget));
+	}
+	return dropTarget;
+}
+
+//-----------------------------------------------------------------------------
+void CScrollContainer::onDragMove (CPoint where)
+{
+	float x, y;
+	if (getScrollValue (where, x, y))
+	{
+		if (auto* scrollView = static_cast<CScrollView*> (getParentView ()))
 		{
-			CScrollView* scrollView = reinterpret_cast<CScrollView*> (getParentView ());
-			if (scrollView)
-			{
-				CRect r (getViewSize ());
-				r.offset (x, y);
-				scrollView->makeRectVisible (r);
-			}
+			CRect r (getViewSize ());
+			r.originize ();
+			r.offset (x, y);
+			scrollView->makeRectVisible (r);
 		}
 	}
-	return CViewContainer::onDragMove (drag, where);
 }
 
 //-----------------------------------------------------------------------------
@@ -248,17 +254,17 @@ bool CScrollContainer::attached (CView* parent)
 	bool result = CViewContainer::attached (parent);
 	if (getNbViews () == 1)
 	{
-		CView* view = getView (0);
-		if (view)
+		if (CView* view = getView (0))
 		{
-			CRect r (view->getViewSize ());
+			const CRect& r (view->getViewSize ());
 			CRect newContainerSize (containerSize);
 			newContainerSize.setWidth (r.getWidth ());
 			newContainerSize.setHeight (r.getHeight ());
 			if (newContainerSize != containerSize)
 			{
-				CScrollView* scrollView = (CScrollView*)getParentView ();
-				scrollView->setContainerSize (newContainerSize);
+				auto* scrollView = static_cast<CScrollView*> (getParentView ());
+				if (scrollView)
+					scrollView->setContainerSize (newContainerSize);
 			}
 		}
 	}
@@ -270,18 +276,19 @@ CMessageResult CScrollContainer::notify (CBaseObject* sender, IdStringPtr messag
 {
 	if (message == kMsgViewSizeChanged && !inScrolling)
 	{
-		int32_t numSubViews = getNbViews ();
-		CView* view = reinterpret_cast<CView*> (sender);
+		uint32_t numSubViews = getNbViews ();
+		auto* view = static_cast<CView*> (sender);
 		if (numSubViews == 1 && view && isChild (view))
 		{
-			CRect r (view->getViewSize ());
+			const CRect& r (view->getViewSize ());
 			CRect newContainerSize (containerSize);
 			newContainerSize.setWidth (r.getWidth ());
 			newContainerSize.setHeight (r.getHeight ());
 			if (newContainerSize != containerSize)
 			{
-				CScrollView* scrollView = (CScrollView*)getParentView ();
-				scrollView->setContainerSize (newContainerSize);
+				auto* scrollView = static_cast<CScrollView*> (getParentView ());
+				if (scrollView)
+					scrollView->setContainerSize (newContainerSize);
 			}
 		}
 	}
@@ -293,15 +300,18 @@ CMessageResult CScrollContainer::notify (CBaseObject* sender, IdStringPtr messag
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-CScrollView::CScrollView (const CRect &size, const CRect &containerSize, CFrame* pParent, int32_t style, CCoord scrollbarWidth, CBitmap* pBackground)
-: CViewContainer (size, pParent, pBackground)
-, sc (0)
-, vsb (0)
-, hsb (0)
+CScrollView::CScrollView (const CRect &size, const CRect &containerSize, int32_t style, CCoord scrollbarWidth, CBitmap* pBackground)
+: CViewContainer (size)
+, sc (nullptr)
+, vsb (nullptr)
+, hsb (nullptr)
 , containerSize (containerSize)
 , scrollbarWidth (scrollbarWidth)
 , style (style)
+, activeScrollbarStyle (0)
 {
+	if (pBackground)
+		setBackground(pBackground);
 	recalculateSubViews ();
 }
 
@@ -309,47 +319,78 @@ CScrollView::CScrollView (const CRect &size, const CRect &containerSize, CFrame*
 CScrollView::CScrollView (const CScrollView& v)
 : CViewContainer (v)
 , containerSize (v.containerSize)
-, style (v.style)
 , scrollbarWidth (v.scrollbarWidth)
+, style (v.style)
+, activeScrollbarStyle (v.activeScrollbarStyle)
 {
 	CViewContainer::removeAll ();
-	if (style & kHorizontalScrollbar && v.hsb)
+	if (activeScrollbarStyle & kHorizontalScrollbar && v.hsb)
 	{
-		hsb = (CScrollbar*)v.hsb->newCopy ();
+		hsb = static_cast<CScrollbar*> (v.hsb->newCopy ());
 		hsb->setListener (this);
-		CViewContainer::addView (hsb);
+		CViewContainer::addView (hsb, nullptr);
 	}
-	if (style & kVerticalScrollbar && v.vsb)
+	if (activeScrollbarStyle & kVerticalScrollbar && v.vsb)
 	{
-		vsb = (CScrollbar*)v.vsb->newCopy ();
+		vsb = static_cast<CScrollbar*> (v.vsb->newCopy ());
 		vsb->setListener (this);
-		CViewContainer::addView (vsb);
+		CViewContainer::addView (vsb, nullptr);
 	}
-	sc = (CScrollContainer*)v.sc->newCopy ();
-	CViewContainer::addView (sc);
-}
-
-//-----------------------------------------------------------------------------
-CScrollView::~CScrollView ()
-{
+	sc = static_cast<CScrollContainer*> (v.sc->newCopy ());
+	CViewContainer::addView (sc, nullptr);
 }
 
 //-----------------------------------------------------------------------------
 void CScrollView::recalculateSubViews ()
 {
-	CRect scsize (0, 0, getViewSize ().getWidth (), getViewSize ().getHeight ());
+	if (recalculateSubViewsRecursionGard)
+		return;
+	recalculateSubViewsRecursionGard = true;
+	CRect scsize (containerSize.left, containerSize.top, getViewSize ().getWidth (), getViewSize ().getHeight ());
 	if (!(style & kDontDrawFrame))
 	{
 		scsize.left++; scsize.top++;
 		scsize.right-=1; scsize.bottom--;
 	}
-	if (style & kHorizontalScrollbar)
+	if (style & kAutoHideScrollbars)
+	{
+		activeScrollbarStyle = 0;
+		CRect r (scsize);
+		if (style & kHorizontalScrollbar)
+		{
+			if (style & kVerticalScrollbar && r.getHeight () < containerSize.getHeight ())
+			{
+				activeScrollbarStyle |= kVerticalScrollbar;
+				if (!(style & kOverlayScrollbars))
+					r.right -= scrollbarWidth;
+			}
+			activeScrollbarStyle |= containerSize.getWidth () <= r.getWidth () ? 0 : kHorizontalScrollbar;
+			if (!(style & kOverlayScrollbars))
+				r.bottom -= scrollbarWidth;
+			if (activeScrollbarStyle == kHorizontalScrollbar && style & kVerticalScrollbar && r.getHeight () < containerSize.getHeight ())
+			{
+				activeScrollbarStyle |= kVerticalScrollbar;
+			}
+		}
+		else if (style & kVerticalScrollbar)
+		{
+			activeScrollbarStyle |= containerSize.getHeight () <= r.getHeight () ? 0 : kVerticalScrollbar;
+		}
+	}
+	else
+	{
+		activeScrollbarStyle = (style & kHorizontalScrollbar) | (style & kVerticalScrollbar);
+	}
+	
+	if (activeScrollbarStyle & kHorizontalScrollbar)
 	{
 		CRect sbr (getViewSize ());
 		sbr.originize ();
 		sbr.top = sbr.bottom - scrollbarWidth;
-		if (style & kVerticalScrollbar)
+		if (activeScrollbarStyle & kVerticalScrollbar)
 		{
+			if (hsb && (vsb && vsb->isVisible () == false))
+				hsb->invalid ();
 			sbr.right -= (scrollbarWidth - 1);
 		}
 		if (hsb)
@@ -362,21 +403,26 @@ void CScrollView::recalculateSubViews ()
 		{
 			hsb = new CScrollbar (sbr, this, kHSBTag, CScrollbar::kHorizontal, containerSize);
 			hsb->setAutosizeFlags (kAutosizeLeft | kAutosizeRight | kAutosizeBottom);
-			CViewContainer::addView (hsb);
+			CViewContainer::addView (hsb, nullptr);
+			hsb->registerViewListener (this);
 		}
-		scsize.bottom = sbr.top;
+		if (!(style & kOverlayScrollbars))
+			scsize.bottom = sbr.top;
+		hsb->setOverlayStyle ((style & kOverlayScrollbars) ? true : false);
 	}
 	else if (hsb)
 	{
 		hsb->setVisible (false);
 	}
-	if (style & kVerticalScrollbar)
+	if (activeScrollbarStyle & kVerticalScrollbar)
 	{
 		CRect sbr (getViewSize ());
 		sbr.originize ();
 		sbr.left = sbr.right - scrollbarWidth;
-		if (style & kHorizontalScrollbar)
+		if (activeScrollbarStyle & kHorizontalScrollbar)
 		{
+			if (vsb && (hsb  && hsb->isVisible () == false))
+				vsb->invalid ();
 			sbr.bottom -= (scrollbarWidth - 1);
 		}
 		if (vsb)
@@ -389,9 +435,12 @@ void CScrollView::recalculateSubViews ()
 		{
 			vsb = new CScrollbar (sbr, this, kVSBTag, CScrollbar::kVertical, containerSize);
 			vsb->setAutosizeFlags (kAutosizeTop | kAutosizeRight | kAutosizeBottom);
-			CViewContainer::addView (vsb);
+			CViewContainer::addView (vsb, nullptr);
+			vsb->registerViewListener (this);
 		}
-		scsize.right = sbr.left;
+		if (!(style & kOverlayScrollbars))
+			scsize.right = sbr.left;
+		vsb->setOverlayStyle ((style & kOverlayScrollbars) ? true : false);
 	}
 	else if (vsb)
 	{
@@ -400,22 +449,27 @@ void CScrollView::recalculateSubViews ()
 
 	if (!sc)
 	{
-		sc = new CScrollContainer (scsize, containerSize, getFrame ());
+		sc = new CScrollContainer (scsize, containerSize);
 		sc->setAutosizeFlags (kAutosizeAll);
-		CViewContainer::addView (sc);
+		CViewContainer::addView (sc, CViewContainer::getView (0));
 	}
 	else
 	{
 		sc->setViewSize (scsize, true);
 		sc->setMouseableArea (scsize);
 	}
-	sc->setAutoDragScroll (style & kAutoDragScrolling ? true : false);
+	sc->setAutoDragScroll ((style & kAutoDragScrolling) ? true : false);
+	recalculateSubViewsRecursionGard = false;
 }
 
 //-----------------------------------------------------------------------------
 void CScrollView::setViewSize (const CRect &rect, bool invalid)
 {
+	bool autoHideScrollbars = (style & kAutoHideScrollbars) != 0;
+	style &= ~ kAutoHideScrollbars;
 	CViewContainer::setViewSize (rect, invalid);
+	if (autoHideScrollbars)
+		style |= kAutoHideScrollbars;
 	setContainerSize (containerSize, true);
 }
 
@@ -432,6 +486,8 @@ void CScrollView::setStyle (int32_t newStyle)
 {
 	if (style != newStyle)
 	{
+		if ((style & kDontDrawFrame) != (newStyle & kDontDrawFrame))
+			setBackgroundColorDrawStyle ((style & kDontDrawFrame) ? kDrawFilled : kDrawFilledAndStroked);
 		style = newStyle;
 		recalculateSubViews ();
 	}
@@ -456,16 +512,18 @@ void CScrollView::setContainerSize (const CRect& cs, bool keepVisibleArea)
 	{
 		sc->setContainerSize (cs);
 	}
+	if (style & kAutoHideScrollbars)
+		recalculateSubViews ();
 	if (vsb)
 	{
 		CRect oldScrollSize = vsb->getScrollSize (oldScrollSize);
 		float oldValue = vsb->getValue ();
 		vsb->setScrollSize (cs);
-		if (cs.getHeight () < getViewSize ().getHeight ())
+		if (cs.getHeight () <= getViewSize ().getHeight ())
 			vsb->setValue (0);
-		else if (keepVisibleArea && oldScrollSize.getHeight () != cs.getHeight ())
+		else if (sc && keepVisibleArea && oldScrollSize.getHeight () != cs.getHeight ())
 		{
-			CRect vSize = sc->getViewSize (vSize);
+			CRect vSize = sc->getViewSize ();
 			float newValue = (float)(oldValue * ((float)(oldScrollSize.getHeight () - vSize.getHeight ()) / ((float)cs.getHeight () - vSize.getHeight ())));
 			if (newValue > 1.f)
 				newValue = 1.f;
@@ -473,6 +531,8 @@ void CScrollView::setContainerSize (const CRect& cs, bool keepVisibleArea)
 				newValue = 0.f;
 			vsb->setValue (newValue);
 		}
+		if (oldSize != containerSize)
+			vsb->onVisualChange ();
 		valueChanged (vsb);
 	}
 	if (hsb)
@@ -480,11 +540,11 @@ void CScrollView::setContainerSize (const CRect& cs, bool keepVisibleArea)
 		CRect oldScrollSize = hsb->getScrollSize (oldScrollSize);
 		float oldValue = hsb->getValue ();
 		hsb->setScrollSize (cs);
-		if (cs.getWidth () < getViewSize ().getWidth ())
+		if (cs.getWidth () <= getViewSize ().getWidth ())
 			hsb->setValue (0);
-		else if (keepVisibleArea && oldScrollSize.getWidth () != cs.getWidth ())
+		else if (sc && keepVisibleArea && oldScrollSize.getWidth () != cs.getWidth ())
 		{
-			CRect vSize = sc->getViewSize (vSize);
+			CRect vSize = sc->getViewSize ();
 			float newValue = (float)(oldValue * ((float)(oldScrollSize.getWidth () - vSize.getWidth ()) / ((float)cs.getWidth () - vSize.getWidth ())));
 			if (newValue > 1.f)
 				newValue = 1.f;
@@ -492,6 +552,8 @@ void CScrollView::setContainerSize (const CRect& cs, bool keepVisibleArea)
 				newValue = 0.f;
 			hsb->setValue (newValue);
 		}
+		if (oldSize != containerSize)
+			hsb->onVisualChange ();
 		valueChanged (hsb);
 	}
 }
@@ -502,8 +564,7 @@ void CScrollView::makeRectVisible (const CRect& rect)
 	CRect r (rect);
 	const CPoint& scrollOffset = sc->getScrollOffset ();
 	CPoint newOffset (scrollOffset);
-	CRect vs;
-	sc->getViewSize (vs);
+	CRect vs = sc->getViewSize ();
 	if (!(style & kDontDrawFrame))
 	{
 		vs.left--; //vs.top--;
@@ -533,15 +594,44 @@ void CScrollView::makeRectVisible (const CRect& rect)
 	}
 	if (vsb && newOffset.y != scrollOffset.y)
 	{
-		vsb->setValue ((float)(newOffset.y - vs.top) / (float)(containerSize.getHeight () - vs.getHeight ()));
+		if (containerSize.getHeight () == vs.getHeight ())
+			vsb->setValue (0.f);
+		else
+			vsb->setValue ((float)(newOffset.y - vs.top) / (float)(containerSize.getHeight () - vs.getHeight ()));
 		vsb->bounceValue ();
+		vsb->onVisualChange ();
 		vsb->invalid ();
 		valueChanged (vsb);
 	}
 	if (hsb && newOffset.x != scrollOffset.x)
 	{
-		hsb->setValue (-(float)(newOffset.x - vs.left) / (float)(containerSize.getWidth () - vs.getWidth ()));
+		if (containerSize.getWidth () == vs.getWidth ())
+			hsb->setValue (0.f);
+		else
+			hsb->setValue (-(float)(newOffset.x - vs.left) / (float)(containerSize.getWidth () - vs.getWidth ()));
 		hsb->bounceValue ();
+		hsb->onVisualChange ();
+		hsb->invalid ();
+		valueChanged (hsb);
+	}
+}
+
+//-----------------------------------------------------------------------------
+void CScrollView::resetScrollOffset ()
+{
+	if (vsb)
+	{
+		vsb->setValue (0);
+		vsb->bounceValue ();
+		vsb->onVisualChange ();
+		vsb->invalid ();
+		valueChanged (vsb);
+	}
+	if (hsb)
+	{
+		hsb->setValue (0);
+		hsb->bounceValue ();
+		hsb->onVisualChange ();
 		hsb->invalid ();
 		valueChanged (hsb);
 	}
@@ -551,18 +641,6 @@ void CScrollView::makeRectVisible (const CRect& rect)
 const CPoint& CScrollView::getScrollOffset () const
 {
 	return sc->getScrollOffset ();
-}
-
-//-----------------------------------------------------------------------------
-bool CScrollView::addView (CView *pView)
-{
-	return sc->addView (pView);
-}
-
-//-----------------------------------------------------------------------------
-bool CScrollView::addView (CView *pView, const CRect &mouseableArea, bool mouseEnabled)
-{
-	return sc->addView (pView, mouseableArea, mouseEnabled);
 }
 
 //-----------------------------------------------------------------------------
@@ -580,19 +658,25 @@ bool CScrollView::removeView (CView *pView, bool withForget)
 //-----------------------------------------------------------------------------
 bool CScrollView::removeAll (bool withForget)
 {
-	return sc->removeAll ();
+	return sc->removeAll (withForget);
 }
 
 //-----------------------------------------------------------------------------
-int32_t CScrollView::getNbViews () const
+uint32_t CScrollView::getNbViews () const
 {
 	return sc->getNbViews ();
 }
 
 //-----------------------------------------------------------------------------
-CView* CScrollView::getView (int32_t index) const
+CView* CScrollView::getView (uint32_t index) const
 {
 	return sc->getView (index);
+}
+
+//-----------------------------------------------------------------------------
+bool CScrollView::changeViewZOrder (CView* view, uint32_t newIndex)
+{
+	return sc->changeViewZOrder (view, newIndex);
 }
 
 //-----------------------------------------------------------------------------
@@ -615,7 +699,7 @@ void CScrollView::valueChanged (CControl *pControl)
 		float value = pControl->getValue ();
 		int32_t tag = pControl->getTag ();
 		CPoint offset;
-		CRect vsize = sc->getViewSize (vsize);
+		CRect vsize = sc->getViewSize ();
 		CRect csize = sc->getContainerSize ();
 		sc->getScrollOffset (offset);
 
@@ -625,10 +709,10 @@ void CScrollView::valueChanged (CControl *pControl)
 			{
 				if (csize.getWidth () > vsize.getWidth ())
 				{
-					offset.x = (int32_t) (csize.left - (csize.width () - vsize.width ()) * value);
+					offset.x = (int32_t) (csize.left - (csize.getWidth () - vsize.getWidth ()) * value);
 					sc->setScrollOffset (offset, false);
 				}
-				else if (offset.x > 0)
+				else if (offset.x < 0)
 				{
 					offset.x = 0;
 					sc->setScrollOffset (offset, false);
@@ -639,7 +723,7 @@ void CScrollView::valueChanged (CControl *pControl)
 			{
 				if (csize.getHeight () > vsize.getHeight ())
 				{
-					offset.y = (int32_t) (csize.top + (csize.height () - vsize.height ()) * value);
+					offset.y = (int32_t) (csize.top + (csize.getHeight () - vsize.getHeight ()) * value);
 					sc->setScrollOffset (offset, false);
 				}
 				else if (offset.y > 0)
@@ -658,19 +742,7 @@ void CScrollView::drawBackgroundRect (CDrawContext *pContext, const CRect& _upda
 {
 	CRect r (getViewSize ());
 	r.originize ();
-	if ((backgroundColor.alpha != 255 && getTransparency ()) || !getTransparency ())
-	{
-		pContext->setDrawMode (kAliasing);
-		pContext->setFillColor (backgroundColor);
-		pContext->drawRect (r, kDrawFilled);
-	}
-	if (!(style & kDontDrawFrame))
-	{
-		pContext->setDrawMode (kAliasing);
-		pContext->setFrameColor (backgroundColor);
-		pContext->setLineWidth (1);
-		pContext->drawRect (r);
-	}
+	CViewContainer::drawBackgroundRect (pContext, r);
 }
 
 //-----------------------------------------------------------------------------
@@ -690,9 +762,9 @@ bool CScrollView::onWheel (const CPoint &where, const CMouseWheelAxis &axis, con
 //-----------------------------------------------------------------------------
 CMessageResult CScrollView::notify (CBaseObject* sender, IdStringPtr message)
 {
-	if (message == kMsgNewFocusView)
+	if (message == kMsgNewFocusView && getStyle () & kFollowFocusView)
 	{
-		CView* focusView = (CView*)sender;
+		auto* focusView = static_cast<CView*> (sender);
 		if (sc->isChild (focusView, true))
 		{
 			CRect r = focusView->getViewSize ();
@@ -707,302 +779,26 @@ CMessageResult CScrollView::notify (CBaseObject* sender, IdStringPtr message)
 }
 
 //-----------------------------------------------------------------------------
-CScrollbar::CScrollbar (const CRect& size, CControlListener* listener, int32_t tag, ScrollbarDirection direction, const CRect& scrollSize)
-: CControl (size, listener, tag, 0)
-, direction (direction)
-, scrollSize (scrollSize)
-, scrollerArea (size)
-, stepValue (0.1f)
-, scrollerLength (0)
-, drawer (0)
-, timer (0)
+void CScrollView::viewSizeChanged (CView* view, const CRect& oldSize)
 {
-	setWheelInc (0.05f);
-	scrollerArea.inset (2, 2);
-	calculateScrollerLength ();
-	frameColor (0, 0, 0, 255);
-	scrollerColor (0, 0, 255, 255);
-	backgroundColor (255, 255, 255, 200);
-}
-
-//-----------------------------------------------------------------------------
-CScrollbar::CScrollbar (const CScrollbar& v)
-: CControl (v)
-, direction (v.direction)
-, scrollSize (v.scrollSize)
-, scrollerArea (v.scrollerArea)
-, stepValue (v.stepValue)
-, scrollerLength (v.scrollerLength)
-, frameColor (v.frameColor)
-, scrollerColor (v.scrollerColor)
-, backgroundColor (v.backgroundColor)
-, drawer (v.drawer)
-, timer (0)
-{
-	calculateScrollerLength ();
-}
-
-//-----------------------------------------------------------------------------
-CScrollbar::~CScrollbar ()
-{
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::setViewSize (const CRect &newSize, bool invalid)
-{
-	scrollerArea = newSize;
-	scrollerArea.inset (2, 2);
-	CControl::setViewSize (newSize, invalid);
-	calculateScrollerLength ();
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::setScrollSize (const CRect& ssize)
-{
-	if (scrollSize != ssize)
+	if (view == hsb)
 	{
-		scrollSize = ssize;
-		calculateScrollerLength ();
-		setDirty (true);
+		hsb->setScrollSize (containerSize);
+		hsb->onVisualChange ();
+	}
+	else if (view == vsb)
+	{
+		vsb->setScrollSize (containerSize);
+		vsb->onVisualChange ();
 	}
 }
 
 //-----------------------------------------------------------------------------
-void CScrollbar::calculateScrollerLength ()
+void CScrollView::viewWillDelete (CView* view)
 {
-	CCoord newScrollerLength = scrollerLength;
-	if (direction == kHorizontal)
-	{
-		float factor = (float)getViewSize ().width () / (float)scrollSize.width ();
-		if (factor >= 1.f)
-			factor = 0;
-		newScrollerLength = (CCoord) (getViewSize ().width () * factor);
-	}
-	else
-	{
-		float factor = (float)getViewSize ().height () / (float)scrollSize.height ();
-		if (factor >= 1.f)
-			factor = 0;
-		newScrollerLength = (CCoord) (getViewSize ().height () * factor);
-	}
-	if (newScrollerLength != scrollerLength)
-	{
-		scrollerLength = newScrollerLength;
-		setDirty (true);
-	}
+	if (view == hsb || view == vsb)
+		view->unregisterViewListener (this);
 }
 
-//-----------------------------------------------------------------------------
-CRect CScrollbar::getScrollerRect ()
-{
-	CRect scrollerRect (scrollerArea);
-	CCoord l = (direction == kHorizontal) ? scrollerArea.width () : scrollerArea.height ();
-	CCoord scrollerOffset = (CCoord) (value * (l - scrollerLength));
-	if (direction == kHorizontal)
-	{
-		scrollerRect.setWidth (scrollerLength);
-		scrollerRect.offset (scrollerOffset, 0);
-	}
-	else
-	{
-		scrollerRect.setHeight (scrollerLength);
-		scrollerRect.offset (0, scrollerOffset);
-	}
-	return scrollerRect;
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::doStepping ()
-{
-	CRect scrollerRect = getScrollerRect ();
-	if (timer)
-	{
-		if (!startPoint.isInside (getViewSize ()) || startPoint.isInside (scrollerRect))
-			return;
-	}
-	bool dir = (direction == kHorizontal && startPoint.x < scrollerRect.left) || (direction == kVertical && startPoint.y < scrollerRect.top);
-	float newValue = value;
-	if (direction == kHorizontal)
-	{
-		if (dir)
-			newValue = value - (float)scrollerLength / (float)scrollerArea.width ();
-		else
-			newValue = value + (float)scrollerLength / (float)scrollerArea.width ();
-	}
-	else
-	{
-		if (dir)
-			newValue = value - (float)scrollerLength / (float)scrollerArea.height ();
-		else
-			newValue = value + (float)scrollerLength / (float)scrollerArea.height ();
-	}
-	if (newValue < 0.f) newValue = 0.f;
-	if (newValue > 1.f) newValue = 1.f;
-	if (newValue != value)
-	{
-		value = newValue;
-		valueChanged ();
-		invalid ();
-	}
-}
-
-//-----------------------------------------------------------------------------
-CMessageResult CScrollbar::notify (CBaseObject* sender, IdStringPtr message)
-{
-	if (message == CVSTGUITimer::kMsgTimer && timer)
-	{
-		doStepping ();
-		timer->setFireTime (80);
-		return kMessageNotified;
-	}
-	return kMessageUnknown;
-}
-
-//-----------------------------------------------------------------------------
-CMouseEventResult CScrollbar::onMouseDown (CPoint &where, const CButtonState& buttons)
-{
-	if (buttons != kLButton || scrollerLength == 0)
-		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
-
-	startPoint = where;
-	scrollerRect = getScrollerRect ();
-	scrolling = where.isInside (scrollerRect);
-	if (scrolling)
-	{
-		scrollerRect = getScrollerRect ();
-		return kMouseEventHandled;
-	}
-	else if (where.isInside (scrollerArea))
-	{
-		doStepping ();
-		timer = new CVSTGUITimer (this, 250);
-		timer->start ();
-		return kMouseEventHandled;
-	}
-	return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
-}
-
-//-----------------------------------------------------------------------------
-CMouseEventResult CScrollbar::onMouseUp (CPoint &where, const CButtonState& buttons)
-{
-	if (timer)
-	{
-		timer->forget ();
-		timer = 0;
-	}
-	return kMouseEventHandled;
-}
-
-//-----------------------------------------------------------------------------
-CMouseEventResult CScrollbar::onMouseMoved (CPoint &where, const CButtonState& buttons)
-{
-	if (buttons & kLButton)
-	{
-		if (scrolling)
-		{
-			float newValue = 0.f;
-			CPoint newPoint (where);
-			newPoint.x -= startPoint.x - scrollerRect.left;
-			newPoint.y -= startPoint.y - scrollerRect.top;
-			if (direction == kHorizontal)
-			{
-				newValue = (float)((float)(newPoint.x - scrollerArea.left) / ((float)scrollerArea.width () - scrollerRect.width ()));
-			}
-			else
-			{
-				newValue = (float)((float)(newPoint.y - scrollerArea.top) / ((float)scrollerArea.height () - scrollerRect.height ()));
-			}
-			if (newValue < 0.f) newValue = 0.f;
-			if (newValue > 1.f) newValue = 1.f;
-			if (newValue != value)
-			{
-				value = newValue;
-				valueChanged ();
-				invalid ();
-			}
-		}
-		else
-		{
-			CPoint old (startPoint);
-			startPoint = where;
-			CRect scollerRect = getScrollerRect ();
-			if (where.isInside (getViewSize ()) && old.isInside (scollerRect) && !startPoint.isInside (scrollerRect))
-				doStepping ();
-		}
-	}
-	return kMouseEventHandled;
-}
-
-//------------------------------------------------------------------------
-bool CScrollbar::onWheel (const CPoint &where, const CMouseWheelAxis &axis, const float &_distance, const CButtonState &buttons)
-{
-	if (!getMouseEnabled ())
-		return false;
-
-	float distance = _distance;
-	if (direction == kHorizontal && axis == kMouseWheelAxisY)
-		distance *= -1;
-	if (buttons & kMouseWheelInverted)
-		distance *= -1;
-
-	if (buttons & kShift)
-		value -= 0.1f * distance * wheelInc;
-	else
-		value -= distance * wheelInc;
-	bounceValue ();
-
-	if (isDirty ())
-	{
-		valueChanged ();
-		invalid ();
-	}
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::drawBackground (CDrawContext* pContext)
-{
-	CRect r (getViewSize ());
-	if (drawer)
-		drawer->drawScrollbarBackground (pContext, r, direction, this);
-	else
-	{
-		pContext->setDrawMode (kAliasing);
-		pContext->setLineWidth (1);
-		pContext->setFillColor (backgroundColor);
-		pContext->setFrameColor (frameColor);
-		pContext->setLineStyle (kLineSolid);
-		pContext->drawRect (r, kDrawFilledAndStroked);
-	}
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::drawScroller (CDrawContext* pContext, const CRect& size)
-{
-	CRect r (size);
-	if (drawer)
-		drawer->drawScrollbarScroller (pContext, r, direction, this);
-	else
-	{
-		pContext->setDrawMode (kAliasing);
-		pContext->setLineWidth (1);
-		pContext->setFillColor (scrollerColor);
-		pContext->setFrameColor (frameColor);
-		pContext->drawRect (r, kDrawFilledAndStroked);
-	}
-}
-
-//-----------------------------------------------------------------------------
-void CScrollbar::draw (CDrawContext* pContext)
-{
-	drawBackground (pContext);
-	if (scrollerLength > 0)
-	{
-		CRect scrollerRect = getScrollerRect ();
-		drawScroller (pContext, scrollerRect);
-	}
-	setDirty (false);
-}
-
-} // namespace
+} // VSTGUI
 

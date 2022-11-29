@@ -1,43 +1,17 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cbuttons__
-#define __cbuttons__
+#pragma once
 
 #include "ccontrol.h"
 #include "../cfont.h"
 #include "../ccolor.h"
+#include "../cbitmap.h"
+#include "../cgradient.h"
+#include "../cgraphicspath.h"
+#include "../cstring.h"
+#include "../cdrawmethods.h"
 
 namespace VSTGUI {
 
@@ -49,7 +23,7 @@ namespace VSTGUI {
 class COnOffButton : public CControl
 {
 public:
-	COnOffButton (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, int32_t style = 0);
+	COnOffButton (const CRect& size, IControlListener* listener = nullptr, int32_t tag = -1, CBitmap* background = nullptr, int32_t style = 0);
 	COnOffButton (const COnOffButton& onOffButton);
 
 	//-----------------------------------------------------------------------------
@@ -61,14 +35,17 @@ public:
 	//@}
 
 	// overrides
-	virtual void draw (CDrawContext*);
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-	virtual bool sizeToFit ();
+	void draw (CDrawContext*) override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
+	bool sizeToFit () override;
 
 	CLASS_METHODS(COnOffButton, CControl)
 protected:
-	~COnOffButton ();
+	~COnOffButton () noexcept override = default;
 	int32_t style;
 };
 
@@ -81,20 +58,22 @@ protected:
 class CCheckBox : public CControl
 {
 public:
-	CCheckBox (const CRect& size, CControlListener* listener, int32_t tag, UTF8StringPtr title, CBitmap* bitmap = 0, int32_t style = 0);
+	CCheckBox (const CRect& size, IControlListener* listener = nullptr, int32_t tag = -1, UTF8StringPtr title = nullptr, CBitmap* bitmap = nullptr, int32_t style = 0);
 	CCheckBox (const CCheckBox& checkbox);
 
 	enum Styles {
-		kAutoSizeToFit = 1 << 0, ///< automatically adjusts the width so that the label is completely visible
-		kDrawCrossBox  = 1 << 1	 ///< draws a crossbox instead of a checkmark if no bitmap is provided
+		/** automatically adjusts the width so that the label is completely visible */
+		kAutoSizeToFit = 1 << 0,
+		/** draws a crossbox instead of a checkmark if no bitmap is provided */
+		kDrawCrossBox  = 1 << 1
 	};
 
 	//-----------------------------------------------------------------------------
 	/// @name CCheckBox Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual void setTitle (UTF8StringPtr newTitle);
-	UTF8StringPtr getTitle () const { return title; }
+	virtual void setTitle (const UTF8String& newTitle);
+	const UTF8String& getTitle () const { return title; }
 	
 	virtual void setFont (CFontRef newFont);
 	const CFontRef getFont () const { return font; }
@@ -111,32 +90,42 @@ public:
 
 	virtual int32_t getStyle () const { return style; }
 	virtual void setStyle (int32_t newStyle);
-	//@}
+
+    CCoord getFrameWidth () const { return frameWidth; }
+    virtual void setFrameWidth (CCoord width);
+    CCoord getRoundRectRadius () const { return roundRectRadius; }
+    virtual void setRoundRectRadius (CCoord radius);
+
+    //@}
 
 	// overrides
-	virtual void draw (CDrawContext* context);
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-	virtual bool sizeToFit ();
-	virtual void setBackground (CBitmap *background);
-	virtual bool getFocusPath (CGraphicsPath& outPath);
+	void draw (CDrawContext* context) override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
+	bool sizeToFit () override;
+	void setBackground (CBitmap *background) override;
+	bool getFocusPath (CGraphicsPath& outPath) override;
 
 	CLASS_METHODS(CCheckBox, CControl)
 protected:
-	~CCheckBox ();
-	UTF8StringBuffer title;
+	~CCheckBox () noexcept override = default;
+
+	UTF8String title;
 	int32_t style;
 	CColor fontColor;
 	CColor boxFrameColor;
 	CColor boxFillColor;
 	CColor checkMarkColor;
-	CFontRef font;
+    CCoord frameWidth {1};
+    CCoord roundRectRadius {0};
+	SharedPointer<CFontDesc> font;
 
 private:
-	float previousValue;
-	bool hilight;
+	float previousValue {0.f};
+	bool hilight {false};
 };
 
 //-----------------------------------------------------------------------------
@@ -147,30 +136,29 @@ private:
 class CKickButton : public CControl, public IMultiBitmapControl
 {
 public:
-	CKickButton (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
-	CKickButton (const CRect& size, CControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CKickButton (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CKickButton (const CRect& size, IControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, const CPoint& offset = CPoint (0, 0));
 	CKickButton (const CKickButton& kickButton);
 
-	virtual void draw (CDrawContext*);
+	void draw (CDrawContext*) override;
 
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-	virtual int32_t onKeyUp (VstKeyCode& keyCode);
-	void setBackgroundOffsetNotBroken(const CPoint& off) { offset = off; }
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
+	int32_t onKeyUp (VstKeyCode& keyCode) override;
 
-	virtual bool sizeToFit ();
+	bool sizeToFit () override;
+	void setSpriteSheetOffsetAdd(CPoint offset) { offsetAdd = offset; }
 
-	void setNumSubPixmaps (int32_t numSubPixmaps) { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
+	void setNumSubPixmaps (int32_t numSubPixmaps) override { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
 
 	CLASS_METHODS(CKickButton, CControl)
 protected:
-	~CKickButton ();	
+	~CKickButton () noexcept override = default;
 	CPoint	offset;
-
-private:
-	float   fEntryState;
+	CPoint	offsetAdd;
 };
 
 //-----------------------------------------------------------------------------
@@ -179,17 +167,24 @@ private:
 /// @ingroup controls
 ///	@ingroup new_in_4_0
 //-----------------------------------------------------------------------------
-class CTextButton : public CKickButton
+class CTextButton : public CControl
 {
 public:
-	CTextButton (const CRect& size, CControlListener* listener, int32_t tag, UTF8StringPtr title);
+	/** CTextButton style */
+	enum Style
+	{
+		kKickStyle = 0,
+		kOnOffStyle
+	};
+
+	CTextButton (const CRect& size, IControlListener* listener = nullptr, int32_t tag = -1, UTF8StringPtr title = nullptr, Style = kKickStyle);
 
 	//-----------------------------------------------------------------------------
 	/// @name CTextButton Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual void setTitle (UTF8StringPtr newTitle);
-	UTF8StringPtr getTitle () const { return title.c_str (); }
+	virtual void setTitle (const UTF8String& newTitle);
+	const UTF8String& getTitle () const { return title; }
 
 	virtual void setFont (CFontRef newFont);
 	CFontRef getFont () const { return font; }
@@ -199,15 +194,10 @@ public:
 	virtual void setTextColorHighlighted (const CColor& color);
 	const CColor& getTextColorHighlighted () const { return textColorHighlighted; }
 	
-	virtual void setGradientStartColor (const CColor& color);
-	const CColor& getGradientStartColor () const { return gradientStartColor; }
-	virtual void setGradientStartColorHighlighted (const CColor& color);
-	const CColor& getGradientStartColorHighlighted () const { return gradientStartColorHighlighted; }
-	
-	virtual void setGradientEndColor (const CColor& color);
-	const CColor& getGradientEndColor () const { return gradientEndColor; }
-	virtual void setGradientEndColorHighlighted (const CColor& color);
-	const CColor& getGradientEndColorHighlighted () const { return gradientEndColorHighlighted; }
+	virtual void setGradient (CGradient* gradient);
+	CGradient* getGradient () const;
+	virtual void setGradientHighlighted (CGradient* gradient);
+	CGradient* getGradientHighlighted () const;
 	
 	virtual void setFrameColor (const CColor& color);
 	const CColor& getFrameColor () const { return frameColor; }
@@ -219,36 +209,70 @@ public:
 
 	virtual void setRoundRadius (CCoord radius);
 	CCoord getRoundRadius () const { return roundRadius; }
+	
+	virtual void setStyle (Style style);
+	Style getStyle () const { return style; }
+
+	virtual void setIcon (CBitmap* bitmap);
+	CBitmap* getIcon () const;
+	
+	virtual void setIconHighlighted (CBitmap* bitmap);
+	CBitmap* getIconHighlighted () const;
+
+	virtual void setIconPosition (CDrawMethods::IconPosition pos);
+	CDrawMethods::IconPosition getIconPosition () const { return iconPosition; }
+	
+	virtual void setTextMargin (CCoord margin);
+	CCoord getTextMargin () const { return textMargin; }
+
+	virtual void setTextAlignment (CHoriTxtAlign hAlign);
+	CHoriTxtAlign getTextAlignment () const { return horiTxtAlign; }
 	//@}
 
 	// overrides
-	void draw (CDrawContext* context);
-	int32_t onKeyDown (VstKeyCode& keyCode);
-	bool getFocusPath (CGraphicsPath& outPath);
-	void setViewSize (const CRect& rect, bool invalid = true);
-	bool removed (CView* parent);
+	void draw (CDrawContext* context) override;
+	bool getFocusPath (CGraphicsPath& outPath) override;
+	bool drawFocusOnTop () override;
+	void setViewSize (const CRect& rect, bool invalid = true) override;
+	bool removed (CView* parent) override;
+	bool sizeToFit () override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
+	int32_t onKeyUp (VstKeyCode& keyCode) override;
+	
+	CLASS_METHODS(CTextButton, CControl)
 protected:
-	void invalidPath ();
-	CGraphicsPath* getPath (CDrawContext* context);
+	~CTextButton () noexcept override = default;
 
-	CFontRef font;
-	CGraphicsPath* _path;
+	void invalidPath ();
+	CGraphicsPath* getPath (CDrawContext* context, CCoord lineWidth);
+
+	SharedPointer<CFontDesc> font;
+	SharedPointer<CGraphicsPath> _path;
+	SharedPointer<CBitmap> icon;
+	SharedPointer<CBitmap> iconHighlighted;
+	SharedPointer<CGradient> gradient;
+	SharedPointer<CGradient> gradientHighlighted;
 	
 	CColor textColor;
-	CColor gradientStartColor;
-	CColor gradientEndColor;
 	CColor frameColor;
 
 	CColor textColorHighlighted;
-	CColor gradientStartColorHighlighted;
-	CColor gradientEndColorHighlighted;
 	CColor frameColorHighlighted;
 
 	CCoord frameWidth;
 	CCoord roundRadius;
-	std::string title;
+	CCoord textMargin;
+	
+	CHoriTxtAlign horiTxtAlign;
+	CDrawMethods::IconPosition iconPosition;
+	Style style;
+	UTF8String title;
+private:
+	float fEntryState;
 };
 
-} // namespace
-
-#endif
+} // VSTGUI

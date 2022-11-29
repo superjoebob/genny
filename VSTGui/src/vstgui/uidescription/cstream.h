@@ -1,43 +1,17 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins :
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistributions of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this
-//     software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED.
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cstream__
-#define __cstream__
+#pragma once
 
-#include "../lib/vstguibase.h"
-#include "../lib/cbitmap.h"
+#include "../lib/vstguifwd.h"
+#include "../lib/optional.h"
+#include <algorithm>
 #include <string>
+#include <limits>
+#include <memory>
+#include <vector>
+#include <iostream>
 
 namespace VSTGUI {
 
@@ -47,7 +21,8 @@ namespace VSTGUI {
 class OutputStream
 {
 public:
-	OutputStream (ByteOrder byteOrder = kNativeByteOrder) : byteOrder (byteOrder) {}
+	explicit OutputStream (ByteOrder byteOrder = kNativeByteOrder) : byteOrder (byteOrder) {}
+	virtual ~OutputStream () noexcept = default;
 
 	ByteOrder getByteOrder () const { return byteOrder; }
 	void setByteOrder (ByteOrder newByteOrder) { byteOrder = newByteOrder; }
@@ -64,7 +39,7 @@ public:
 
 	virtual bool operator<< (const std::string& str) = 0;
 
-	virtual int32_t writeRaw (const void* buffer, int32_t size) = 0;
+	virtual uint32_t writeRaw (const void* buffer, uint32_t size) = 0;
 private:
 	ByteOrder byteOrder;
 };
@@ -75,7 +50,8 @@ private:
 class InputStream
 {
 public:
-	InputStream (ByteOrder byteOrder = kNativeByteOrder) : byteOrder (byteOrder) {}
+	explicit InputStream (ByteOrder byteOrder = kNativeByteOrder) : byteOrder (byteOrder) {}
+	virtual ~InputStream () noexcept = default;
 
 	ByteOrder getByteOrder () const { return byteOrder; }
 	void setByteOrder (ByteOrder newByteOrder) { byteOrder = newByteOrder; }
@@ -92,7 +68,7 @@ public:
 
 	virtual bool operator>> (std::string& string) = 0;
 
-	virtual int32_t readRaw (void* buffer, int32_t size) = 0;
+	virtual uint32_t readRaw (void* buffer, uint32_t size) = 0;
 private:
 	ByteOrder byteOrder;
 };
@@ -103,13 +79,15 @@ private:
 class SeekableStream
 {
 public:
+	virtual ~SeekableStream () noexcept = default;
 	enum SeekMode {
 		kSeekSet,
 		kSeekCurrent,
 		kSeekEnd
 	};
 
-	virtual int64_t seek (int64_t pos, SeekMode mode) = 0;	///< returns -1 if seek fails otherwise new position
+	/** returns -1 if seek fails otherwise new position */
+	virtual int64_t seek (int64_t pos, SeekMode mode) = 0;
 	virtual int64_t tell () const = 0;
 	virtual void rewind () = 0;
 };
@@ -117,43 +95,49 @@ public:
 /**
 	Memory input and output stream
  */
-class CMemoryStream : public OutputStream, public InputStream, public SeekableStream, public CBaseObject
+class CMemoryStream : virtual public OutputStream, virtual public InputStream, public SeekableStream, public AtomicReferenceCounted
 {
 public:
-	CMemoryStream (int32_t initialSize = 1024, int32_t delta = 1024, bool binaryMode = true, ByteOrder byteOrder = kNativeByteOrder);
-	CMemoryStream (const int8_t* buffer, int32_t bufferSize, bool binaryMode = true, ByteOrder byteOrder = kNativeByteOrder);
-	~CMemoryStream ();
+	CMemoryStream (uint32_t initialSize = 1024, uint32_t delta = 1024, bool binaryMode = true, ByteOrder byteOrder = kNativeByteOrder);
+	CMemoryStream (const int8_t* buffer, uint32_t bufferSize, bool binaryMode = true, ByteOrder byteOrder = kNativeByteOrder);
+	~CMemoryStream () noexcept override;
 
-	int32_t writeRaw (const void* buffer, int32_t size);
-	int32_t readRaw (void* buffer, int32_t size);
+	uint32_t writeRaw (const void* buffer, uint32_t size) override;
+	uint32_t readRaw (void* buffer, uint32_t size) override;
 
-	int64_t seek (int64_t pos, SeekMode mode);
-	int64_t tell () const { return pos; }
-	void rewind () { pos = 0; }
+	int64_t seek (int64_t pos, SeekMode mode) override;
+	int64_t tell () const override { return static_cast<int64_t> (pos); }
+	void rewind () override { pos = 0; }
 
 	const int8_t* getBuffer () const { return buffer; }
 
-	virtual bool operator<< (const std::string& str);
-	virtual bool operator>> (std::string& string);
-protected:
-	bool resize (int32_t newSize);
+	bool operator<< (const std::string& str) override;
+	bool operator>> (std::string& string) override;
 
+	using OutputStream::operator<<;
+	using InputStream::operator>>;
+
+	bool end (); // write a zero byte if binaryMode is false
+protected:
+	bool resize (uint32_t newSize);
+
+	int8_t* buffer;
+	uint32_t bufferSize;
+	uint32_t size;
+	uint32_t pos;
+	uint32_t delta;
 	bool binaryMode;
 	bool ownsBuffer;
-	int8_t* buffer;
-	int32_t size;
-	int32_t pos;
-	int32_t delta;
 };
 
 /**
 	File input and output stream
  */
-class CFileStream : public OutputStream, public InputStream, public SeekableStream, public CBaseObject
+class CFileStream : public OutputStream, public InputStream, public SeekableStream, public AtomicReferenceCounted
 {
 public:
 	CFileStream ();
-	~CFileStream ();
+	~CFileStream () noexcept override;
 
 	enum {
 		kReadMode		= 1 << 0,
@@ -163,20 +147,67 @@ public:
 	};
 
 	bool open (UTF8StringPtr path, int32_t mode, ByteOrder byteOrder = kNativeByteOrder);
+	bool isEndOfFile () const;
 
-	int32_t writeRaw (const void* buffer, int32_t size);
-	int32_t readRaw (void* buffer, int32_t size);
+	uint32_t writeRaw (const void* buffer, uint32_t size) override;
+	uint32_t readRaw (void* buffer, uint32_t size) override;
 
-	int64_t seek (int64_t pos, SeekMode mode);
-	int64_t tell () const;
-	void rewind ();
+	int64_t seek (int64_t pos, SeekMode mode) override;
+	int64_t tell () const override;
+	void rewind () override;
 
-	virtual bool operator<< (const std::string& str);
-	virtual bool operator>> (std::string& string);
+	bool operator<< (const std::string& str) override;
+	bool operator>> (std::string& string) override;
+
+	using OutputStream::operator<<;
+	using InputStream::operator>>;
 protected:
 	FILE* stream;
 	int32_t openMode;
 };
+
+static const int8_t unixPathSeparator = '/';
+static const int8_t windowsPathSeparator = '\\';
+/**
+	Helper function to transform all Windows path separators to unix ones
+ */
+inline void unixfyPath (std::string& path)
+{
+	std::replace (path.begin (), path.end (), windowsPathSeparator, unixPathSeparator);
+}
+
+//------------------------------------------------------------------------
+inline bool removeLastPathComponent (std::string& path)
+{
+	size_t sepPos = path.find_last_of (unixPathSeparator);
+	if (sepPos != std::string::npos)
+	{
+		path.erase (sepPos);
+		return true;
+	}
+	return false;
+}
+
+//------------------------------------------------------------------------
+inline Optional<std::string> lastPathComponent (const std::string path)
+{
+	size_t sepPos = path.find_last_of (unixPathSeparator);
+	if (sepPos == std::string::npos)
+		return Optional<std::string> (path);
+	return {path.substr (sepPos + 1)};
+}
+
+//------------------------------------------------------------------------
+inline bool pathIsAbsolute (const std::string& path)
+{
+#if MAC || LINUX
+	return !path.empty () && path[0] == unixPathSeparator;
+#elif WINDOWS
+	return path.length () >= 2 && path[1] == ':';
+#else
+	return false;
+#endif
+}
 
 /**
 	Resource input stream
@@ -184,21 +215,90 @@ protected:
 class CResourceInputStream : public InputStream, public SeekableStream
 {
 public:
-	CResourceInputStream (ByteOrder byteOrder = kNativeByteOrder);
-	~CResourceInputStream ();
+	explicit CResourceInputStream (ByteOrder byteOrder = kNativeByteOrder);
+	~CResourceInputStream () noexcept override;
 
 	bool open (const CResourceDescription& res);
 
-	virtual bool operator>> (std::string& string) { return false; }
-	virtual int32_t readRaw (void* buffer, int32_t size);
-	virtual int64_t seek (int64_t pos, SeekMode mode);
-	virtual int64_t tell () const;
-	virtual void rewind ();
+	bool operator>> (std::string& string) override { return false; }
+	uint32_t readRaw (void* buffer, uint32_t size) override;
+	int64_t seek (int64_t pos, SeekMode mode) override;
+	int64_t tell () const override;
+	void rewind () override;
+
+	using InputStream::operator>>;
 protected:
-	void* platformHandle;
+	PlatformResourceInputStreamPtr platformStream;
 };
 
+//------------------------------------------------------------------------
+class BufferedOutputStream : public OutputStream
+{
+public:
+	BufferedOutputStream (OutputStream& stream, size_t bufferSize = 8192)
+	: stream (stream), bufferSize (bufferSize)
+	{
+		buffer.reserve (bufferSize);
+	}
+	~BufferedOutputStream () noexcept override { flush (); }
+	bool operator<< (const std::string& str) override
+	{
+		return writeRaw (str.c_str (), static_cast<uint32_t> (str.size ())) == str.size ();
+	}
+	uint32_t writeRaw (const void* inBuffer, uint32_t size) override
+	{
+		auto written = size;
+		const uint8_t* ptr = reinterpret_cast<const uint8_t*> (inBuffer);
+		while (size)
+		{
+			auto toWrite = 1;
+			buffer.emplace_back (*ptr);
+			if (buffer.size () == bufferSize)
+			{
+				if (!flush ())
+					return kStreamIOError;
+			}
+			size -= toWrite;
+			ptr += toWrite;
+		}
+		return written;
+	}
+	bool flush ()
+	{
+		if (buffer.empty ())
+			return true;
+		auto result = stream.writeRaw (buffer.data (), static_cast<uint32_t> (buffer.size ())) ==
+		              buffer.size ();
+		buffer.clear ();
+		return result;
+	}
 
-} // namespace
+private:
+	OutputStream& stream;
+	std::vector<uint8_t> buffer;
+	size_t bufferSize;
+};
 
-#endif
+//------------------------------------------------------------------------
+class StdOutStream : public OutputStream
+{
+public:
+	StdOutStream () {}
+	uint32_t writeRaw (const void* buffer, uint32_t size) override
+	{
+		auto byteBuffer = reinterpret_cast<const uint8_t*>(buffer);
+		for (auto i = 0u; i < size; ++i, ++byteBuffer)
+		{
+			std::cout << *byteBuffer;
+		}
+		return size;
+	}
+	bool operator<< (const std::string& str) override
+	{
+		std::cout << str;
+		return true;
+	}
+};
+
+//------------------------------------------------------------------------
+} // VSTGUI

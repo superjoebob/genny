@@ -1,42 +1,14 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "coptionmenu.h"
 #include "../cbitmap.h"
 #include "../cframe.h"
+#include "../cstring.h"
 
 #include "../platform/iplatformoptionmenu.h"
+#include "../platform/iplatformframe.h"
 
 namespace VSTGUI {
 
@@ -56,14 +28,8 @@ Defines an item of a VSTGUI::COptionMenu
  * @param inIcon icon of item
  */
 //------------------------------------------------------------------------
-CMenuItem::CMenuItem (UTF8StringPtr inTitle, UTF8StringPtr inKeycode, int32_t inKeyModifiers, CBitmap* inIcon, int32_t inFlags)
-: title (0)
-, flags (inFlags)
-, keycode (0)
-, keyModifiers (0)
-, submenu (0)
-, icon (0)
-, tag (-1)
+CMenuItem::CMenuItem (const UTF8String& inTitle, const UTF8String& inKeycode, int32_t inKeyModifiers, CBitmap* inIcon, int32_t inFlags)
+: flags (inFlags)
 {
 	setTitle (inTitle);
 	setKey (inKeycode, inKeyModifiers);
@@ -78,14 +44,7 @@ CMenuItem::CMenuItem (UTF8StringPtr inTitle, UTF8StringPtr inKeycode, int32_t in
  * @param inIcon icon of item
  */
 //------------------------------------------------------------------------
-CMenuItem::CMenuItem (UTF8StringPtr inTitle, COptionMenu* inSubmenu, CBitmap* inIcon)
-: title (0)
-, flags (0)
-, keycode (0)
-, keyModifiers (0)
-, submenu (0)
-, icon (0)
-, tag (-1)
+CMenuItem::CMenuItem (const UTF8String& inTitle, COptionMenu* inSubmenu, CBitmap* inIcon)
 {
 	setTitle (inTitle);
 	setSubmenu (inSubmenu);
@@ -99,14 +58,7 @@ CMenuItem::CMenuItem (UTF8StringPtr inTitle, COptionMenu* inSubmenu, CBitmap* in
  * @param inTag tag of item
  */
 //------------------------------------------------------------------------
-CMenuItem::CMenuItem (UTF8StringPtr inTitle, int32_t inTag)
-: title (0)
-, flags (0)
-, keycode (0)
-, keyModifiers (0)
-, submenu (0)
-, icon (0)
-, tag (-1)
+CMenuItem::CMenuItem (const UTF8String& inTitle, int32_t inTag)
 {
 	setTitle (inTitle);
 	setTag (inTag);
@@ -119,74 +71,49 @@ CMenuItem::CMenuItem (UTF8StringPtr inTitle, int32_t inTag)
  */
 //------------------------------------------------------------------------
 CMenuItem::CMenuItem (const CMenuItem& item)
-: title (0)
-, flags (item.flags)
-, keycode (0)
-, keyModifiers (0)
-, submenu (0)
-, icon (0)
+: flags (item.flags)
 {
 	setTitle (item.getTitle ());
 	setIcon (item.getIcon ());
-	setKey (item.getKeycode (), item.getKeyModifiers ());
+	if (item.getVirtualKeyCode ())
+		setVirtualKey (item.getVirtualKeyCode (), item.getKeyModifiers ());
+	else
+		setKey (item.getKeycode (), item.getKeyModifiers ());
 	setTag (item.getTag ());
-	*submenu = *item.getSubmenu ();
+	setSubmenu (item.getSubmenu ());
 }
 
 //------------------------------------------------------------------------
-CMenuItem::~CMenuItem ()
+void CMenuItem::setTitle (const UTF8String& inTitle)
 {
-	setIcon (0);
-	setSubmenu (0);
-	setTitle (0);
-	setKey (0);
+	title = inTitle;
 }
 
 //------------------------------------------------------------------------
-void CMenuItem::setTitle (UTF8StringPtr inTitle)
+void CMenuItem::setKey (const UTF8String& inKeycode, int32_t inKeyModifiers)
 {
-	if (title)
-		free (title);
-	title = 0;
-	if (inTitle)
-	{
-		title = (UTF8StringBuffer)malloc (strlen (inTitle) + 1);
-		strcpy (title, inTitle);
-	}
-}
-
-//------------------------------------------------------------------------
-void CMenuItem::setKey (UTF8StringPtr inKeycode, int32_t inKeyModifiers)
-{
-	if (keycode)
-		free (keycode);
-	keycode = 0;
-	if (inKeycode)
-	{
-		keycode = (UTF8StringBuffer)malloc (strlen (inKeycode) + 1);
-		strcpy (keycode, inKeycode);
-	}
+	keyCode = inKeycode;
 	keyModifiers = inKeyModifiers;
+	virtualKeyCode = 0;
+}
+
+//------------------------------------------------------------------------
+void CMenuItem::setVirtualKey (int32_t inVirtualKeyCode, int32_t inKeyModifiers)
+{
+	setKey (nullptr, inKeyModifiers);
+	virtualKeyCode = inVirtualKeyCode;
 }
 
 //------------------------------------------------------------------------
 void CMenuItem::setSubmenu (COptionMenu* inSubmenu)
 {
-	if (submenu)
-		submenu->forget ();
 	submenu = inSubmenu;
-	if (submenu)
-		submenu->remember ();
 }
 
 //------------------------------------------------------------------------
 void CMenuItem::setIcon (CBitmap* inIcon)
 {
-	if (icon)
-		icon->forget ();
 	icon = inIcon;
-	if (icon)
-		icon->remember ();
 }
 
 //------------------------------------------------------------------------
@@ -198,37 +125,117 @@ void CMenuItem::setTag (int32_t t)
 //------------------------------------------------------------------------
 void CMenuItem::setEnabled (bool state)
 {
-	if (state)
-		flags &= ~kDisabled;
-	else
-		flags |= kDisabled;
+	setBit (flags, kDisabled, !state);
 }
 
 //------------------------------------------------------------------------
 void CMenuItem::setChecked (bool state)
 {
-	if (state)
-		flags |= kChecked;
-	else
-		flags &= ~kChecked;
+	setBit (flags, kChecked, state);
 }
 
 //------------------------------------------------------------------------
 void CMenuItem::setIsTitle (bool state)
 {
-	if (state)
-		flags |= kTitle;
-	else
-		flags &= ~kTitle;
+	setBit (flags, kTitle, state);
 }
 
 //------------------------------------------------------------------------
 void CMenuItem::setIsSeparator (bool state)
 {
-	if (state)
-		flags |= kSeparator;
-	else
-		flags &= ~kSeparator;
+	setBit (flags, kSeparator, state);
+}
+
+//------------------------------------------------------------------------
+/*! @class CCommandMenuItem
+
+	The CCommandMenuItem supports setting a category, name and a target. The target will get a @link CBaseObject::notify notify()@endlink call before the item is
+	displayed and after it was selected. @see CCommandMenuItem::kMsgMenuItemValidate and @see CCommandMenuItem::kMsgMenuItemSelected
+*/
+//------------------------------------------------------------------------
+CCommandMenuItem::CCommandMenuItem (Desc&& args)
+: CMenuItem (args.title, args.keycode, args.keyModifiers, args.icon, args.flags)
+, commandCategory (std::move (args.commandCategory))
+, commandName (std::move (args.commandName))
+, itemTarget (std::move (args.target))
+{
+}
+
+//------------------------------------------------------------------------
+CCommandMenuItem::CCommandMenuItem (const Desc& args)
+: CMenuItem (args.title, args.keycode, args.keyModifiers, args.icon, args.flags)
+, commandCategory (args.commandCategory)
+, commandName (args.commandName)
+, itemTarget (args.target)
+{
+}
+
+//------------------------------------------------------------------------
+CCommandMenuItem::CCommandMenuItem (const CCommandMenuItem& item)
+: CMenuItem (item)
+, validateFunc (item.validateFunc)
+, selectedFunc (item.selectedFunc)
+, commandCategory (item.commandCategory)
+, commandName (item.commandName)
+{
+	setItemTarget (item.itemTarget);
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::setItemTarget (ICommandMenuItemTarget* target)
+{
+	itemTarget = target;
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::setCommandCategory (const UTF8String& category)
+{
+	commandCategory = category;
+}
+
+//------------------------------------------------------------------------
+bool CCommandMenuItem::isCommandCategory (const UTF8String& category) const
+{
+	return commandCategory == category;
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::setCommandName (const UTF8String& name)
+{
+	commandName = name;
+}
+
+//------------------------------------------------------------------------
+bool CCommandMenuItem::isCommandName (const UTF8String& name) const
+{
+	return commandName == name;
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::setActions (SelectedCallbackFunction&& selected, ValidateCallbackFunction&& validate)
+{
+	selectedFunc = std::move (selected);
+	validateFunc = std::move (validate);
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::execute ()
+{
+	if (selectedFunc)
+		selectedFunc (this);
+
+	if (itemTarget)
+		itemTarget->onCommandMenuItemSelected (this);
+}
+
+//------------------------------------------------------------------------
+void CCommandMenuItem::validate ()
+{
+	if (validateFunc)
+		validateFunc (this);
+
+	if (itemTarget)
+		itemTarget->validateCommandMenuItem (this);
 }
 
 //------------------------------------------------------------------------
@@ -251,24 +258,15 @@ There are 2 styles with or without a shadowed text. When a mouse click occurs, a
  * @param style the style of the display (see CParamDisplay for styles)
  */
 //------------------------------------------------------------------------
-COptionMenu::COptionMenu (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, CBitmap* bgWhenClick, const int32_t style)
+COptionMenu::COptionMenu (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, CBitmap* bgWhenClick, const int32_t style)
 : CParamDisplay (size, background, style)
 , bgWhenClick (bgWhenClick)
-, nbItemsPerColumn (-1)
-, prefixNumbers (0)
-, inPopup (false)
 {
 	this->listener = listener;
 	this->tag = tag;
 
-	currentIndex = -1;
 	lastButton = kRButton;
-	lastResult = -1;
-	lastMenu = 0;
 	
-	if (bgWhenClick)
-		bgWhenClick->remember ();
-
 	menuItems = new CMenuItemList;
 	setWantsFocus (true);
 }
@@ -276,14 +274,6 @@ COptionMenu::COptionMenu (const CRect& size, CControlListener* listener, int32_t
 //------------------------------------------------------------------------
 COptionMenu::COptionMenu ()
 : CParamDisplay (CRect (0, 0, 0, 0))
-, currentIndex (-1)
-, bgWhenClick (0)
-, lastButton (0)
-, nbItemsPerColumn (-1)
-, lastResult (-1)
-, prefixNumbers (0)
-, lastMenu (0)
-, inPopup (false)
 {
 	menuItems = new CMenuItemList;
 	setWantsFocus (true);
@@ -292,37 +282,34 @@ COptionMenu::COptionMenu ()
 //------------------------------------------------------------------------
 COptionMenu::COptionMenu (const COptionMenu& v)
 : CParamDisplay (v)
-, currentIndex (-1)
-, bgWhenClick (v.bgWhenClick)
-, lastButton (0)
-, nbItemsPerColumn (v.nbItemsPerColumn)
-, lastResult (-1)
-, prefixNumbers (0)
-, lastMenu (0)
 , menuItems (new CMenuItemList (*v.menuItems))
-, inPopup (false)
+, nbItemsPerColumn (v.nbItemsPerColumn)
+, bgWhenClick (v.bgWhenClick)
 {
-	if (bgWhenClick)
-		bgWhenClick->remember ();
-
-	CMenuItemIterator it = menuItems->begin ();
-	while (it != menuItems->end ())
-	{
-		(*it)->remember ();
-		it++;
-	}
 	setWantsFocus (true);
 }
 
 //------------------------------------------------------------------------
-COptionMenu::~COptionMenu ()
+COptionMenu::~COptionMenu () noexcept
 {
 	removeAllEntry ();
 
-	if (bgWhenClick)
-		bgWhenClick->forget ();
-
 	delete menuItems;
+}
+
+//------------------------------------------------------------------------
+void COptionMenu::registerOptionMenuListener (IOptionMenuListener* listener)
+{
+	if (!listeners)
+		listeners = std::unique_ptr<MenuListenerList> (new MenuListenerList ());
+	listeners->add (listener);
+}
+
+//------------------------------------------------------------------------
+void COptionMenu::unregisterOptionMenuListener (IOptionMenuListener* listener)
+{
+	if (listeners)
+		listeners->remove (listener);
 }
 
 //------------------------------------------------------------------------
@@ -332,11 +319,10 @@ int32_t COptionMenu::onKeyDown (VstKeyCode& keyCode)
 	{
 		if (keyCode.virt == VKEY_RETURN)
 		{
-			if (bgWhenClick)
-				invalid ();
-			popup ();
-			if (bgWhenClick)
-				invalid ();
+			auto self = shared (this);
+			getFrame ()->doAfterEventProcessing ([self] () {
+				self->doPopup ();
+			});
 			return 1;
 		}
 		if (!(style & (kMultipleCheckStyle & ~kCheckStyle)))
@@ -387,61 +373,176 @@ int32_t COptionMenu::onKeyDown (VstKeyCode& keyCode)
 }
 
 //------------------------------------------------------------------------
-bool COptionMenu::popup ()
+void COptionMenu::beforePopup ()
 {
-	bool popupResult = false;
-	if (!getFrame ())
-		return popupResult;
-
-	inPopup = true;
-
-	beginEdit ();
-
-	lastResult = -1;
-	lastMenu = 0;
-
-	IPlatformOptionMenu* platformMenu = getFrame ()->getPlatformFrame ()->createPlatformOptionMenu ();
-	if (platformMenu)
+	if (listeners)
+		listeners->forEach ([this] (IOptionMenuListener* l) { l->onOptionMenuPrePopup (this); });
+	for (auto& menuItem : *menuItems)
 	{
-		PlatformOptionMenuResult platformPopupResult = platformMenu->popup (this);
-		if (platformPopupResult.menu != 0)
-		{
-			IDependency::DeferChanges dc (this);
-			lastMenu = platformPopupResult.menu;
-			lastResult = platformPopupResult.index;
-			lastMenu->setValue ((float)lastResult);
-			valueChanged ();
-			invalid ();
-			popupResult = true;
-		}
-		platformMenu->forget ();
+		if (auto* commandItem = menuItem.cast<CCommandMenuItem> ())
+			commandItem->validate ();
+		if (menuItem->getSubmenu ())
+			menuItem->getSubmenu ()->beforePopup ();
 	}
-
-	endEdit ();
-	inPopup = false;
-	return popupResult;
 }
 
 //------------------------------------------------------------------------
-bool COptionMenu::popup (CFrame* frame, const CPoint& frameLocation)
+void COptionMenu::afterPopup ()
 {
-	if (frame == 0)
+	for (auto& menuItem : *menuItems)
+	{
+		if (menuItem->getSubmenu ())
+			menuItem->getSubmenu ()->afterPopup ();
+	}
+	if (listeners)
+		listeners->forEach ([this] (IOptionMenuListener* l) { l->onOptionMenuPostPopup (this); });
+}
+
+//------------------------------------------------------------------------
+bool COptionMenu::doPopup ()
+{
+	if (bgWhenClick)
+		invalid ();
+	auto result = popup ();
+	if (bgWhenClick)
+		invalid ();
+	return result;
+}
+
+//------------------------------------------------------------------------
+bool COptionMenu::popup (const PopupCallback& callback)
+{
+	if (!getFrame ())
+		return false;
+
+	beforePopup ();
+
+	lastResult = -1;
+	lastMenu = nullptr;
+
+	if (!menuItems->empty ())
+	{
+		getFrame ()->onStartLocalEventLoop ();
+		if (auto platformMenu = getFrame ()->getPlatformFrame ()->createPlatformOptionMenu ())
+		{
+			inPopup = true;
+			auto self = shared (this);
+			platformMenu->popup (this, [self, callback] (COptionMenu* menu, PlatformOptionMenuResult result) {
+				if (result.menu != nullptr)
+				{
+					bool preventSettingValue = false;
+					if (self->listeners)
+					{
+						self->listeners->forEach (
+							[self, &result] (IOptionMenuListener* l) {
+								return l->onOptionMenuSetPopupResult (self, result.menu,
+																	  result.index);
+							},
+							[&preventSettingValue] (bool result) {
+								if (result)
+									preventSettingValue = true;
+								return result;
+							});
+					}
+					if (!preventSettingValue)
+					{
+						self->beginEdit ();
+						self->lastMenu = result.menu;
+						self->lastResult = result.index;
+						self->lastMenu->setValue (static_cast<float> (self->lastResult));
+						self->valueChanged ();
+						self->invalid ();
+						if (auto commandItem = dynamic_cast<CCommandMenuItem*> (
+								self->lastMenu->getEntry (self->lastResult)))
+							commandItem->execute ();
+						self->endEdit ();
+					}
+				}
+				self->afterPopup ();
+				if (callback)
+					callback (self);
+				self->inPopup = false;
+			});
+		}
+	}
+	return true;
+}
+
+//------------------------------------------------------------------------
+bool COptionMenu::popup (CFrame* frame, const CPoint& frameLocation, const PopupCallback& callback)
+{
+	if (frame == nullptr || menuItems->empty ())
 		return false;
 	if (isAttached ())
 		return false;
 	CView* oldFocusView = frame->getFocusView ();
-	CBaseObjectGuard ofvg (oldFocusView);
-
 	CRect size (frameLocation, CPoint (0, 0));
 	setViewSize (size);
 	frame->addView (this);
-	popup ();
-	frame->removeView (this, false);
-	frame->setFocusView (oldFocusView);
-	int32_t index;
-	if (getLastItemMenu (index))
-		return true;
-	return false;
+
+	auto prevFocusView = shared (oldFocusView);
+	popup ([prevFocusView, callback] (COptionMenu* menu) {
+		if (auto frame = menu->getFrame ())
+		{
+			frame->removeView (menu, false);
+			frame->setFocusView (prevFocusView);
+		}
+		else
+		{
+			// if the selected menu item is a command menu and the command menu has removed this
+			// option menu from the view hierarchy then we have to make sure the reference count is
+			// corrected
+			menu->remember ();
+		}
+		if (callback)
+			callback (menu);
+	});
+	return true;
+}
+
+//------------------------------------------------------------------------
+void COptionMenu::cleanupSeparators (bool deep)
+{
+	if (getItems ()->empty ())
+		return;
+
+	std::list<int32_t>indicesToRemove;
+	bool lastEntryWasSeparator = true;
+	for (auto i = 0; i < getNbEntries () - 1; ++i)
+	{
+		auto entry = getEntry (i);
+		vstgui_assert (entry);
+		if (!entry)
+			continue;
+
+		if (entry->isSeparator ())
+		{
+			if (lastEntryWasSeparator)
+			{
+				indicesToRemove.push_front (i);
+			}
+			lastEntryWasSeparator = true;
+		}
+		else
+			lastEntryWasSeparator = false;
+		if (deep)
+		{
+			if (auto subMenu = entry->getSubmenu ())
+			{
+				subMenu->cleanupSeparators (deep);
+			}
+		}
+	}
+	auto lastIndex = getNbEntries () - 1;
+	if (getEntry (lastIndex)->isSeparator ())
+	{
+		indicesToRemove.push_front (lastIndex);
+	}
+
+	for (auto index : indicesToRemove)
+	{
+		removeEntry (index);
+	}
 }
 
 //------------------------------------------------------------------------
@@ -458,37 +559,35 @@ void COptionMenu::setPrefixNumbers (int32_t preCount)
 //-----------------------------------------------------------------------------
 CMenuItem* COptionMenu::addEntry (CMenuItem* item, int32_t index)
 {
-	if (index == -1)
-		menuItems->push_back (item);
+	if (index < 0 || index > getNbEntries ())
+		menuItems->emplace_back (owned (item));
 	else
 	{
-		CMenuItemIterator it = menuItems->begin ();
-		for (int32_t i = 0; i < index && it != menuItems->end (); i++, it++);
-		menuItems->insert (it, item);
+		menuItems->insert (menuItems->begin () + index, owned (item));
 	}
 	return item;
 }
 
 //-----------------------------------------------------------------------------
-CMenuItem* COptionMenu::addEntry (COptionMenu* submenu, UTF8StringPtr title)
+CMenuItem* COptionMenu::addEntry (COptionMenu* submenu, const UTF8String& title)
 {
-	CMenuItem* item = new CMenuItem (title, submenu);
+	auto* item = new CMenuItem (title, submenu);
 	return addEntry (item);
 }
 
 //-----------------------------------------------------------------------------
-CMenuItem* COptionMenu::addEntry (UTF8StringPtr title, int32_t index, int32_t itemFlags)
+CMenuItem* COptionMenu::addEntry (const UTF8String& title, int32_t index, int32_t itemFlags)
 {
-	if (title && strcmp (title, "-") == 0)
+	if (title == "-")
 		return addSeparator (index);
-	CMenuItem* item = new CMenuItem (title, 0, 0, 0, itemFlags);
+	auto* item = new CMenuItem (title, nullptr, 0, nullptr, itemFlags);
 	return addEntry (item, index);
 }
 
 //-----------------------------------------------------------------------------
 CMenuItem* COptionMenu::addSeparator (int32_t index)
 {
-	CMenuItem* item = new CMenuItem ("", 0, 0, 0, CMenuItem::kSeparator);
+	auto* item = new CMenuItem ("", nullptr, 0, nullptr, CMenuItem::kSeparator);
 	return addEntry (item, index);
 }
 
@@ -501,20 +600,16 @@ CMenuItem* COptionMenu::getCurrent () const
 //-----------------------------------------------------------------------------
 CMenuItem* COptionMenu::getEntry (int32_t index) const
 {
-	if (menuItems->empty())
-		return 0;
+	if (index < 0 || menuItems->empty () || index >= getNbEntries ())
+		return nullptr;
 	
-	CMenuItemIterator it = menuItems->begin ();
-	for (int32_t i = 0; i < index && it != menuItems->end (); i++, it++);
-	if (it == menuItems->end ())
-		return 0;
-	return (*it);
+	return (*menuItems)[static_cast<size_t> (index)];
 }
 
 //-----------------------------------------------------------------------------
 int32_t COptionMenu::getNbEntries () const
 {
-	return (int32_t) menuItems->size ();
+	return static_cast<int32_t> (menuItems->size ());
 }
 
 //------------------------------------------------------------------------
@@ -523,7 +618,7 @@ COptionMenu* COptionMenu::getSubMenu (int32_t idx) const
 	CMenuItem* item = getEntry (idx);
 	if (item)
 		return item->getSubmenu ();
-	return 0;
+	return nullptr;
 }
 
 //------------------------------------------------------------------------
@@ -533,14 +628,12 @@ int32_t COptionMenu::getCurrentIndex (bool countSeparator) const
 		return currentIndex;
 	int32_t i = 0;
 	int32_t numSeparators = 0;
-	CMenuItemIterator it = menuItems->begin ();
-	while (it != menuItems->end ())
+	for (auto& item : *menuItems)
 	{
-		if ((*it)->isSeparator ())
+		if (item->isSeparator ())
 			numSeparators++;
 		if (i == currentIndex)
 			break;
-		it++;
 		i++;
 	}
 	return currentIndex - numSeparators;
@@ -549,25 +642,23 @@ int32_t COptionMenu::getCurrentIndex (bool countSeparator) const
 //------------------------------------------------------------------------
 bool COptionMenu::setCurrent (int32_t index, bool countSeparator)
 {
-	CMenuItem* item = 0;
+	CMenuItem* item = nullptr;
 	if (countSeparator)
 	{
 		item = getEntry (index);
-		if (!item || (item && item->isSeparator ()))
+		if (!item || item->isSeparator ())
 			return false;
 		currentIndex = index;
 	}
 	else
 	{
 		int32_t i = 0;
-		CMenuItemIterator it = menuItems->begin ();
-		while (it != menuItems->end ())
+		for (auto& menuItem : *menuItems)
 		{
 			if (i > index)
 				break;
-			if ((*it)->isSeparator ())
+			if (menuItem->isSeparator ())
 				index++;
-			it++;
 			i++;
 		}
 		currentIndex = index;
@@ -585,23 +676,15 @@ bool COptionMenu::setCurrent (int32_t index, bool countSeparator)
 //------------------------------------------------------------------------
 bool COptionMenu::removeEntry (int32_t index)
 {
-	CMenuItem* item = getEntry (index);
-	if (item)
-	{
-		menuItems->remove (item);
-		item->forget ();
-		return true;
-	}
-	return false;
+	if (index < 0 || menuItems->empty () || index >= getNbEntries ())
+		return false;
+	menuItems->erase (menuItems->begin () + index);
+	return true;
 }
 
 //------------------------------------------------------------------------
 bool COptionMenu::removeAllEntry ()
 {
-	for (CMenuItemIterator it = menuItems->begin(); it != menuItems->end(); ++it)
-	{
-		(*it)->forget();
-	}
 	menuItems->clear ();
 	return true;
 }
@@ -621,12 +704,10 @@ bool COptionMenu::checkEntry (int32_t index, bool state)
 //------------------------------------------------------------------------
 bool COptionMenu::checkEntryAlone (int32_t index)
 {
-	CMenuItemIterator it = menuItems->begin ();
 	int32_t pos = 0;
-	while (it != menuItems->end ())
+	for (auto& item : *menuItems)
 	{
-		(*it)->setChecked (pos == index);
-		it++;
+		item->setChecked (pos == index);
 		pos++;
 	}
 	return true;
@@ -645,8 +726,9 @@ bool COptionMenu::isCheckEntry (int32_t index) const
 void COptionMenu::draw (CDrawContext *pContext)
 {
 	CMenuItem* item = getEntry (currentIndex);
-	drawBack (pContext, inPopup ? bgWhenClick : 0);
-	drawText (pContext, item ? item->getTitle () : 0);
+	drawBack (pContext, inPopup ? bgWhenClick : nullptr);
+	if (item)
+		drawPlatformText (pContext, UTF8String (item->getTitle ()).getPlatformString ());
 	setDirty (false);
 }
 
@@ -656,12 +738,10 @@ CMouseEventResult COptionMenu::onMouseDown (CPoint& where, const CButtonState& b
 	lastButton = buttons;
 	if (lastButton & (kLButton|kRButton|kApple))
 	{
-		if (bgWhenClick)
-			invalid ();
-		getFrame ()->setFocusView (this);
-		popup ();
-		if (bgWhenClick)
-			invalid ();
+		auto self = shared (this);
+		getFrame ()->doAfterEventProcessing ([self] () {
+			self->doPopup ();
+		});
 		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
 	}
 	return kMouseEventNotHandled;
@@ -677,17 +757,18 @@ COptionMenu *COptionMenu::getLastItemMenu (int32_t &idxInMenu) const
 //------------------------------------------------------------------------
 void COptionMenu::setValue (float val)
 {
-	if ((int32_t)val < 0 || (int32_t)val >= getNbEntries ())
+	auto newIndex = static_cast<int32_t> (std::round (val));
+	if (newIndex < 0 || newIndex >= getNbEntries ())
 		return;
 	
-	currentIndex = (int32_t)val;
+	currentIndex = newIndex;
 	if (style & (kMultipleCheckStyle & ~kCheckStyle))
 	{
 		CMenuItem* item = getCurrent ();
 		if (item)
 			item->setChecked (!item->isChecked ());
 	}
-	CParamDisplay::setValue (val);
+	CParamDisplay::setValue (static_cast<float> (newIndex));
 	
 	// to force the redraw
 	setDirty ();
@@ -701,14 +782,15 @@ void COptionMenu::takeFocus ()
 
 //------------------------------------------------------------------------
 void COptionMenu::looseFocus ()
-{	
-	CView* receiver = pParentView ? pParentView : pParentFrame;
+{
+	CView* receiver = getParentView () ? getParentView () : getFrame ();
 	while (receiver)
 	{
 		if (receiver->notify (this, kMsgLooseFocus) == kMessageNotified)
 			break;
 		receiver = receiver->getParentView ();
 	}
+	CParamDisplay::looseFocus ();
 }
 
-} // namespace
+} // VSTGUI

@@ -7,10 +7,10 @@
 #include "UIKnob.h"
 
 class UIOperator;
-class UIOpKnob : public UIKnob, public CControlListener
+class UIOpKnob : public UIKnob, public IControlListener
 {
 public:
-	UIOpKnob(const CRect& size, CControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
+	UIOpKnob(const CRect& size, IControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
 	~UIOpKnob(void);
 	void setValue(float val);
 	void valueChanged(CControl* control);
@@ -21,6 +21,6 @@ public:
 
 
 	UIDigitDisplay* _display;
-	CControlListener* _realListener;
+	IControlListener* _realListener;
 };
 

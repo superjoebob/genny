@@ -1,21 +1,16 @@
-/*
- *  win32bitmapbase.h
- *  VST3PlugIns
- *
- *  Created by Arne Scheffler on 4/9/10.
- *  Copyright 2010 Arne Scheffler. All rights reserved.
- *
- */
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __win32bitmapbase__
-#define __win32bitmapbase__
+#pragma once
 
 #include "../iplatformbitmap.h"
+#include "../platformfwd.h"
 
 #if WINDOWS
 
 #include <windows.h>
-#include <objidl.h>
+struct IStream;
 
 namespace VSTGUI {
 
@@ -24,10 +19,9 @@ class Win32BitmapBase : public IPlatformBitmap
 public:
 	virtual HBITMAP createHBitmap () = 0;
 	virtual bool loadFromStream (IStream* stream) = 0;
+	virtual PNGBitmapBuffer createMemoryPNGRepresentation () = 0;
 };
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS
-
-#endif // __win32bitmapbase__

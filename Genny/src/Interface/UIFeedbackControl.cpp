@@ -10,16 +10,17 @@ UIFeedbackControl::UIFeedbackControl(const CRect& size, UIInstrument* owner):
 	GennyInterfaceObject(owner),
 	_owner(owner)
 {
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
-	float yoff = 20;
+	float yoff = 212;
 	UIBitmap knobImage(PNG_KNOB);
 	CRect knobSize = CRect(0, 0, 26, 26);
-	knobSize.offset(52, 166 + 44 + yoff);
+	knobSize.offset(52, yoff);
 
 	int index = baron->getYMParamIndex(YM_FB);
 	_feedback = new UIKnob(knobSize, this, index, 31, 26.0, knobImage, getInterface());
+	//_feedback->setMidiLearnAppearance(UIBitmap(PNG_KNOBRED));
 	tag = index;
 
 	frame->addView(_feedback);
@@ -28,13 +29,22 @@ UIFeedbackControl::UIFeedbackControl(const CRect& size, UIInstrument* owner):
 	_feedback->setWheelInc(1.0f / (float)YM2612Param_getRange(YM_FB));
 
 	CRect displaySize = CRect(0, 0, 39, 18);
-	displaySize.offset(88.0f, 170.0f + 44 + yoff);
+	displaySize.offset(88.0f, yoff + 4);
 	_fbDisplay = new UIImage(displaySize, PNG_FBVAL, true);
 	frame->addView(_fbDisplay);
 
 	VSTPatch* patch = getVst()->getCurrentPatch();
 
 	setValue(patch->getFromBaron(baron->getIndex(index)));
+}
+
+void UIFeedbackControl::midiLearn()
+{
+	//_feedback->midiLearn();
+}
+void UIFeedbackControl::midiForget()
+{
+	//_feedback->midiForget();
 }
 
 UIFeedbackControl::~UIFeedbackControl(void)

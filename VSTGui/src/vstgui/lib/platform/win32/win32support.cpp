@@ -1,141 +1,121 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "win32support.h"
 
 #if WINDOWS
 
-#if VSTGUI_DIRECT2D_SUPPORT
-	#include <d2d1.h>
-	#include <dwrite.h>
-#endif
+#include "../../vstkeycode.h"
+#include "../common/fileresourceinputstream.h"
+#include "../platform_win32.h"
+#include "win32factory.h"
+
+#include <d2d1.h>
+#include <dwrite.h>
+#include <wincodec.h>
 
 #include <shlwapi.h>
-#include "cfontwin32.h"
-#include "gdiplusbitmap.h"
-#include "gdiplusdrawcontext.h"
 #include "direct2d/d2ddrawcontext.h"
 #include "direct2d/d2dbitmap.h"
 #include "direct2d/d2dfont.h"
 
-extern void* hInstance;
+#ifdef _MSC_VER
+#pragma comment (lib,"windowscodecs.lib")
+#pragma comment (lib,"d2d1.lib")
+#pragma comment (lib,"dwrite.lib")
+#endif
 
 namespace VSTGUI {
 
-HINSTANCE GetInstance () { return (HINSTANCE)hInstance; }
-
-const OSVERSIONINFOEX& getSystemVersion ()
+//-----------------------------------------------------------------------------
+HINSTANCE GetInstance ()
 {
-	static OSVERSIONINFOEX gSystemVersion = {0};
-	static bool once = true;
-	if (once)
-	{
-		memset (&gSystemVersion, 0, sizeof (gSystemVersion));
-		gSystemVersion.dwOSVersionInfoSize = sizeof (gSystemVersion);
-		GetVersionEx ((OSVERSIONINFO *)&gSystemVersion);
-	}
-	return gSystemVersion;
+	if (auto wf = getPlatformFactory ().asWin32Factory ())
+		return wf->getInstance ();
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
-#if VSTGUI_DIRECT2D_SUPPORT
-typedef HRESULT (WINAPI *D2D1CreateFactoryProc) (D2D1_FACTORY_TYPE type, REFIID riid, CONST D2D1_FACTORY_OPTIONS *pFactoryOptions, void** factory);
-typedef HRESULT (WINAPI *DWriteCreateFactoryProc) (DWRITE_FACTORY_TYPE factoryType, REFIID iid, void** factory);
-
-static int VSTGUI_Eval_Exception( int ) { return EXCEPTION_EXECUTE_HANDLER; }
-static bool d2dreleased;
 class D2DFactory
 {
 public:
 	D2DFactory ()
-	: factory (0)
-	, writeFactory (0)
-	, d2d1Dll (0)
-	, dwriteDll (0)
 	{
-		d2dreleased = false;
-		d2d1Dll = LoadLibraryA ("d2d1.dll");
-		if (d2d1Dll)
-		{
-			D2D1CreateFactoryProc _D2D1CreateFactory = (D2D1CreateFactoryProc)GetProcAddress (d2d1Dll, "D2D1CreateFactory");
-			if (_D2D1CreateFactory)
-			{
-				D2D1_FACTORY_OPTIONS* options = 0;
-			#if 0 //DEBUG
-				D2D1_FACTORY_OPTIONS debugOptions;
-				debugOptions.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-				options = &debugOptions;
-			#endif
-				HRESULT hr = _D2D1CreateFactory (D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory), options, (void**)&factory);
-			}
-			dwriteDll = LoadLibraryA ("dwrite.dll");
-			if (dwriteDll)
-			{
-				DWriteCreateFactoryProc _DWriteCreateFactory = (DWriteCreateFactoryProc)GetProcAddress (dwriteDll, "DWriteCreateFactory");
-				if (_DWriteCreateFactory)
-				{
-					HRESULT hr = _DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (void**)&writeFactory);
-				}
-			}	
-		}
 	}
 
-	~D2DFactory ()
+	~D2DFactory () noexcept
+	{
+		CFontDesc::cleanup ();
+		releaseFactory ();
+	}
+	ID2D1Factory* getFactory () const
+	{
+		if (factory == nullptr)
+		{
+			D2D1_FACTORY_OPTIONS* options = nullptr;
+		#if 0 //DEBUG
+			D2D1_FACTORY_OPTIONS debugOptions;
+			debugOptions.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+			options = &debugOptions;
+		#endif
+			D2D1CreateFactory (D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory), options, (void**)&factory);
+		}
+		return factory;
+	}
+	
+	IDWriteFactory* getWriteFactory ()
+	{
+		if (!writeFactory)
+			DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&writeFactory);
+		return writeFactory;
+	}
+
+	IWICImagingFactory* getImagingFactory ()
+	{
+		if (imagingFactory == nullptr)
+		{
+#if _WIN32_WINNT > 0x601
+// make sure when building with the Win 8.0 SDK we work on Win7
+#define VSTGUI_WICImagingFactory CLSID_WICImagingFactory1
+#else
+#define VSTGUI_WICImagingFactory CLSID_WICImagingFactory
+#endif
+			CoCreateInstance (VSTGUI_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory, (void**)&imagingFactory);
+		}
+		return imagingFactory;
+	}
+
+	void use ()
+	{
+		++useCount;
+	}
+
+	void unuse ()
+	{
+		vstgui_assert (useCount > 0);
+		if (--useCount == 0)
+			releaseFactory ();
+	}
+
+private:
+	void releaseFactory ()
 	{
 		if (writeFactory)
 			writeFactory->Release ();
-		if (dwriteDll)
-			FreeLibrary (dwriteDll);
+		writeFactory = nullptr;
+		if (imagingFactory)
+			imagingFactory->Release ();
+		imagingFactory = nullptr;
 		if (factory)
-		{
-			//GENNY change, may god have mercy I am so sorry but the factory->Release line was crashing and I have no fucking idea.
-			//__try { // since the Direct2D hotfix (KB2028560) this is necessary
-			//	factory->Release ();
-			//} __except (VSTGUI_Eval_Exception (GetExceptionCode ())) {}
-		}
-		if (d2d1Dll)
-			FreeLibrary (d2d1Dll);
-
-		d2dreleased = true;
+			factory->Release ();
+		factory = nullptr;
 	}
-	ID2D1Factory* getFactory () const { return factory; }
-	IDWriteFactory* getWriteFactory () const { return writeFactory; }
-protected:
-	ID2D1Factory* factory;
-	IDWriteFactory* writeFactory;
-	HMODULE d2d1Dll;
-	HMODULE dwriteDll;
+
+	ID2D1Factory* factory {nullptr};
+	IDWriteFactory* writeFactory {nullptr};
+	IWICImagingFactory* imagingFactory {nullptr};
+	int32_t useCount {0};
 };
 
 //-----------------------------------------------------------------------------
@@ -144,296 +124,127 @@ D2DFactory& getD2DFactoryInstance ()
 	static D2DFactory d2dFactory;
 	return d2dFactory;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 ID2D1Factory* getD2DFactory ()
 {
-#if VSTGUI_DIRECT2D_SUPPORT
 	return getD2DFactoryInstance ().getFactory ();
-#else
-	return 0;
-#endif
 }
 
+//-----------------------------------------------------------------------------
+IWICImagingFactory* getWICImageingFactory ()
+{
+	return getD2DFactoryInstance ().getImagingFactory ();
+}
+
+//-----------------------------------------------------------------------------
+void useD2D ()
+{
+	getD2DFactoryInstance ().use ();
+}
+
+//-----------------------------------------------------------------------------
+void unuseD2D ()
+{
+	getD2DFactoryInstance ().unuse ();
+}
+
+//-----------------------------------------------------------------------------
 IDWriteFactory* getDWriteFactory ()
 {
-#if VSTGUI_DIRECT2D_SUPPORT
 	return getD2DFactoryInstance ().getWriteFactory ();
-#else
-	return 0;
-#endif
 }
 
 //-----------------------------------------------------------------------------
 CDrawContext* createDrawContext (HWND window, HDC device, const CRect& surfaceRect)
 {
-#if VSTGUI_DIRECT2D_SUPPORT
-	if (getD2DFactory ())
-		return new D2DDrawContext (window, surfaceRect);
-#endif
-	return new GdiplusDrawContext (window, surfaceRect);
-}
-
-//-----------------------------------------------------------------------------
-IPlatformBitmap* IPlatformBitmap::create (CPoint* size)
-{
-#if VSTGUI_DIRECT2D_SUPPORT
-	if (getD2DFactory ())
+	auto context = new D2DDrawContext (window, surfaceRect);
+	if (!context->usable ())
 	{
-		if (size)
-			return new D2DBitmap (*size);
-		return new D2DBitmap ();
+		context->forget ();
+		return nullptr;
 	}
-#endif
-	if (size)
-		return new GdiplusBitmap (*size);
-	return new GdiplusBitmap ();
+	return context;
 }
 
 //-----------------------------------------------------------------------------
-IPlatformBitmap* IPlatformBitmap::createFromPath (UTF8StringPtr absolutePath)
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+Optional<VstKeyCode> keyMessageToKeyCode (WPARAM wParam, LPARAM lParam)
 {
-	// TODO: check that this implementation actually works
-	UTF8StringHelper path (absolutePath);
-	IStream* stream = 0;
-	if (SUCCEEDED (SHCreateStreamOnFileEx (path, STGM_READ|STGM_SHARE_DENY_WRITE, 0, false, 0, &stream)))
+	static std::map<WPARAM, VstVirtualKey> vMap = {
+		{VK_BACK, VKEY_BACK}, 
+		{VK_TAB, VKEY_TAB}, 
+		{VK_CLEAR, VKEY_CLEAR}, 
+		{VK_RETURN, VKEY_RETURN}, 
+		{VK_PAUSE, VKEY_PAUSE}, 
+		{VK_ESCAPE, VKEY_ESCAPE}, 
+		{VK_SPACE, VKEY_SPACE}, 
+		{VK_NEXT, VKEY_NEXT}, 
+		{VK_END, VKEY_END}, 
+		{VK_HOME, VKEY_HOME}, 
+		{VK_LEFT, VKEY_LEFT}, 
+		{VK_UP, VKEY_UP}, 
+		{VK_RIGHT, VKEY_RIGHT}, 
+		{VK_DOWN, VKEY_DOWN}, 
+		// {VK_PAGEUP, VKEY_PAGEUP}, 
+		// {VK_PAGEDOWN, VKEY_PAGEDOWN}, 
+		{VK_SELECT, VKEY_SELECT}, 
+		{VK_PRINT, VKEY_PRINT}, 
+		// {VK_ENTER, VKEY_ENTER}, 
+		{VK_SNAPSHOT, VKEY_SNAPSHOT}, 
+		{VK_INSERT, VKEY_INSERT}, 
+		{VK_DELETE, VKEY_DELETE}, 
+		{VK_HELP, VKEY_HELP}, 
+		{VK_NUMPAD0, VKEY_NUMPAD0}, 
+		{VK_NUMPAD1, VKEY_NUMPAD1}, 
+		{VK_NUMPAD2, VKEY_NUMPAD2}, 
+		{VK_NUMPAD3, VKEY_NUMPAD3}, 
+		{VK_NUMPAD4, VKEY_NUMPAD4}, 
+		{VK_NUMPAD5, VKEY_NUMPAD5}, 
+		{VK_NUMPAD6, VKEY_NUMPAD6}, 
+		{VK_NUMPAD7, VKEY_NUMPAD7}, 
+		{VK_NUMPAD8, VKEY_NUMPAD8}, 
+		{VK_NUMPAD9, VKEY_NUMPAD9}, 
+		{VK_MULTIPLY, VKEY_MULTIPLY}, 
+		{VK_ADD, VKEY_ADD}, 
+		{VK_SEPARATOR, VKEY_SEPARATOR}, 
+		{VK_SUBTRACT, VKEY_SUBTRACT}, 
+		{VK_DECIMAL, VKEY_DECIMAL}, 
+		{VK_DIVIDE, VKEY_DIVIDE}, 
+		{VK_F1, VKEY_F1}, 
+		{VK_F2, VKEY_F2}, 
+		{VK_F3, VKEY_F3}, 
+		{VK_F4, VKEY_F4}, 
+		{VK_F5, VKEY_F5}, 
+		{VK_F6, VKEY_F6}, 
+		{VK_F7, VKEY_F7}, 
+		{VK_F8, VKEY_F8}, 
+		{VK_F9, VKEY_F9}, 
+		{VK_F10, VKEY_F10}, 
+		{VK_F11, VKEY_F11}, 
+		{VK_F12, VKEY_F12}, 
+		{VK_NUMLOCK, VKEY_NUMLOCK}, 
+		{VK_SCROLL, VKEY_SCROLL},
+		{VK_SHIFT, VKEY_SHIFT},
+		{VK_CONTROL, VKEY_CONTROL},
+		// {VK_ALT, VKEY_ALT},
+		{VK_OEM_NEC_EQUAL, VKEY_EQUALS} // TODO: verify
+	};
+	auto it = vMap.find (wParam);
+	if (it != vMap.end ())
 	{
-#if VSTGUI_DIRECT2D_SUPPORT
-		if (getD2DFactory ())
-		{
-			D2DBitmap* result = new D2DBitmap ();
-			if (result->loadFromStream (stream))
-			{
-				stream->Release ();
-				return result;
-			}
-			stream->Release ();
-			result->forget ();
-			return 0;
-		}
-#endif
-		GdiplusBitmap* bitmap = new GdiplusBitmap ();
-		if (bitmap->loadFromStream (stream))
-		{
-			stream->Release ();
-			return bitmap;
-		}
-		bitmap->forget ();
-		stream->Release ();
+		VstKeyCode res {};
+		res.virt = it->second;
+		return Optional<VstKeyCode> (res);
 	}
-	return 0;
+	return {};
 }
 
-//-----------------------------------------------------------------------------
-IPlatformFont* IPlatformFont::create (const char* name, const CCoord& size, const int32_t& style)
-{
-#if VSTGUI_DIRECT2D_SUPPORT
-	if (getD2DFactory ())
-	{
-		return new D2DFont (name, size, style);
-	}
-#endif
-	GdiPlusFont* font = new GdiPlusFont (name, size, style);
-	if (font->getFont ())
-		return font;
-	font->forget ();
-	return 0;
-}
-
-/// @cond ignore
-//-----------------------------------------------------------------------------
-GDIPlusGlobals* GDIPlusGlobals::gInstance = 0;
-
-//-----------------------------------------------------------------------------
-GDIPlusGlobals::GDIPlusGlobals ()
-{
-	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-	Gdiplus::GdiplusStartup (&gdiplusToken, &gdiplusStartupInput, NULL);
-}
-
-//-----------------------------------------------------------------------------
-GDIPlusGlobals::~GDIPlusGlobals ()
-{
-	CFontDesc::cleanup ();
-	Gdiplus::GdiplusShutdown (gdiplusToken);
-}
-
-//-----------------------------------------------------------------------------
-void GDIPlusGlobals::enter ()
-{
-	if (gInstance)
-		gInstance->remember ();
-	else
-		gInstance = new GDIPlusGlobals;
-}
-
-//-----------------------------------------------------------------------------
-void GDIPlusGlobals::exit ()
-{
-	if (gInstance)
-	{
-		bool destroyed = (gInstance->getNbReference () == 1);
-		gInstance->forget ();
-		if (destroyed)
-			gInstance = 0;
-	}
-}
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-ResourceStream::ResourceStream ()
-: streamPos (0)
-, resData (0)
-, resSize (0)
-, _refcount (1)
-{
-}
-
-//-----------------------------------------------------------------------------
-bool ResourceStream::open (const CResourceDescription& resourceDesc, const char* type)
-{
-	HRSRC rsrc = 0;
-	if (resourceDesc.type == CResourceDescription::kIntegerType)
-		rsrc = FindResourceA (GetInstance (), MAKEINTRESOURCEA (resourceDesc.u.id), type);
-	else
-		rsrc = FindResourceA (GetInstance (), resourceDesc.u.name, type);
-	if (rsrc)
-	{
-		resSize = SizeofResource (GetInstance (), rsrc);
-		HGLOBAL resDataLoad = LoadResource (GetInstance (), rsrc);
-		if (resDataLoad)
-		{
-			resData = LockResource (resDataLoad);
-			return true;
-		}
-	}
-	return false;
-}
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Read (void *pv, ULONG cb, ULONG *pcbRead)
-{
-	int readSize = min (resSize - streamPos, cb);
-	if (readSize > 0)
-	{
-		memcpy (pv, ((uint8_t*)resData+streamPos), readSize);
-		streamPos += readSize;
-		if (pcbRead)
-			*pcbRead = readSize;
-		return S_OK;
-	}
-	if (pcbRead)
-		*pcbRead = 0;
-	return S_FALSE;
-}
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Write (const void *pv, ULONG cb, ULONG *pcbWritten) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Seek (LARGE_INTEGER dlibMove, DWORD dwOrigin, ULARGE_INTEGER *plibNewPosition)
-{
-	switch(dwOrigin)
-	{
-		case STREAM_SEEK_SET:
-		{
-			if (dlibMove.QuadPart < resSize)
-			{
-				streamPos = (uint32_t)dlibMove.QuadPart;
-				if (plibNewPosition)
-					plibNewPosition->QuadPart = streamPos;
-				return S_OK;
-			}
-			break;
-		}
-		case STREAM_SEEK_CUR:
-		{
-			if (streamPos + dlibMove.QuadPart < resSize && streamPos + dlibMove.QuadPart >= 0)
-			{
-				streamPos += (int32_t)dlibMove.QuadPart;
-				if (plibNewPosition)
-					plibNewPosition->QuadPart = streamPos;
-				return S_OK;
-			}
-			break;
-		}
-		case STREAM_SEEK_END:
-		{
-			break;
-		}
-		default:   
-			return STG_E_INVALIDFUNCTION;
-		break;
-	}
-	return S_FALSE;
-}
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::SetSize (ULARGE_INTEGER libNewSize) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::CopyTo (IStream *pstm, ULARGE_INTEGER cb, ULARGE_INTEGER *pcbRead, ULARGE_INTEGER *pcbWritten) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Commit (DWORD grfCommitFlags) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Revert (void) 
-{ 
-	streamPos = 0;
-	return S_OK; 
-}
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::LockRegion (ULARGE_INTEGER libOffset, ULARGE_INTEGER cb, DWORD dwLockType) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::UnlockRegion (ULARGE_INTEGER libOffset, ULARGE_INTEGER cb, DWORD dwLockType) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Stat (STATSTG *pstatstg, DWORD grfStatFlag)
-{
-	memset (pstatstg, 0, sizeof (STATSTG));
-	pstatstg->cbSize.QuadPart = resSize;
-	return S_OK;
-}
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::Clone (IStream **ppstm) { return E_NOTIMPL; }
-
-//-----------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE ResourceStream::QueryInterface(REFIID iid, void ** ppvObject)
-{ 
-    if (iid == __uuidof(IUnknown)
-        || iid == __uuidof(IStream)
-        || iid == __uuidof(ISequentialStream))
-    {
-        *ppvObject = static_cast<IStream*>(this);
-        AddRef();
-        return S_OK;
-    } else
-        return E_NOINTERFACE; 
-}
-
-//-----------------------------------------------------------------------------
-ULONG STDMETHODCALLTYPE ResourceStream::AddRef(void) 
-{ 
-    return (ULONG)InterlockedIncrement(&_refcount); 
-}
-
-//-----------------------------------------------------------------------------
-ULONG STDMETHODCALLTYPE ResourceStream::Release(void) 
-{
-    ULONG res = (ULONG) InterlockedDecrement(&_refcount);
-    if (res == 0) 
-        delete this;
-    return res;
-}
 
 /// @endcond ignore
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS

@@ -4,16 +4,16 @@
 class UIInstrumentsPanel;
 class UIImage;
 struct GennyPatch;
-class UIInstrumentElement : public CCheckBox, public CControlListener, public GennyInterfaceObject
+class UIInstrumentElement : public CCheckBox, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIInstrumentElement(const CPoint& vPosition, UIInstrumentsPanel* vOwner, GennyPatch* vPatch, int vIndex);
 	~UIInstrumentElement(void);
 
-	virtual bool attached (CView* parent);	
+	virtual bool attached (CView* parent);
 	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
 	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);	
+	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
 
 	void update();
 	void makeChannelsDirty();
@@ -23,12 +23,15 @@ public:
 	void unselect();
 	void select();
 
-	void setPatchLink(GennyPatch* patch);
-	GennyPatch* getPatchLink() { return _patch; }
+	void setInstrumentIndex(int pIdx);
+	int getInstrumentIndex();
+
+	int getDisplayIndex() { return _displayIndex; }
+	GennyPatch* getPresetLink();
+	GennyPatch* getInstrumentLink();
 
 	void setWide(bool vWide);
 
-	int getInstrumentIndex();
 
 	virtual void setVisible(bool visible);
 	void updateEnabledStatus();
@@ -38,11 +41,10 @@ public:
 
 private:
 	UIInstrumentsPanel* _owner;
-	GennyPatch* _patch;
-
 	CCheckBox* _enabledCheckbox;
 	CTextLabel* _label;
-	CMovieBitmap* _typeDisplay;
+	UIImage* _typeDisplay;
+	int _instrumentIndex;
 
 	std::vector<UIImage*> _lights;
 	std::vector<float> _lightVals;
@@ -51,5 +53,6 @@ private:
 	CPoint _clickDragStart;
 	bool _selected;
 	bool _wide;
+	int _displayIndex;
 };
 

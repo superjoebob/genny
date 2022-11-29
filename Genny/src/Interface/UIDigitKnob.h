@@ -7,10 +7,10 @@
 #include "Genny2612.h"
 #include "UIKnob.h"
 class UIOperator;
-class UIDigitKnob : public CControl, public CControlListener, public GennyInterfaceObject
+class UIDigitKnob : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
-	UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param param, GennyInstrumentParam param2 = GIP_None);
+	UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param param, GennyInstrumentParam param2 = GIP_None, bool hzKnob = false);
 	~UIDigitKnob(void);
 	void setValue(float val);
 	virtual void valueChanged (CControl* control);
@@ -34,6 +34,7 @@ private:
 	UIKnob* _knob;
 	UIDigitDisplay* _display;
 	bool _YMParam;
+	bool _hzKnob;
 
 	int _min;
 	int _max;

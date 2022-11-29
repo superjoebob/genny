@@ -1,6 +1,7 @@
 #include "YM2612.h"
+#include <util/atomic.h>
 
-
+volatile bool YM2612::interrupted = false;
 YM2612::YM2612()
 {
     DDRF = 0xFF;
@@ -69,22 +70,240 @@ void YM2612::DumpShadowRegisters()
   }
 }
 
+#define PIN_A0_LOW PORTC &= ~(1 << PC4)
+#define PIN_A0_HIGH PORTC |= (1 << PC4)
+
+#define PIN_A1_LOW PORTC &= ~(1 << PC5)
+#define PIN_A1_HIGH PORTC |= (1 << PC5)
+
+#define PIN_WR_LOW PORTC &= ~(1 << PC2)
+#define PIN_WR_HIGH PORTC |= (1 << PC2)
+
+#define PIN_CS_LOW PORTC &= ~(1 << PC1)
+#define PIN_CS_HIGH PORTC |= (1 << PC1)
+
+#define PIN_WR_A0_CS_HIGH PORTC |= ((1 << PC2) | (1 << PC4) | (1 << PC1));
+#define PIN_WR_CS_HIGH PORTC |= ((1 << PC2) | (1 << PC1));
+#define PIN_A0_CS_LOW PORTC &= ~((1 << PC4) | (1 << PC1));
+
+
+
+
+
+#define YM_CTRL_INIT (YM_CTRL_IC | YM_CTRL_CS | YM_CTRL_WR | YM_CTRL_RD)
+
+
+unsigned char prevAddrUpper = 0;
+unsigned char prevAddrLower = 0;
+void YM2612::sendUpper(unsigned char addr, unsigned char data)
+{    
+  ATOMIC_BLOCK(ATOMIC_FORCEON)
+  {
+    if(addr != prevAddrUpper )
+    {
+      PIN_A1_HIGH;
+      PIN_A0_CS_LOW;
+      PORTF = addr;
+      PIN_WR_LOW;
+      delayMicroseconds(1);
+      PIN_WR_A0_CS_HIGH;
+
+      prevAddrUpper = addr;
+      prevAddrLower = 255;
+    }
+
+    PIN_CS_LOW;
+    PORTF = data;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_CS_HIGH;
+  }
+}
+
+void YM2612::sendLower(unsigned char addr, unsigned char data)
+{        
+  
+  /*if(addr != prevAddr || prevSetA1 != setA1)
+  {
+    if(setA1)
+      PIN_A1_HIGH;
+    else
+      PIN_A1_LOW;
+
+    PIN_A0_CS_LOW;
+    PORTF = addr;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_A0_CS_HIGH;
+  }
+  prevAddr = addr;
+  prevSetA1 = setA1;
+
+  PIN_CS_LOW;
+  PORTF = data;
+  PIN_WR_LOW;
+  delayMicroseconds(1);
+  PIN_WR_CS_HIGH;*/
+
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON)
+  {
+    if(addr != prevAddrLower )
+    {
+      PIN_A1_LOW;
+      PIN_A0_CS_LOW;
+      PORTF = addr;
+      PIN_WR_LOW;
+      delayMicroseconds(1);
+      PIN_WR_A0_CS_HIGH;
+
+      prevAddrLower = addr;
+      prevAddrUpper = 255;
+    }
+
+    PIN_CS_LOW;
+    PORTF = data;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_CS_HIGH;
+  }
+}
+
+void YM2612::interruptSendLower(unsigned char addr, unsigned char data)
+{     
+  if(addr != prevAddrLower )
+  {
+    PIN_A1_LOW;
+    PIN_A0_CS_LOW;
+    PORTF = addr;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_A0_CS_HIGH;
+
+    prevAddrLower = addr;
+    prevAddrUpper = 255;
+  }
+
+  PIN_CS_LOW;
+  PORTF = data;
+  PIN_WR_LOW;
+  delayMicroseconds(1);
+  PIN_WR_CS_HIGH;
+}
+
+
 
 
 unsigned char prevAddr = 0;
 bool prevSetA1 = false;
+volatile bool mustDelay = false;
 void YM2612::send(unsigned char addr, unsigned char data, bool setA1)
-{
-    //Store in shadow registers to keep track of written values
-    /*if(setA1)
-    {
-      bank1[addr-0x30] = data;
-    }
+{    
+  /*cli();
+  if(addr != prevAddr || prevSetA1 != setA1)
+  {
+    if(setA1)
+      PIN_A1_HIGH;
     else
-    {
-      bank0[addr-0x21] = data;
-    }*/
+      PIN_A1_LOW;
 
+    cli();
+    PIN_A0_CS_LOW;
+    PORTF = addr;
+    PIN_WR_LOW;
+    mustDelay = true;
+    sei();
+    if(interrupted) { interrupted = false; send(addr, data, setA1); return; }
+
+    if(mustDelay)
+    {
+      delayMicroseconds(1);
+      mustDelay = false;
+    }
+
+    cli();
+    PIN_WR_A0_CS_HIGH;
+  }
+  prevAddr = addr;
+  prevSetA1 = setA1;
+  sei();
+  if(interrupted) { interrupted = false; send(addr, data, setA1); return; }
+
+
+  cli();
+    PIN_CS_LOW;
+    PORTF = data;
+    PIN_WR_LOW;
+    mustDelay = true;
+  sei();
+
+    if(mustDelay)
+    {
+      delayMicroseconds(1);
+      mustDelay = false;
+    }
+    
+  cli();
+    PIN_WR_CS_HIGH;
+  sei();*/
+
+
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON)
+  {
+    if(addr != prevAddr || prevSetA1 != setA1)
+    {
+      if(setA1)
+        PIN_A1_HIGH;
+      else
+        PIN_A1_LOW;
+
+      PIN_A0_CS_LOW;
+      PORTF = addr;
+      PIN_WR_LOW;
+      delayMicroseconds(1);
+      PIN_WR_A0_CS_HIGH;
+    }
+    prevAddr = addr;
+    prevSetA1 = setA1;
+
+    PIN_CS_LOW;
+    PORTF = data;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_CS_HIGH;
+  }
+}
+
+void YM2612::interruptSend(unsigned char addr, unsigned char data, bool setA1)
+{    
+  if(addr != prevAddr || prevSetA1 != setA1)
+  {
+    if(setA1)
+      PIN_A1_HIGH;
+    else
+      PIN_A1_LOW;
+
+    PIN_A0_CS_LOW;
+    PORTF = addr;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_A0_CS_HIGH;
+  }
+  prevAddr = addr;
+  prevSetA1 = setA1;
+
+  PIN_CS_LOW;
+  PORTF = data;
+  PIN_WR_LOW;
+  delayMicroseconds(1);
+  PIN_WR_CS_HIGH;
+}
+
+void YM2612::shittySlowSend(unsigned char addr, unsigned char data, bool setA1)
+{
+  //ATOMIC_BLOCK(ATOMIC_FORCEON)
+  {
     if(addr != prevAddr || prevSetA1 != setA1)
     {
       digitalWriteFast(_A1, setA1);
@@ -94,21 +313,53 @@ void YM2612::send(unsigned char addr, unsigned char data, bool setA1)
       digitalWriteFast(_WR, LOW);
       delayMicroseconds(1);
       digitalWriteFast(_WR, HIGH);
+      digitalWriteFast(_CS, HIGH);
+      digitalWriteFast(_A0, HIGH);
     }
     prevAddr = addr;
     prevSetA1 = setA1;
+  }
 
-
-    digitalWriteFast(_CS, HIGH);
-    digitalWriteFast(_A0, HIGH);
+  ATOMIC_BLOCK(ATOMIC_FORCEON)
+  {
     digitalWriteFast(_CS, LOW);
     PORTF = data;
     digitalWriteFast(_WR, LOW);
     delayMicroseconds(1);
     digitalWriteFast(_WR, HIGH);
-    //digitalWriteFast(_CS, HIGH);
-    //digitalWriteFast(_A0, LOW);
+    digitalWriteFast(_CS, HIGH);
+  }
 }
+
+/*void YM2612::interruptSend(unsigned char addr, unsigned char data, bool setA1)
+{
+  if(mustDelay)
+  {
+    delayMicroseconds(1);
+    mustDelay = false;
+  }
+  if(addr != prevAddr || prevSetA1 != setA1)
+  {
+    if(setA1)
+      PIN_A1_HIGH;
+    else
+      PIN_A1_LOW;
+
+    PIN_A0_CS_LOW;
+    PORTF = addr;
+    PIN_WR_LOW;
+    delayMicroseconds(1);
+    PIN_WR_A0_CS_HIGH;
+  }
+  prevAddr = addr;
+  prevSetA1 = setA1;
+
+  PIN_CS_LOW;
+  PORTF = data;
+  PIN_WR_LOW;
+  delayMicroseconds(1);
+  PIN_WR_CS_HIGH;
+}*/
 
 void YM2612::SetFrequency(uint16_t frequency, uint8_t channel)
 {

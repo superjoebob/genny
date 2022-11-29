@@ -2,7 +2,7 @@
 #include "UIInstrument.h"
 #include "UIImage.h"
 #include "UICheckBoxNum.h"
-class UIChannelStatus : public CControl, public CControlListener, public GennyInterfaceObject
+class UIChannelStatus : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIChannelStatus(UIInstrument* owner);

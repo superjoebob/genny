@@ -266,6 +266,28 @@
     <ClCompile Include="src\Interface\UIOpKnob.cpp">
       <Filter>Interface</Filter>
     </ClCompile>
+    <ClCompile Include="src\YM2612\ym3438.c">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface\UIBendRangeSpinner.cpp">
+      <Filter>Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\sn76489_plusgx.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="src\YM2612\blip_buf.cpp">
+      <Filter>YM2612</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\vstplugmain.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GennyExtParam.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -595,6 +617,40 @@
     <ClInclude Include="src\Interface\UIOpKnob.h">
       <Filter>Interface</Filter>
     </ClInclude>
+    <ClInclude Include="src\YM2612\atomicops.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\readerwriterqueue.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\ym3438.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface\UIBendRangeSpinner.h">
+      <Filter>Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\sn76489_plusgx.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\blip_buf.h">
+      <Filter>YM2612</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\aeffeditor.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffectx.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffect.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GennyExtParam.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VST">
@@ -725,5 +781,35 @@
     <Image Include="res\megamidicheck.png" />
     <Image Include="res\emu_switch.png" />
     <Image Include="res\presetsTab_VST.png" />
+    <Image Include="res\knob_red.png" />
+    <Image Include="res\bitmap5.bmp" />
+    <Image Include="res\noiseLink.png" />
+    <Image Include="res\bitmap6.bmp" />
+    <Image Include="res\bitmap7.bmp" />
+    <Image Include="res\bigLightInverse.png" />
+    <Image Include="res\emu_switch_vst.png" />
+    <Image Include="res\transTabs.png" />
+    <Image Include="res\soloButton.png" />
+    <Image Include="res\legatoButton.png" />
+    <Image Include="res\lcdSliderTall.png" />
+    <Image Include="res\channel36.png" />
+    <Image Include="res\lcdSlider2.png" />
+    <Image Include="res\opSpSettings.png" />
+    <Image Include="res\littleVertArrowLeft.png" />
+    <Image Include="res\littleVertArrowRight.png" />
+    <Image Include="res\lcdSliderSmall.png" />
+    <Image Include="res\ssgDisplay.png" />
+    <Image Include="res\lChannelButton.png" />
+    <Image Include="res\rChannelButton.png" />
+    <Image Include="res\sampleVolumeBar.png" />
+    <Image Include="res\sliderWide.png" />
+    <Image Include="res\drumSettingsCover.png" />
+    <Image Include="res\sliderKnobRightFlip.png" />
+    <Image Include="res\sampleSliderKnob.png" />
+    <Image Include="res\infoButton.png" />
+    <Image Include="res\infoTab.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="changelog.txt" />
   </ItemGroup>
 </Project>

@@ -1,46 +1,21 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "hiviewtextedit.h"
+#include "hiviewframe.h"
+#include "../cfontmac.h"
+#include "../macstring.h"
 
 #if MAC_CARBON
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // we know that we use deprecated functions from Carbon, so we don't want to be warned
+#include "../../iplatformopenglview.h"
+#include "../../iplatformviewlayer.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 namespace VSTGUI {
-
-extern bool isWindowComposited (WindowRef window);
 
 //-----------------------------------------------------------------------------
 HIViewTextEdit::HIViewTextEdit (HIViewRef parent, IPlatformTextEditCallback* textEdit)
@@ -91,7 +66,7 @@ HIViewTextEdit::HIViewTextEdit (HIViewRef parent, IPlatformTextEditCallback* tex
 
 		ControlEditTextSelectionRec selection;
 		selection.selStart = 0;
-		selection.selEnd = strlen (text);
+		selection.selEnd = static_cast<SInt16> (strlen (text));
 		SetControlData (platformControl, kControlEditTextPart, kControlEditTextSelectionTag, sizeof (ControlEditTextSelectionRec), &selection);
 
 		Boolean singleLineStyle = true;
@@ -105,10 +80,18 @@ HIViewTextEdit::HIViewTextEdit (HIViewRef parent, IPlatformTextEditCallback* tex
 			case kRightText: fontStyle.just = teFlushRight; break;
 			default: fontStyle.just = teCenter; break;
 		}
-		fontStyle.size = fontID->getSize ();
+		fontStyle.size = static_cast<SInt16> (fontID->getSize ());
+	#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 		Str255 fontName;
-		CopyCStringToPascal (fontID->getName (), fontName); 
+		CopyCStringToPascal (fontID->getName (), fontName);
 		GetFNum (fontName, &fontStyle.font);
+	#else
+		if (auto ctFont = fontID->getPlatformFont ().cast<CoreTextFont> ())
+		{
+			if (auto ctFontRef = ctFont->getFontRef ())
+				HIViewSetTextFont (textControl, kControlEditTextPart, ctFontRef);
+		}
+	#endif
 		SetControlData (textControl, kControlEditTextPart, kControlFontStyleTag, sizeof (fontStyle), &fontStyle);
 		HIViewSetVisible (textControl, true);
 		HIViewAdvanceFocus (textControl, 0);
@@ -119,7 +102,7 @@ HIViewTextEdit::HIViewTextEdit (HIViewRef parent, IPlatformTextEditCallback* tex
 }
 
 //-----------------------------------------------------------------------------
-HIViewTextEdit::~HIViewTextEdit ()
+HIViewTextEdit::~HIViewTextEdit () noexcept
 {
 	if (eventHandler)
 		RemoveEventHandler (eventHandler);
@@ -138,28 +121,24 @@ HIViewTextEdit::~HIViewTextEdit ()
 void HIViewTextEdit::freeText ()
 {
 	if (text)
-		free (text);
+		std::free (text);
 	text = 0;
 }
 
 //-----------------------------------------------------------------------------
-bool HIViewTextEdit::setText (UTF8StringPtr text)
+bool HIViewTextEdit::setText (const UTF8String& text)
 {
 	if (platformControl)
 	{
-		CFStringRef textString = CFStringCreateWithCString (NULL, text, kCFStringEncodingUTF8);
-		if (textString)
-		{
-			SetControlData (platformControl, kControlEditTextPart, kControlEditTextCFStringTag, sizeof (CFStringRef), &textString);
-			CFRelease (textString);
-		}
+		CFStringRef textString = fromUTF8String<CFStringRef> (text);
+		SetControlData (platformControl, kControlEditTextPart, kControlEditTextCFStringTag, sizeof (CFStringRef), &textString);
 		return true;
 	}
 	return false;
 }
 
 //-----------------------------------------------------------------------------
-UTF8StringPtr HIViewTextEdit::getText ()
+UTF8String HIViewTextEdit::getText ()
 {
 	if (platformControl)
 	{
@@ -168,7 +147,7 @@ UTF8StringPtr HIViewTextEdit::getText ()
 		{
 			freeText ();
 			CFIndex textSize = CFStringGetMaximumSizeForEncoding (CFStringGetLength (cfstr), kCFStringEncodingUTF8);
-			text = (UTF8StringBuffer)malloc (textSize);
+			text = static_cast<UTF8StringBuffer> (std::malloc (static_cast<size_t> (textSize)));
 			
 			CFStringGetCString (cfstr, text, textSize, kCFStringEncodingUTF8);
 			CFRelease (cfstr);
@@ -191,10 +170,10 @@ bool HIViewTextEdit::updateSize ()
 			rect.offset ((CCoord)hiRect.origin.x, (CCoord)hiRect.origin.y);
 		}
 		HIRect r;
-		r.origin.x = rect.left;
-		r.origin.y = rect.top;
-		r.size.width = rect.getWidth ();
-		r.size.height = rect.getHeight ();
+		r.origin.x = static_cast<CGFloat> (rect.left);
+		r.origin.y = static_cast<CGFloat> (rect.top);
+		r.size.width = static_cast<CGFloat> (rect.getWidth ());
+		r.size.height = static_cast<CGFloat> (rect.getHeight ());
 		if (HIViewSetFrame (platformControl, &r) == noErr)
 			return true;
 	}
@@ -267,7 +246,7 @@ pascal OSStatus HIViewTextEdit::CarbonEventsTextControlProc (EventHandlerCallRef
 						#endif
 						{
 							CRect viewSize = textEdit->getViewSize (viewSize);
-							viewSize.inset (-10, -10);
+							viewSize.extend (10, 10);
 							CViewContainer* container = (CViewContainer*)textEdit->getParentView ();
 							while (!container->isTypeOf ("CScrollContainer"))
 							{
@@ -319,8 +298,8 @@ pascal OSStatus HIViewTextEdit::CarbonEventsTextControlProc (EventHandlerCallRef
 	return result;
 }
 
-} // namespace
+} // VSTGUI
 
-#pragma GCC diagnostic warning "-Wdeprecated-declarations" // we know that we use deprecated functions from Carbon, so we don't want to be warned
+#pragma clang diagnostic pop
 
 #endif

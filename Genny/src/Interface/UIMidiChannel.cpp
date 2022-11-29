@@ -6,10 +6,12 @@
 #include "UIImage.h"
 #include "UIInstrumentsPanel.h"
 
-UIMidiChannel::UIMidiChannel(UIInstrumentsPanel* owner):
-	CControl(CRect(662, 162, 662 + 26, 162 + 18), owner),
+UIMidiChannel::UIMidiChannel(const CPoint& locasticon, GennyInterfaceObject* owner, IControlListener* listener, int op):
+	CControl(CRect(locasticon.x, locasticon.y, locasticon.x + 26, locasticon.y + 18), listener),
 	GennyInterfaceObject(owner),
-	_owner(owner)
+	_op(op),
+	_upArrow(nullptr),
+	_downArrow(nullptr)
 {
 
 }
@@ -19,27 +21,66 @@ UIMidiChannel::~UIMidiChannel(void)
 
 }
 
+CMouseEventResult UIMidiChannel::onMouseUp(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+	{
+		onMouseUpContext(tag);
+		return kMouseEventHandled;
+	}
+	else
+	{
+		return __super::onMouseUp(where, buttons);
+	}
+}
+
+CMouseEventResult UIMidiChannel::onMouseMoved(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+		return kMouseEventHandled;
+
+	return __super::onMouseMoved(where, buttons);
+}
+
+CMouseEventResult UIMidiChannel::onMouseDown(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+		return kMouseEventHandled;
+	else
+		return __super::onMouseDown(where, buttons);
+}
+
+CMouseEventResult UIMidiChannel::onMouseEntered(CPoint& where, const CButtonState& buttons)
+{
+	getInterface()->hoverControl(this);
+	return __super::onMouseEntered(where, buttons);
+}
+
+CMouseEventResult UIMidiChannel::onMouseExited(CPoint& where, const CButtonState& buttons)
+{
+	getInterface()->unhoverControl(this);
+	return __super::onMouseExited(where, buttons);
+}
+
 bool UIMidiChannel::attached (CView* parent)
 {
 	bool returnValue = CControl::attached(parent);
 
-	CFrame* frame = _owner->getFrame();
-	IndexBaron* baron = _owner->getIndexBaron();
+	CFrame* frame = getFrame();
+	IndexBaron* baron = getIndexBaron();
 	int index = baron->getInsParamIndex(GIP_MidiChannel);
 
 	tag = index;
 	setMax(16.0f);
 
-	float xoff = 236;
-	float yoff = -4;
+	CPoint pos = getViewSize().getTopLeft();
+	_upArrow = new CKickButton(CRect(pos.x + 28, pos.y, (pos.x + 28) + 16, pos.y + 8 + 2), this, 9999999, 8, UIBitmap(PNG_LITTLEUPARROW));
+	frame->addView(_upArrow);
 
-	CKickButton* upArrow = new CKickButton(CRect(454 + xoff, 164 + yoff + 2, 454 + xoff + 16, 164 + yoff + 8 + 2), this, 9999999, 10, UIBitmap(PNG_LITTLEUPARROW));
-	frame->addView(upArrow);
+	_downArrow = new CKickButton(CRect(pos.x + 28, pos.y + 10, (pos.x + 28) + 16, pos.y + 10 + 8), this, 99999999, 8, UIBitmap(PNG_LITTLEDOWNARROW));
+	frame->addView(_downArrow);
 
-	CKickButton* downArrow = new CKickButton(CRect(454 + xoff, 164 + yoff + 12, 454 + xoff + 16, 164 + yoff + 12 + 8), this, 99999999, 10, UIBitmap(PNG_LITTLEDOWNARROW));
-	frame->addView(downArrow);
-
-	_midiLabel = new CTextLabel(CRect(430 + xoff, (162 + yoff) - 4, 430 + xoff + 25, 162 + yoff + 25), "16");
+	_midiLabel = new CTextLabel(CRect(pos.x + 4, pos.y, pos.x + 26, pos.y + 18), "16");
 	_midiLabel->setFont(kNormalFontBig);
 	_midiLabel->setHoriAlign(kLeftText);
 	_midiLabel->getFont()->setStyle(kBoldFace);
@@ -57,26 +98,49 @@ bool UIMidiChannel::attached (CView* parent)
 void UIMidiChannel::setValue(float val)
 {
 	CControl::setValue(val);
-
-	char buf[3];
-	itoa((int)val + 1, buf, 10);
-	_midiLabel->setText(buf);
-	_midiLabel->invalid();
+	if (_op != -1)
+	{
+		if (val == 0)
+		{
+			_midiLabel->setText("-");
+			_midiLabel->invalid();
+		}
+		else
+		{
+			char buf[4];
+			itoa((int)val, buf, 10);
+			_midiLabel->setText(buf);
+			_midiLabel->invalid();
+		}
+	}
+	else 
+	{
+		char buf[4];
+		itoa((int)val + 1, buf, 10);
+		_midiLabel->setText(buf);
+		_midiLabel->invalid();
+	}
 }
 
 void UIMidiChannel::valueChanged (CControl* control)
 {
+	if (_extParam == nullptr)
+		return;
+	
 	if(control->getTag() == 9999999 && control->getValue() > 0.5f)
 	{
-		if(getValue() < 15.0f)
+		if(getValue() < _extParam->rangeMax)
 			setValue(getValue() + 1.0f);
+
+		getInterface()->valueChanged(this);
 	}
 	else if(control->getTag() == 99999999 && control->getValue() > 0.5f)
 	{
 		if(getValue() > 0.0f)
 			setValue(getValue() - 1.0f);
+
+		getInterface()->valueChanged(this);
 	}
-	getInterface()->valueChanged(this);
 }
 
 void UIMidiChannel::draw (CDrawContext* pContext)
@@ -89,17 +153,38 @@ void UIMidiChannel::reconnect()
 	int selection = getInstrumentIndex(getPatch(0)->SelectedInstrument);
 	GennyPatch* selectedPatch = (GennyPatch*)getVst()->getPatch(selection);
 
-	setValue(selectedPatch->InstrumentDef.MidiChannel);
-
-	tag = kMidiChannelStart + selection;
+	if(_op == -1)
+		setExtParam(selectedPatch->getExt(GEParam::InsMidiChannel));
+	else
+	{
+		setExtParam(getCurrentPatch()->getExt(GEParam::Op3SpecialMidi, _op));
+		setVisible(getCurrentPatch()->InstrumentDef.Ch3Special);
+	}
 }
 
-bool UIMidiChannel::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+void UIMidiChannel::setVisible(bool visible)
+{
+	__super::setVisible(visible);
+	_midiLabel->setVisible(visible);
+	_upArrow->setVisible(visible);
+	_downArrow->setVisible(visible);
+}
+
+bool UIMidiChannel::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)	
 {		
-	if(distance > 0 && getValue() < 15.0f)
-			setValue(getValue() + 1.0f);
-	else if(distance < 0 && getValue() > 0.0f)
-			setValue(getValue() - 1.0f);
+	if (_extParam == nullptr)
+		return true;
+
+	if (distance > 0 && getValue() < _extParam->rangeMax)
+	{
+		setValue(getValue() + 1.0f);
+		getInterface()->valueChanged(this);
+	}
+	else if (distance < 0 && getValue() > 0.0f)
+	{
+		setValue(getValue() - 1.0f);
+		getInterface()->valueChanged(this);
+	}
 
 	return true;
 }

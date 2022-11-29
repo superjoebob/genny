@@ -1,43 +1,614 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#include "cslider.h"
-#include "../cdrawcontext.h"
 #include "../cbitmap.h"
+#include "../cdrawcontext.h"
+#include "../cgraphicspath.h"
+#include "../cvstguitimer.h"
+#include "cslider.h"
 #include <cmath>
 
 namespace VSTGUI {
+
+//------------------------------------------------------------------------
+bool CSliderBase::kAlwaysUseZoomFactor = false;
+
+//------------------------------------------------------------------------
+struct CSliderBase::Impl
+{
+	SharedPointer<CVSTGUITimer> rampTimer;
+
+	int32_t style {0};
+	float zoomFactor {10.f};
+
+	CSliderMode mode {CSliderMode::UseGlobal};
+
+	CPoint offsetHandle;
+	CPoint handleSize {1., 1.};
+
+	CCoord rangeHandle {0.};
+	CCoord minTmp {0.};
+	CCoord maxTmp {0.};
+	CCoord minPos {0.};
+
+	// mouse editing values
+	CPoint meStartPoint;
+	float mePreviousVal;
+	float meStartValue;
+	CButtonState meOldButton;
+	CCoord meDelta {0.};
+
+	static CSliderMode globalMode;
+};
+
+//------------------------------------------------------------------------
+CSliderMode CSliderBase::Impl::globalMode = CSliderMode::FreeClick;
+
+//------------------------------------------------------------------------
+CSliderBase::CSliderBase (const CRect& size, IControlListener* listener, int32_t tag)
+: CControl (size, listener, tag)
+{
+	impl = std::unique_ptr<Impl> (new Impl);
+}
+
+//------------------------------------------------------------------------
+CSliderBase::CSliderBase (const CSliderBase& v) : CControl (v)
+{
+	impl = std::unique_ptr<Impl> (new Impl (*v.impl));
+}
+
+//------------------------------------------------------------------------
+CSliderBase::~CSliderBase () noexcept
+{
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setHandleRangePrivate (CCoord range)
+{
+	impl->rangeHandle = range;
+	updateInternalHandleValues ();
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setHandleMinPosPrivate (CCoord pos)
+{
+	impl->minPos = pos;
+	updateInternalHandleValues ();
+}
+
+//------------------------------------------------------------------------
+CCoord CSliderBase::getHandleMinPosPrivate () const
+{
+	return impl->minPos;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setOffsetHandle (const CPoint& val)
+{
+	impl->offsetHandle = val;
+	updateInternalHandleValues ();
+}
+
+//------------------------------------------------------------------------
+CPoint CSliderBase::getOffsetHandle () const
+{
+	return impl->offsetHandle;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setHandleSizePrivate (CCoord width, CCoord height)
+{
+	impl->handleSize.x = width;
+	impl->handleSize.y = height;
+	updateInternalHandleValues ();
+}
+
+//------------------------------------------------------------------------
+CPoint CSliderBase::getHandleSizePrivate () const
+{
+	return impl->handleSize;
+}
+
+//------------------------------------------------------------------------
+CPoint CSliderBase::getControlSizePrivate () const
+{
+	return {getWidth (), getHeight ()};
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setStyle (int32_t _style)
+{
+	vstgui_assert (((_style & kHorizontal) || (_style & kVertical)) &&
+	               !((_style & kVertical) && (_style & kHorizontal)));
+
+	impl->style = _style;
+}
+
+//------------------------------------------------------------------------
+int32_t CSliderBase::getStyle () const
+{
+	return impl->style;
+}
+
+//------------------------------------------------------------------------
+bool CSliderBase::isStyleHorizontal () const
+{
+	return impl->style & kHorizontal;
+}
+
+//------------------------------------------------------------------------
+bool CSliderBase::isStyleRight () const
+{
+	return impl->style & kRight;
+}
+
+//------------------------------------------------------------------------
+bool CSliderBase::isStyleBottom () const
+{
+	return impl->style & kBottom;
+}
+
+//------------------------------------------------------------------------
+bool CSliderBase::isInverseStyle () const
+{
+	if (isStyleHorizontal ())
+		return getStyle () & kRight;
+	return getStyle () & kTop;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setZoomFactor (float val)
+{
+	impl->zoomFactor = val;
+}
+
+//------------------------------------------------------------------------
+float CSliderBase::getZoomFactor () const
+{
+	return impl->zoomFactor;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setSliderMode (CSliderMode newMode)
+{
+	impl->mode = newMode;
+}
+
+//------------------------------------------------------------------------
+CSliderMode CSliderBase::getSliderMode () const
+{
+	return impl->mode;
+}
+
+//------------------------------------------------------------------------
+CSliderMode CSliderBase::getEffectiveSliderMode () const
+{
+	if (impl->mode == CSliderMode::UseGlobal)
+		return Impl::globalMode;
+	return impl->mode;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setGlobalMode (CSliderMode mode)
+{
+	vstgui_assert (mode != CSliderMode::UseGlobal, "do not set the global mode to use global");
+	Impl::globalMode = mode;
+}
+
+//------------------------------------------------------------------------
+CSliderMode CSliderBase::getGlobalMode ()
+{
+	return Impl::globalMode;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::setViewSize (const CRect& rect, bool invalid)
+{
+	CControl::setViewSize (rect, invalid);
+	if (isStyleHorizontal ())
+	{
+		impl->minPos = rect.left - getViewSize ().left;
+		impl->rangeHandle = rect.getWidth () - (impl->handleSize.x + impl->offsetHandle.x * 2);
+	}
+	else
+	{
+		impl->minPos = rect.top - getViewSize ().top;
+		impl->rangeHandle = rect.getHeight () - (impl->handleSize.y + impl->offsetHandle.y * 2);
+	}
+	updateInternalHandleValues ();
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::updateInternalHandleValues ()
+{
+	if (isStyleHorizontal ())
+	{
+		impl->minTmp = impl->offsetHandle.x + impl->minPos;
+		impl->maxTmp = impl->minTmp + impl->rangeHandle + impl->handleSize.x;
+	}
+	else
+	{
+		impl->minTmp = impl->offsetHandle.y + impl->minPos;
+		impl->maxTmp = impl->minTmp + impl->rangeHandle + impl->handleSize.y;
+	}
+}
+
+//------------------------------------------------------------------------
+CRect CSliderBase::calculateHandleRect (float normValue) const
+{
+	if (isStyleRight () || isStyleBottom ())
+		normValue = 1.f - normValue;
+
+	CRect r;
+	if (isStyleHorizontal ())
+	{
+		r.top = impl->offsetHandle.y;
+		r.bottom = r.top + impl->handleSize.y;
+
+		r.left = impl->offsetHandle.x + floor (normValue * impl->rangeHandle);
+		r.left = (r.left < impl->minTmp) ? impl->minTmp : r.left;
+
+		r.right = r.left + impl->handleSize.x;
+		r.right = (r.right > impl->maxTmp) ? impl->maxTmp : r.right;
+	}
+	else
+	{
+		r.left = impl->offsetHandle.x;
+		r.right = r.left + impl->handleSize.x;
+
+		r.top = impl->offsetHandle.y + floor (normValue * impl->rangeHandle);
+		r.top = (r.top < impl->minTmp) ? impl->minTmp : r.top;
+
+		r.bottom = r.top + impl->handleSize.y;
+		r.bottom = (r.bottom > impl->maxTmp) ? impl->maxTmp : r.bottom;
+	}
+	r.offset (getViewSize ().left, getViewSize ().top);
+	return r;
+}
+
+//------------------------------------------------------------------------
+float CSliderBase::calculateDelta (const CPoint& where, CRect* handleRect) const
+{
+	CCoord result;
+	if (isStyleHorizontal ())
+		result = getViewSize ().left + impl->offsetHandle.x;
+	else
+		result = getViewSize ().top + impl->offsetHandle.y;
+	if (getEffectiveSliderMode () != CSliderMode::FreeClick)
+	{
+		float normValue = getValueNormalized ();
+		if (isStyleRight () || isStyleBottom ())
+			normValue = 1.f - normValue;
+		CCoord actualPos;
+
+		actualPos = result + (int32_t) (normValue * impl->rangeHandle);
+
+		if (isStyleHorizontal ())
+		{
+			if (handleRect)
+			{
+				handleRect->left = actualPos;
+				handleRect->top = getViewSize ().top + impl->offsetHandle.y;
+				handleRect->right = handleRect->left + impl->handleSize.x;
+				handleRect->bottom = handleRect->top + impl->handleSize.y;
+			}
+			result += where.x - actualPos;
+		}
+		else
+		{
+			if (handleRect)
+			{
+				handleRect->left = getViewSize ().left + impl->offsetHandle.x;
+				handleRect->top = actualPos;
+				handleRect->right = handleRect->left + impl->handleSize.x;
+				handleRect->bottom = handleRect->top + impl->handleSize.y;
+			}
+			result += where.y - actualPos;
+		}
+	}
+	else
+	{
+		if (isStyleHorizontal ())
+			result += impl->handleSize.x / 2 - 1;
+		else
+			result += impl->handleSize.y / 2 - 1;
+	}
+	return (float)result;
+}
+
+//------------------------------------------------------------------------
+void CSliderBase::doRamping ()
+{
+	float distance = 1.f;
+	float normValue = getValueNormalized ();
+
+	auto handleRect = calculateHandleRect (normValue);
+	if (isStyleHorizontal ())
+		distance = impl->meStartPoint.x < handleRect.getCenter ().x ? -0.1f : 0.1f;
+	else
+		distance = impl->meStartPoint.y < handleRect.getCenter ().y ? 0.1f : -0.1f;
+
+	if (isInverseStyle ())
+		distance *= -1.f;
+
+	CCoord delta;
+	if (isStyleHorizontal ())
+		delta = getViewSize ().left + impl->offsetHandle.x + impl->handleSize.x / 2 - 1;
+	else
+		delta = getViewSize ().top + impl->offsetHandle.y + impl->handleSize.y / 2 - 1;
+
+	float clickValue;
+	if (isStyleHorizontal ())
+		clickValue = (float)(impl->meStartPoint.x - delta) / (float)impl->rangeHandle;
+	else
+		clickValue = (float)(impl->meStartPoint.y - delta) / (float)impl->rangeHandle;
+
+	if (isStyleRight () || isStyleBottom ())
+		clickValue = 1.f - clickValue;
+
+	normValue += distance * getWheelInc ();
+	if ((clickValue > normValue && distance < 0.f) || (clickValue < normValue && distance > 0.f))
+	{
+		normValue = clickValue;
+		impl->rampTimer = nullptr;
+		impl->meDelta = delta;
+	}
+
+	setValueNormalized (normValue);
+	if (isDirty ())
+	{
+		valueChanged ();
+		invalid ();
+	}
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CSliderBase::onMouseDown (CPoint& where, const CButtonState& buttons)
+{
+	if (!(buttons & kLButton))
+		return kMouseEventNotHandled;
+
+	invalidMouseWheelEditTimer (this);
+
+	CRect handleRect;
+	impl->meDelta = calculateDelta (
+	    where, getEffectiveSliderMode () != CSliderMode::FreeClick ? &handleRect : nullptr);
+	if (getEffectiveSliderMode () == CSliderMode::Touch && !handleRect.pointInside (where))
+		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
+
+	impl->mePreviousVal = getMin () - 1;
+	impl->meOldButton = buttons;
+
+	if ((getEffectiveSliderMode () == CSliderMode::RelativeTouch &&
+	     handleRect.pointInside (where)) ||
+	    getEffectiveSliderMode () != CSliderMode::RelativeTouch)
+	{
+		if (checkDefaultValue (buttons))
+		{
+			return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
+		}
+	}
+
+	if (getEffectiveSliderMode () == CSliderMode::Ramp && !handleRect.pointInside (where))
+	{
+		impl->rampTimer = owned (new CVSTGUITimer ([this] (CVSTGUITimer*) { doRamping (); }, 16));
+	}
+
+	impl->meStartValue = getValue ();
+	beginEdit ();
+	impl->meStartPoint = where;
+	if (buttons & kZoomModifier)
+		return kMouseEventHandled;
+	return onMouseMoved (where, buttons);
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CSliderBase::onMouseCancel ()
+{
+	if (isEditing ())
+	{
+		value = impl->meStartValue;
+		if (isDirty ())
+		{
+			valueChanged ();
+			invalid ();
+		}
+		impl->meOldButton = 0;
+		impl->rampTimer = nullptr;
+		endEdit ();
+	}
+	return kMouseEventHandled;
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CSliderBase::onMouseUp (CPoint& where, const CButtonState& buttons)
+{
+	if (isEditing ())
+	{
+		impl->meOldButton = 0;
+		impl->rampTimer = nullptr;
+		endEdit ();
+	}
+	return kMouseEventHandled;
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CSliderBase::onMouseMoved (CPoint& where, const CButtonState& _buttons)
+{
+	if (_buttons.isLeftButton () && isEditing ())
+	{
+		CButtonState buttons (_buttons);
+		if (kAlwaysUseZoomFactor)
+			buttons |= kZoomModifier;
+		if (buttons.isLeftButton ())
+		{
+			if (impl->rampTimer)
+			{
+				impl->meStartPoint = where;
+				return kMouseEventHandled;
+			}
+			if (kAlwaysUseZoomFactor)
+			{
+				CCoord distance = fabs (isStyleHorizontal () ? where.y - impl->meStartPoint.y :
+				                                               where.x - impl->meStartPoint.x);
+				float newZoomFactor = 1.f;
+				if (distance > (isStyleHorizontal () ? getHeight () : getWidth ()))
+				{
+					newZoomFactor =
+					    (float)(distance / (isStyleHorizontal () ? getHeight () : getWidth ()));
+					newZoomFactor = static_cast<int32_t> (newZoomFactor * 10.f) / 10.f;
+				}
+				if (impl->zoomFactor != newZoomFactor)
+				{
+					impl->zoomFactor = newZoomFactor;
+					impl->mePreviousVal = (value - getMin ()) / getRange ();
+					impl->meDelta = calculateDelta (where);
+				}
+			}
+
+			if (impl->mePreviousVal == getMin () - 1)
+				impl->mePreviousVal = (value - getMin ()) / getRange ();
+
+			if ((impl->meOldButton != buttons) && (buttons & kZoomModifier))
+			{
+				impl->mePreviousVal = (value - getMin ()) / getRange ();
+				impl->meOldButton = buttons;
+			}
+			else if (!(buttons & kZoomModifier))
+				impl->mePreviousVal = (value - getMin ()) / getRange ();
+
+			float normValue;
+			if (isStyleHorizontal ())
+				normValue = (float)(where.x - impl->meDelta) / (float)impl->rangeHandle;
+			else
+				normValue = (float)(where.y - impl->meDelta) / (float)impl->rangeHandle;
+
+			if (isStyleRight () || isStyleBottom ())
+				normValue = 1.f - normValue;
+
+			if (buttons & kZoomModifier)
+				normValue = impl->mePreviousVal + ((normValue - impl->mePreviousVal) / impl->zoomFactor);
+
+			setValueNormalized (normValue);
+
+			if (isDirty ())
+			{
+				valueChanged ();
+				invalid ();
+			}
+		}
+		return kMouseEventHandled;
+	}
+	return kMouseEventNotHandled;
+}
+
+//------------------------------------------------------------------------
+bool CSliderBase::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance,
+                           const CButtonState& buttons)
+{
+	if (!getMouseEnabled ())
+		return false;
+
+	//if ((isStyleHorizontal () && axis == kMouseWheelAxisY) ||
+	//    (!isStyleHorizontal () && axis == kMouseWheelAxisX))
+	//	return false;
+
+	onMouseWheelEditing (this);
+
+	float _distance = distance;
+	//if (isStyleHorizontal ())
+	//	_distance *= -1.f;
+	//if (isInverseStyle ())
+	//	_distance *= -1.f;
+	float normValue = getValueNormalized ();
+	if (buttons & kZoomModifier)
+		normValue += 0.1f * _distance * getWheelInc ();
+	else
+		normValue += _distance * getWheelInc ();
+
+	setValueNormalized (normValue);
+
+	if (isDirty ())
+	{
+		invalid ();
+
+		valueChanged ();
+	}
+
+	return true;
+}
+
+//------------------------------------------------------------------------
+int32_t CSliderBase::onKeyDown (VstKeyCode& keyCode)
+{
+	switch (keyCode.virt)
+	{
+		case VKEY_UP:
+		case VKEY_RIGHT:
+		case VKEY_DOWN:
+		case VKEY_LEFT:
+		{
+			float distance = 1.f;
+			bool isInverse = isInverseStyle ();
+			if ((keyCode.virt == VKEY_DOWN && !isInverse) ||
+			    (keyCode.virt == VKEY_UP && isInverse) ||
+			    (keyCode.virt == VKEY_LEFT && !isInverse) ||
+			    (keyCode.virt == VKEY_RIGHT && isInverse))
+			{
+				distance = -distance;
+			}
+
+			float normValue = getValueNormalized ();
+			if (mapVstKeyModifier (keyCode.modifier) & kZoomModifier)
+				normValue += 0.1f * distance * getWheelInc ();
+			else
+				normValue += distance * getWheelInc ();
+
+			setValueNormalized (normValue);
+
+			if (isDirty ())
+			{
+				invalid ();
+
+				// begin of edit parameter
+				beginEdit ();
+
+				valueChanged ();
+
+				// end of edit parameter
+				endEdit ();
+			}
+			return 1;
+		}
+		case VKEY_ESCAPE:
+		{
+			if (isEditing ())
+			{
+				onMouseCancel ();
+				return 1;
+			}
+			break;
+		}
+	}
+	return -1;
+}
+
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+//------------------------------------------------------------------------
+struct CSlider::Impl
+{
+	CPoint backgroundOffset;
+
+	SharedPointer<CBitmap> pHandle;
+	CCoord frameWidth {1.};
+
+	int32_t drawStyle {0};
+	CColor frameColor {kGreyCColor};
+	CColor backColor {kBlackCColor};
+	CColor valueColor {kWhiteCColor};
+};
 
 //------------------------------------------------------------------------
 // CSlider
@@ -62,47 +633,28 @@ By clicking Alt+Left Mouse the default value is used.
  * @param style style (kBottom,kRight,kTop,kLeft,kHorizontal,kVertical)
  */
 //------------------------------------------------------------------------
-CSlider::CSlider (const CRect &rect, CControlListener* listener, int32_t tag, int32_t iMinPos, int32_t iMaxPos, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CControl (rect, listener, tag, background)
-, offset (offset)
-, pHandle (handle)
-, style (style)
-, minPos (iMinPos)
-, bFreeClick (true)
-, drawStyle (0)
+CSlider::CSlider (const CRect& rect, IControlListener* listener, int32_t tag, int32_t iMinPos,
+                  int32_t iMaxPos, CBitmap* handle, CBitmap* background, const CPoint& offset,
+                  const int32_t style)
+: CSliderBase (rect, listener, tag)
 {
-	setDrawTransparentHandle (true);
+	impl = std::unique_ptr<Impl> (new Impl);
 
-	if (pHandle)
-	{
-		pHandle->remember ();
-		widthOfSlider  = pHandle->getWidth ();
-		heightOfSlider = pHandle->getHeight ();
-	}
-	else
-	{
-		widthOfSlider  = 1; 
-		heightOfSlider = 1;
-	}
-
-	widthControl  = getViewSize ().width ();
-	heightControl = getViewSize ().height ();
+	setBackgroundOffset (offset);
+	setBackground (background);
+	setStyle (style);
+	setHandle (handle);
 
 	if (style & kHorizontal)
 	{
-		minPos = iMinPos - getViewSize ().left;
-		rangeHandle = (CCoord)iMaxPos - iMinPos;
+		setHandleMinPosPrivate (iMinPos - getViewSize ().left);
+		setHandleRangePrivate ((CCoord)iMaxPos - iMinPos);
 	}
 	else
 	{
-		minPos = iMinPos - getViewSize ().top;
-		rangeHandle = (CCoord)iMaxPos - iMinPos;
+		setHandleMinPosPrivate (iMinPos - getViewSize ().top);
+		setHandleRangePrivate ((CCoord)iMaxPos - iMinPos);
 	}
-
-	CPoint p (0, 0);
-	setOffsetHandle (p);
-
-	zoomFactor = 10.f;
 
 	setWantsFocus (true);
 }
@@ -121,112 +673,61 @@ CSlider::CSlider (const CRect &rect, CControlListener* listener, int32_t tag, in
  * @param style style (kBottom,kRight,kTop,kLeft,kHorizontal,kVertical)
  */
 //------------------------------------------------------------------------
-CSlider::CSlider (const CRect &rect, CControlListener* listener, int32_t tag, const CPoint& offsetHandle, int32_t _rangeHandle, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CControl (rect, listener, tag, background)
-, offset (offset)
-, pHandle (handle) 
-, style (style)
-, minPos (0)
-, bFreeClick (true)
-, drawStyle (0)
+CSlider::CSlider (const CRect& rect, IControlListener* listener, int32_t tag,
+                  const CPoint& offsetHandle, int32_t _rangeHandle, CBitmap* handle,
+                  CBitmap* background, const CPoint& offset, const int32_t style)
+: CSliderBase (rect, listener, tag)
 {
-	setDrawTransparentHandle (true);
+	impl = std::unique_ptr<Impl> (new Impl);
 
-	if (pHandle)
-	{
-		pHandle->remember ();
-		widthOfSlider  = pHandle->getWidth ();
-		heightOfSlider = pHandle->getHeight ();
-	}
-	else
-	{
-		widthOfSlider  = 1; 
-		heightOfSlider = 1;
-	}
+	setBackgroundOffset (offset);
+	setBackground (background);
+	setStyle (style);
+	setHandle (handle);
 
-	widthControl  = getViewSize ().width ();
-	heightControl = getViewSize ().height ();
-	if (style & kHorizontal)
-		rangeHandle = _rangeHandle - widthOfSlider;
+	if (isStyleHorizontal ())
+		setHandleRangePrivate (_rangeHandle - getHandleSizePrivate ().x);
 	else
-		rangeHandle = _rangeHandle - heightOfSlider;
+		setHandleRangePrivate (_rangeHandle - getHandleSizePrivate ().y);
 
 	setOffsetHandle (offsetHandle);
-	
-	zoomFactor = 10.f;
 
 	setWantsFocus (true);
 }
 
 //------------------------------------------------------------------------
-CSlider::CSlider (const CSlider& v)
-: CControl (v)
-, offset (v.offset)
-, offsetHandle (v.offsetHandle)
-, pHandle (v.pHandle)
-, style (v.style)
-, widthOfSlider (v.widthOfSlider)
-, heightOfSlider (v.heightOfSlider)
-, rangeHandle (v.rangeHandle)
-, minTmp (v.minTmp)
-, maxTmp (v.maxTmp)
-, minPos (v.minPos)
-, widthControl (v.widthControl)
-, heightControl (v.heightControl)
-, zoomFactor (v.zoomFactor)
-, bDrawTransparentEnabled (v.bDrawTransparentEnabled)
-, bFreeClick (v.bFreeClick)
-, drawStyle (v.drawStyle)
-, backColor (v.backColor)
-, frameColor (v.frameColor)
-, valueColor (v.valueColor)
+CSlider::CSlider (const CSlider& v) : CSliderBase (v)
 {
-	if (pHandle)
-		pHandle->remember ();
+	impl = std::unique_ptr<Impl> (new Impl (*v.impl));
 }
 
 //------------------------------------------------------------------------
-CSlider::~CSlider ()
+CSlider::~CSlider () noexcept
 {
-	if (pHandle)
-		pHandle->forget ();
+}
+
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+//------------------------------------------------------------------------
+void CSlider::setOffset (const CPoint& val)
+{
+	setBackgroundOffset (val);
 }
 
 //------------------------------------------------------------------------
-void CSlider::setStyle (int32_t _style)
+CPoint CSlider::getOffset () const
 {
-	style =_style;
+	return getBackgroundOffset ();
 }
-
-//------------------------------------------------------------------------
-void CSlider::setViewSize (const CRect& rect, bool invalid)
-{
-	CControl::setViewSize (rect, invalid);
-	if (style & kHorizontal)
-	{
-		minPos = rect.left - getViewSize ().left;
-		rangeHandle = rect.getWidth () - (widthOfSlider + offsetHandle.h*2);
-	}
-	else
-	{
-		minPos = rect.top - getViewSize ().top;
-		rangeHandle = rect.getHeight () - (heightOfSlider + offsetHandle.v * 2);
-	}
-	
-	widthControl  = rect.width ();
-	heightControl = rect.height ();
-
-	setOffsetHandle (offsetHandle);
-}
+#endif
 
 //------------------------------------------------------------------------
 bool CSlider::sizeToFit ()
 {
-	if (pBackground)
+	if (getDrawBackground ())
 	{
 		CRect vs (getViewSize ());
-		vs.setWidth (pBackground->getWidth ());
-		vs.setHeight (pBackground->getHeight ());
+		vs.setWidth (getDrawBackground ()->getWidth ());
+		vs.setHeight (getDrawBackground ()->getHeight ());
 		setViewSize (vs, true);
 		setMouseableArea (vs);
 		return true;
@@ -235,340 +736,171 @@ bool CSlider::sizeToFit ()
 }
 
 //------------------------------------------------------------------------
-void CSlider::setOffsetHandle (const CPoint &val)
+void CSlider::setBackgroundOffset (const CPoint& offset)
 {
-	offsetHandle = val;
-
-	if (style & kHorizontal)
-	{
-		minTmp = offsetHandle.h + minPos;
-		maxTmp = minTmp + rangeHandle + widthOfSlider;
-	}
-	else
-	{
-		minTmp = offsetHandle.v + minPos;
-		maxTmp = minTmp + rangeHandle + heightOfSlider;
-	}
+	impl->backgroundOffset = offset;
 }
 
 //------------------------------------------------------------------------
-void CSlider::draw (CDrawContext *pContext)
+CPoint CSlider::getBackgroundOffset () const
+{
+	return impl->backgroundOffset;
+}
+
+//------------------------------------------------------------------------
+void CSlider::draw (CDrawContext* pContext)
 {
 	CDrawContext* drawContext = pContext;
 
 	// draw background
-	if (pBackground)
+	if (getDrawBackground ())
 	{
-		CRect rect (0, 0, widthControl, heightControl);
+		CRect rect (0, 0, getControlSizePrivate ().x, getControlSizePrivate ().y);
 		rect.offset (getViewSize ().left, getViewSize ().top);
-		pBackground->draw (drawContext, rect, offset);
+		getDrawBackground ()->draw (drawContext, rect, getBackgroundOffset ());
 	}
-	
-	if (drawStyle != 0)
+
+	if (impl->drawStyle != 0)
 	{
-		pContext->setDrawMode (kAliasing);
-		if (drawStyle & kDrawFrame || drawStyle & kDrawBack)
-		{
-			pContext->setFrameColor (frameColor);
-			pContext->setFillColor (backColor);
-			CDrawStyle d = kDrawFilled;
-			if (drawStyle & kDrawFrame && drawStyle & kDrawBack)
-				d = kDrawFilledAndStroked;
-			else if (drawStyle & kDrawFrame)
-				d = kDrawStroked;
-			pContext->drawRect (getViewSize (), d);
-		}
+		auto lineWidth = getFrameWidth ();
+		if (lineWidth < 0.)
+			lineWidth = pContext->getHairlineSize ();
+		CRect r (getViewSize ());
 		pContext->setDrawMode (kAntiAliasing);
-		if (drawStyle & kDrawValue)
+		pContext->setLineStyle (kLineSolid);
+		pContext->setLineWidth (lineWidth);
+		if (impl->drawStyle & kDrawFrame || impl->drawStyle & kDrawBack)
 		{
-			CRect r (getViewSize ());
-			r.inset (1., 1.);
-			float drawValue = getValueNormalized ();
-			if (drawStyle & kDrawValueFromCenter)
+			pContext->setFrameColor (impl->frameColor);
+			pContext->setFillColor (impl->backColor);
+			if (auto path = owned (pContext->createGraphicsPath ()))
 			{
-				if (drawStyle & kDrawInverted)
-					drawValue = 1.f - drawValue;
-				CCoord width = r.getWidth ();
-				r.right = r.left + r.getWidth () * drawValue;
-				r.left += width / 2.;
-				r.normalize ();
+				if (impl->drawStyle & kDrawFrame)
+					r.inset (lineWidth / 2., lineWidth / 2.);
+				path->addRect (r);
+				if (impl->drawStyle & kDrawBack)
+					pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
+				if (impl->drawStyle & kDrawFrame)
+					pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
 			}
 			else
 			{
-				if (drawStyle & kDrawInverted)
-					r.left = r.right - r.getWidth () * drawValue;
-				else
-					r.right = r.left + r.getWidth () * drawValue;
+				CDrawStyle d = kDrawFilled;
+				if (impl->drawStyle & kDrawFrame && impl->drawStyle & kDrawBack)
+					d = kDrawFilledAndStroked;
+				else if (impl->drawStyle & kDrawFrame)
+					d = kDrawStroked;
+				pContext->drawRect (r, d);
 			}
-			pContext->setFillColor (valueColor);
-			pContext->drawRect (r, kDrawFilled);
+		}
+		if (impl->drawStyle & kDrawValue)
+		{
+			pContext->setDrawMode (kAliasing);
+			if (impl->drawStyle & kDrawFrame)
+				r.inset (lineWidth / 2., lineWidth / 2.);
+			float drawValue = getValueNormalized ();
+			if (impl->drawStyle & kDrawValueFromCenter)
+			{
+				if (impl->drawStyle & kDrawInverted)
+					drawValue = 1.f - drawValue;
+				if (getStyle () & kHorizontal)
+				{
+					CCoord width = r.getWidth ();
+					r.right = r.left + r.getWidth () * drawValue;
+					r.left += width / 2.;
+					r.normalize ();
+				}
+				else
+				{
+					CCoord height = r.getHeight ();
+					r.bottom = r.top + r.getHeight () * drawValue;
+					r.top += height / 2.;
+					r.normalize ();
+				}
+			}
+			else
+			{
+				if (getStyle () & kHorizontal)
+				{
+					if (impl->drawStyle & kDrawInverted)
+						r.left = r.right - r.getWidth () * drawValue;
+					else
+						r.right = r.left + r.getWidth () * drawValue;
+				}
+				else
+				{
+					if (impl->drawStyle & kDrawInverted)
+						r.bottom = r.top + r.getHeight () * drawValue;
+					else
+						r.top = r.bottom - r.getHeight () * drawValue;
+				}
+			}
+			r.normalize ();
+			if (r.getWidth () >= 0.5 && r.getHeight () >= 0.5)
+			{
+				pContext->setFillColor (impl->valueColor);
+				if (auto path = owned (pContext->createGraphicsPath ()))
+				{
+					path->addRect (r);
+					pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
+				}
+				else
+					pContext->drawRect (r, kDrawFilled);
+			}
 		}
 	}
-	
-	if (pHandle)
+
+	if (impl->pHandle)
 	{
-		float normValue = getValueNormalized ();
-		if (style & kRight || style & kBottom)
-			normValue = 1.f - normValue;
-		
 		// calc new coords of slider
-		CRect rectNew;
-		if (style & kHorizontal)
-		{
-			rectNew.top    = offsetHandle.v;
-			rectNew.bottom = rectNew.top + heightOfSlider;	
+		CRect rectNew = calculateHandleRect (getValueNormalized ());
 
-			rectNew.left   = offsetHandle.h + floor (normValue * rangeHandle);
-			rectNew.left   = (rectNew.left < minTmp) ? minTmp : rectNew.left;
 
-			rectNew.right  = rectNew.left + widthOfSlider;
-			rectNew.right  = (rectNew.right > maxTmp) ? maxTmp : rectNew.right;
-		}
-		else
-		{
-			rectNew.left   = offsetHandle.h;
-			rectNew.right  = rectNew.left + widthOfSlider;	
-
-			rectNew.top    = offsetHandle.v + floor (normValue * rangeHandle);
-			rectNew.top    = (rectNew.top < minTmp) ? minTmp : rectNew.top;
-
-			rectNew.bottom = rectNew.top + heightOfSlider;
-			rectNew.bottom = (rectNew.bottom > maxTmp) ? maxTmp : rectNew.bottom;
-		}
-		rectNew.offset (getViewSize ().left, getViewSize ().top);
-
+		handlePos = rectNew;
 		// draw slider at new position
-		pHandle->draw (drawContext, rectNew);
+		impl->pHandle->draw (drawContext, rectNew);
 	}
 
 	setDirty (false);
 }
 
 //------------------------------------------------------------------------
-CMouseEventResult CSlider::onMouseDown (CPoint& where, const CButtonState& buttons)
+void CSlider::setHandle (CBitmap* _pHandle)
 {
-	if (!(buttons & kLButton))
-		return kMouseEventNotHandled;
-
-	if (style & kHorizontal)
-		delta = getViewSize ().left + offsetHandle.h;
-	else
-		delta = getViewSize ().top + offsetHandle.v;
-	if (!bFreeClick)
+	impl->pHandle = _pHandle;
+	if (impl->pHandle)
 	{
-		float normValue = getValueNormalized ();
-		if (style & kRight || style & kBottom)
-			normValue = 1.f - normValue;
-		CCoord actualPos;
-		CRect rect;
-
-		if (style & kHorizontal)
-		{
-			actualPos = offsetHandle.h + (int32_t)(normValue * rangeHandle) + getViewSize ().left;
-
-			rect.left   = actualPos;
-			rect.top    = getViewSize ().top  + offsetHandle.v;
-			rect.right  = rect.left + widthOfSlider;
-			rect.bottom = rect.top  + heightOfSlider;
-
-			if (!where.isInside (rect))
-				return kMouseEventNotHandled;
-			else
-				delta += where.h - actualPos;
-		}
-		else
-		{
-			actualPos = offsetHandle.v + (int32_t)(normValue * rangeHandle) + getViewSize ().top;
-		
-			rect.left   = getViewSize ().left  + offsetHandle.h;
-			rect.top    = actualPos;
-			rect.right  = rect.left + widthOfSlider;
-			rect.bottom = rect.top  + heightOfSlider;
-
-			if (!where.isInside (rect))
-				return kMouseEventNotHandled;
-			else
-				delta += where.v - actualPos;
-		}
-	} 
+		setHandleSizePrivate (impl->pHandle->getWidth (), impl->pHandle->getHeight ());
+		setViewSize (getViewSize (), true);
+	}
 	else
 	{
-		if (style & kHorizontal)
-			delta += widthOfSlider / 2 - 1;
-		else
-			delta += heightOfSlider / 2 - 1;
+		setHandleSizePrivate (1., 1.);
 	}
-	
-	oldVal    = getMin ()-1;
-	oldButton = buttons;
-
-	beginEdit ();
-	if (checkDefaultValue (buttons))
-	{
-		endEdit ();
-		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
-	}
-	if (buttons & kZoomModifier)
-		return kMouseEventHandled;
-	return onMouseMoved (where, buttons);
 }
 
 //------------------------------------------------------------------------
-CMouseEventResult CSlider::onMouseUp (CPoint& where, const CButtonState& buttons)
+CBitmap* CSlider::getHandle () const
 {
-	oldButton = 0;
-	endEdit ();
-	return kMouseEventHandled;
-}
-
-//------------------------------------------------------------------------
-CMouseEventResult CSlider::onMouseMoved (CPoint& where, const CButtonState& buttons)
-{
-	if (oldButton != 0 && buttons & kLButton)
-	{
-		if (oldVal == getMin () - 1)
-			oldVal = (value - getMin ()) / (getMax () - getMin ());
-			
-		if ((oldButton != buttons) && (buttons & kZoomModifier))
-		{
-			oldVal = (value - getMin ()) / (getMax () - getMin ());
-			oldButton = buttons;
-		}
-		else if (!(buttons & kZoomModifier))
-			oldVal = (value - getMin ()) / (getMax () - getMin ());
-
-		float normValue = getMin ();
-		if (style & kHorizontal)
-			normValue = (float)(where.h - delta) / (float)rangeHandle;
-		else
-			normValue = (float)(where.v - delta) / (float)rangeHandle;
-
-		if (style & kRight || style & kBottom)
-			normValue = 1.f - normValue;
-
-		if (buttons & kZoomModifier)
-			normValue = oldVal + ((normValue - oldVal) / zoomFactor);
-
-		setValueNormalized (normValue);
-    	    
-		if (isDirty ())
-		{
-			valueChanged ();
-			invalid ();
-		}
-	}
-	return kMouseEventHandled;
-}
-
-//------------------------------------------------------------------------
-static bool styleIsInverseStyle (int32_t style)
-{
-	if (style & kVertical && style & kTop)
-		return true;
-	if (style & kHorizontal && style & kRight)
-		return true;
-	return false;
-}
-
-//------------------------------------------------------------------------
-bool CSlider::onWheel (const CPoint& where, const float &distance, const CButtonState &buttons)
-{
-	if (!getMouseEnabled ())
-		return false;
-
-	float _distance = distance;
-	if (styleIsInverseStyle (style))
-		_distance *= -1.f;
-	float normValue = getValueNormalized ();
-	if (buttons & kZoomModifier)
-		normValue += 0.1f * _distance * wheelInc;
-	else
-		normValue += _distance * wheelInc;
-
-	setValueNormalized (normValue);
-
-	if (isDirty ())
-	{
-		invalid ();
-		
-		// begin of edit parameter
-		beginEdit ();
-	
-		valueChanged ();
-	
-		// end of edit parameter
-		endEdit ();
-	}
-
-	return true;
-}
-
-//------------------------------------------------------------------------
-int32_t CSlider::onKeyDown (VstKeyCode& keyCode)
-{
-	switch (keyCode.virt)
-	{
-		case VKEY_UP :
-		case VKEY_RIGHT :
-		case VKEY_DOWN :
-		case VKEY_LEFT :
-		{
-			float distance = 1.f;
-			bool isInverse = styleIsInverseStyle (style);
-			if ((keyCode.virt == VKEY_DOWN && !isInverse) 
-			 || (keyCode.virt == VKEY_UP && isInverse)
-			 || (keyCode.virt == VKEY_LEFT && !isInverse)
-			 || (keyCode.virt == VKEY_RIGHT && isInverse))
-			{
-				distance = -distance;
-			}
-
-			float normValue = getValueNormalized ();
-			if (mapVstKeyModifier (keyCode.modifier) & kZoomModifier)
-				normValue += 0.1f * distance * wheelInc;
-			else
-				normValue += distance * wheelInc;
-
-			setValueNormalized (normValue);
-
-			if (isDirty ())
-			{
-				invalid ();
-
-				// begin of edit parameter
-				beginEdit ();
-			
-				valueChanged ();
-			
-				// end of edit parameter
-				endEdit ();
-			}
-			return 1;
-		}
-	}
-	return -1;
-}
-
-//------------------------------------------------------------------------
-void CSlider::setHandle (CBitmap *_pHandle)
-{
-	if (pHandle)
-		pHandle->forget ();
-	pHandle = _pHandle;
-	if (pHandle)
-	{
-		pHandle->remember ();
-		widthOfSlider  = pHandle->getWidth ();
-		heightOfSlider = pHandle->getHeight ();
-	}
+	return impl->pHandle;
 }
 
 //------------------------------------------------------------------------
 void CSlider::setDrawStyle (int32_t style)
 {
-	if (style != drawStyle)
+	if (style != impl->drawStyle)
 	{
-		drawStyle = style;
+		impl->drawStyle = style;
+		invalid ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CSlider::setFrameWidth (CCoord width)
+{
+	if (impl->frameWidth != width)
+	{
+		impl->frameWidth = width;
 		invalid ();
 	}
 }
@@ -576,9 +908,9 @@ void CSlider::setDrawStyle (int32_t style)
 //------------------------------------------------------------------------
 void CSlider::setFrameColor (CColor color)
 {
-	if (color != frameColor)
+	if (color != impl->frameColor)
 	{
-		frameColor = color;
+		impl->frameColor = color;
 		invalid ();
 	}
 }
@@ -586,9 +918,9 @@ void CSlider::setFrameColor (CColor color)
 //------------------------------------------------------------------------
 void CSlider::setBackColor (CColor color)
 {
-	if (color != backColor)
+	if (color != impl->backColor)
 	{
-		backColor = color;
+		impl->backColor = color;
 		invalid ();
 	}
 }
@@ -596,11 +928,41 @@ void CSlider::setBackColor (CColor color)
 //------------------------------------------------------------------------
 void CSlider::setValueColor (CColor color)
 {
-	if (color != valueColor)
+	if (color != impl->valueColor)
 	{
-		valueColor = color;
+		impl->valueColor = color;
 		invalid ();
 	}
+}
+
+//------------------------------------------------------------------------
+int32_t CSlider::getDrawStyle () const
+{
+	return impl->drawStyle;
+}
+
+//------------------------------------------------------------------------
+CCoord CSlider::getFrameWidth () const
+{
+	return impl->frameWidth;
+}
+
+//------------------------------------------------------------------------
+CColor CSlider::getFrameColor () const
+{
+	return impl->frameColor;
+}
+
+//------------------------------------------------------------------------
+CColor CSlider::getBackColor () const
+{
+	return impl->backColor;
+}
+
+//------------------------------------------------------------------------
+CColor CSlider::getValueColor () const
+{
+	return impl->valueColor;
 }
 
 //------------------------------------------------------------------------
@@ -623,9 +985,12 @@ This is the vertical slider. See CSlider.
  * @param style style (kLeft, kRight)
  */
 //------------------------------------------------------------------------
-CVerticalSlider::CVerticalSlider (const CRect &rect, CControlListener* listener, int32_t tag, int32_t iMinPos, int32_t iMaxPos, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CSlider (rect, listener, tag, iMinPos, iMaxPos, handle, background, offset, style|kVertical)
-{}
+CVerticalSlider::CVerticalSlider (const CRect& rect, IControlListener* listener, int32_t tag,
+                                  int32_t iMinPos, int32_t iMaxPos, CBitmap* handle,
+                                  CBitmap* background, const CPoint& offset, const int32_t style)
+: CSlider (rect, listener, tag, iMinPos, iMaxPos, handle, background, offset, style | kVertical)
+{
+}
 
 //------------------------------------------------------------------------
 /**
@@ -641,14 +1006,13 @@ CVerticalSlider::CVerticalSlider (const CRect &rect, CControlListener* listener,
  * @param style style (kLeft, kRight)
  */
 //------------------------------------------------------------------------
-CVerticalSlider::CVerticalSlider (const CRect &rect, CControlListener* listener, int32_t tag, const CPoint& offsetHandle, int32_t rangeHandle, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CSlider (rect, listener, tag, offsetHandle, rangeHandle, handle, background, offset, style|kVertical)
-{}
-
-//------------------------------------------------------------------------
-CVerticalSlider::CVerticalSlider (const CVerticalSlider& slider)
-: CSlider (slider)
-{}
+CVerticalSlider::CVerticalSlider (const CRect& rect, IControlListener* listener, int32_t tag,
+                                  const CPoint& offsetHandle, int32_t rangeHandle, CBitmap* handle,
+                                  CBitmap* background, const CPoint& offset, const int32_t style)
+: CSlider (rect, listener, tag, offsetHandle, rangeHandle, handle, background, offset,
+           style | kVertical)
+{
+}
 
 //------------------------------------------------------------------------
 // CHorizontalSlider
@@ -670,9 +1034,13 @@ This is the horizontal slider. See CSlider.
  * @param style style (kLeft, kRight)
  */
 //------------------------------------------------------------------------
-CHorizontalSlider::CHorizontalSlider (const CRect &rect, CControlListener* listener, int32_t tag, int32_t iMinPos, int32_t iMaxPos, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CSlider (rect, listener, tag, iMinPos, iMaxPos, handle, background, offset, style|kHorizontal)
-{}
+CHorizontalSlider::CHorizontalSlider (const CRect& rect, IControlListener* listener, int32_t tag,
+                                      int32_t iMinPos, int32_t iMaxPos, CBitmap* handle,
+                                      CBitmap* background, const CPoint& offset,
+                                      const int32_t style)
+: CSlider (rect, listener, tag, iMinPos, iMaxPos, handle, background, offset, style | kHorizontal)
+{
+}
 
 //------------------------------------------------------------------------
 /**
@@ -688,13 +1056,13 @@ CHorizontalSlider::CHorizontalSlider (const CRect &rect, CControlListener* liste
  * @param style style (kLeft, kRight)
  */
 //------------------------------------------------------------------------
-CHorizontalSlider::CHorizontalSlider (const CRect &rect, CControlListener* listener, int32_t tag, const CPoint& offsetHandle, int32_t rangeHandle, CBitmap* handle, CBitmap* background, const CPoint& offset, const int32_t style)
-: CSlider (rect, listener, tag, offsetHandle, rangeHandle, handle, background, offset, style|kHorizontal)
-{}
+CHorizontalSlider::CHorizontalSlider (const CRect& rect, IControlListener* listener, int32_t tag,
+                                      const CPoint& offsetHandle, int32_t rangeHandle,
+                                      CBitmap* handle, CBitmap* background, const CPoint& offset,
+                                      const int32_t style)
+: CSlider (rect, listener, tag, offsetHandle, rangeHandle, handle, background, offset,
+           style | kHorizontal)
+{
+}
 
-//------------------------------------------------------------------------
-CHorizontalSlider::CHorizontalSlider (const CHorizontalSlider& slider)
-: CSlider (slider)
-{}
-
-} // namespace
+} // VSTGUI

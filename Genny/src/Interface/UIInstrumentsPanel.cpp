@@ -11,6 +11,7 @@
 #include "UIDigitKnob.h"
 
 static int numInstruments = 10;
+const int kInstrumentElementFlags = 3210593;
 UIInstrumentsPanel::UIInstrumentsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner):
 	CControl(size, owner),
 	GennyInterfaceObject(owner),
@@ -27,25 +28,28 @@ UIInstrumentsPanel::UIInstrumentsPanel(const CRect& size, UIPresetsAndInstrument
 	_preparingToDrag(false),
 	_ignoreRescroll(false)
 {
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	frame->addView(this);
 
 	IndexBaron* baron = getIndexBaron();
 	//int index = getIndexBaron()->getPatchParamIndex(GPP_SelectedInstrument);
 	//owner->mapControl(this, index);
 	setTag(kInstrumentControlIndex);
-	setMax(10000.0f);
+	setMax(1000.0f);
 
-	_instrumentsTab = new UIImage(CRect(416, 96, 416 + 300, 96 + 186), PNG_INSTRUMENTTAB);
+	_instrumentsTab = new UIImage(CRect(416, 96, 416 + 300, 96 + 206), PNG_INSTRUMENTTAB);
+	_instrumentsTab->setMouseEnabled(false);
+	_instrumentsTab->setMouseableArea(CRect(-999, -999, -999, -999));
 	_instrumentsTab->setFrame(1);
 	frame->addView(_instrumentsTab);
 
 	//Initialize list of elements
 	for(int i = 0; i < numInstruments; i++)
 	{
-		int top = (int)size.top + ((i * 16) - 8);
+		int top = (int)size.top + ((i * 18) - 8);
 		UIInstrumentElement* element = new UIInstrumentElement(CPoint(size.left, top), this, nullptr, i + 1);
 		frame->addView(element);
+		element->specialFlags = kInstrumentElementFlags;
 		_elements.push_back(element);
 	}
 
@@ -54,13 +58,13 @@ UIInstrumentsPanel::UIInstrumentsPanel(const CRect& size, UIPresetsAndInstrument
 	 
 	setDirty(true);
 
-	_scrollBar = new CSlider(CRect(614 - 24, 134, 614 - 24 + 14, 134 + 130), this, 999999, 134, 134 + 130 - 20, UIBitmap(PNG_SCROLLHANDLE), NULL, CPoint(), kTop | kVertical);
+	_scrollBar = new CSlider(CRect(614 - 24, 134, 614 - 24 + 14, 134 + 130 + 20), this, 999999, 134, 134 + 130, UIBitmap(PNG_SCROLLHANDLE), NULL, CPoint(), CSliderBase::Style::kTop | CSliderBase::Style::kVertical);
 	frame->addView(_scrollBar);
 
 	_scrollBarUp = new CKickButton(CRect(616- 24, 118, 616- 24 + 10, 118 + 16), this, 9999999, 16, UIBitmap(PNG_UPBUTTON));
 	frame->addView(_scrollBarUp);
 
-	_scrollBarDown = new CKickButton(CRect(616- 24, 264, 616- 24 + 10, 264 + 16), this, 99999999, 16, UIBitmap(PNG_DOWNBUTTON));
+	_scrollBarDown = new CKickButton(CRect((616- 24), 264 + 20, (616- 24) + 10, 264 + 16 + 20), this, 99999999, 16, UIBitmap(PNG_DOWNBUTTON));
 	frame->addView(_scrollBarDown);
 
 	_addInstrumentButton = new CKickButton(CRect(548, 100, 548 + 14, 100 + 14), this, 9999, 14, UIBitmap(PNG_PLUSBUTTON));
@@ -69,7 +73,7 @@ UIInstrumentsPanel::UIInstrumentsPanel(const CRect& size, UIPresetsAndInstrument
 	_removeInstrumentButton = new CKickButton(CRect(564, 100, 564 + 14, 100 + 14), this, 99999, 14, UIBitmap(PNG_MINUSBUTTON));
 	frame->addView(_removeInstrumentButton);
 
-	_letterDisplay = new UILetterDisplay(CPoint(414, 28), this, 16);
+	_letterDisplay = new UILetterDisplay(CPoint(414, 28), this, frame, 16);
 	frame->addView(_letterDisplay);
 
 	reconnect();
@@ -100,7 +104,7 @@ bool UIInstrumentsPanel::dragBegin(UIInstrumentElement* vBox)
 {
 	if(_currentDrag == -1)
 	{
-		_currentDrag = vBox->getTag();
+		_currentDrag = _topItem + vBox->getDisplayIndex();
 		return true;
 	}
 
@@ -111,41 +115,31 @@ void UIInstrumentsPanel::dragUpdate(UIInstrumentElement* vBox)
 {
 	if(_currentDrag != -1)
 	{
-		if(vBox->getTag() != _currentDrag)
+		int newDrag = _topItem + vBox->getDisplayIndex();
+		if(newDrag != _currentDrag)
 		{
 			int prevInstrumentIndex = _currentDrag;
-			int newInstrumentIndex = vBox->getTag();
+			int newInstrumentIndex = newDrag;
 
-			GennyPatch* reorderPatch = (GennyPatch*)getPatch(1);
-			GennyPatch* prevInstrument = (GennyPatch*)getPatch(((GennyPatch*)getPatch(0))->Instruments[prevInstrumentIndex]);
-			GennyPatch* newInstrument = (GennyPatch*)getPatch(((GennyPatch*)getPatch(0))->Instruments[newInstrumentIndex]);
-			
-			if(reorderPatch->Instruments[prevInstrumentIndex] < 0)
-				reorderPatch->Instruments[prevInstrumentIndex] = prevInstrumentIndex;
-			if(reorderPatch->Instruments[newInstrumentIndex] < 0)
-				reorderPatch->Instruments[newInstrumentIndex] = newInstrumentIndex;
+			while (prevInstrumentIndex != newInstrumentIndex)
+			{
+				GennyPatch* reorderPatch = (GennyPatch*)getPatch(3);
+				int oldIdx = prevInstrumentIndex;
+				if (prevInstrumentIndex < newInstrumentIndex)
+					prevInstrumentIndex++;
+				else
+					prevInstrumentIndex--;
 
-			int swap = reorderPatch->Instruments[newInstrumentIndex];
-			reorderPatch->Instruments[newInstrumentIndex] = reorderPatch->Instruments[prevInstrumentIndex];
-			reorderPatch->Instruments[prevInstrumentIndex] = swap;
+				int swap = reorderPatch->Instruments[prevInstrumentIndex];
+				reorderPatch->Instruments[prevInstrumentIndex] = reorderPatch->Instruments[oldIdx];
+				reorderPatch->Instruments[oldIdx] = swap;
+			}
 
 
-			//int temp = ((GennyPatch*)getPatch(0))->Instruments[prevInstrumentIndex];
-			//((GennyPatch*)getPatch(0))->Instruments[prevInstrumentIndex] = ((GennyPatch*)getPatch(0))->Instruments[newInstrumentIndex];
-			//((GennyPatch*)getPatch(0))->Instruments[newInstrumentIndex] = temp;
-
-			if(((GennyPatch*)getPatch(0))->SelectedInstrument == prevInstrumentIndex)
-				((GennyPatch*)getPatch(0))->SelectedInstrument = newInstrumentIndex;
-			else if(((GennyPatch*)getPatch(0))->SelectedInstrument == newInstrumentIndex)
-				((GennyPatch*)getPatch(0))->SelectedInstrument = prevInstrumentIndex;
-
+			_currentDrag = newInstrumentIndex;
 			_ignoreRescroll = true;
 			reconnect();
 			_ignoreRescroll = false;
-
-
-
-			_currentDrag = vBox->getTag();
 		}
 	}
 }
@@ -165,45 +159,62 @@ void UIInstrumentsPanel::setDirty(bool dirty)
 
 void UIInstrumentsPanel::valueChanged (CControl* control)
 {
+	if (control->getExtParam() != nullptr)
+	{
+		_owner->valueChanged(control);
+		return;
+	}
+
 	bool force = false;
 	if(control == _addInstrumentButton)
 	{
 		if(control->getValue() > 0.5f)
 		{	
-			int instrumentIndex = getVst()->getNumInstruments();
-			if(instrumentIndex == 16)
-				return;
-
-			IndexBaron* baron = getIndexBaron();
-			int indexprev = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + _selection));
-			int prevPatch = getPatch(0)->getFromBaron(baron->getIndex(indexprev));
-			int patchIndex = getVst()->getPatchIndex(getVst()->getPatch(prevPatch));
-
-			setTag(kInstrumentMappingStart + instrumentIndex);
-			float val = value;
-			value = patchIndex;
-			getInterface()->valueChanged(this);
-			value = val;
-
-			setTag(kInstrumentControlIndex);
-
-			//Set initial enabled channels based on patch type
-			GIType::GIType type = getPatch(patchIndex)->InstrumentDef.Type;
-			for(int i = 0; i < 10; i++)
+			int instrumentSlotIndex = -1;
+			for (instrumentSlotIndex = 0; instrumentSlotIndex < 16; instrumentSlotIndex++)
 			{
-				if(type == GIType::FM)
-					getPatch(instrumentIndex)->setFromBaron(baron->getIndex(getIndexBaron()->getInsParamIndex((GennyInstrumentParam)(GIP_Channel0 + i))), (i < 6) ? 1.0f : 0.0f); 
-				else if(type == GIType::DAC)
-					getPatch(instrumentIndex)->setFromBaron(baron->getIndex(getIndexBaron()->getInsParamIndex((GennyInstrumentParam)(GIP_Channel0 + i))), (i == 5) ? 1.0f : 0.0f);
-				else if(type == GIType::SN)
-					getPatch(instrumentIndex)->setFromBaron(baron->getIndex(getIndexBaron()->getInsParamIndex((GennyInstrumentParam)(GIP_Channel0 + i))), (i > 5) ? 1.0f : 0.0f);
-				else if(type == GIType::SNDRUM)
-					getPatch(instrumentIndex)->setFromBaron(baron->getIndex(getIndexBaron()->getInsParamIndex((GennyInstrumentParam)(GIP_Channel0 + i))), (i == 9) ? 1.0f : 0.0f);
+				if (getPatch(0)->Instruments[instrumentSlotIndex] < 0)
+					break;
 			}
-			getPatch(instrumentIndex)->InstrumentMode = type;
+
+			if (instrumentSlotIndex == kMaxInstruments)
+				return; //No remaining slots
+
+			GennyPatch* patch = getCurrentPatch();
+			GennyPatch* instrument = getPatch(instrumentSlotIndex);
+			getPatch(0)->Instruments[instrumentSlotIndex] = getVst()->getPatchIndex(patch);
+
+			for (int i = 0; i < kMaxInstruments; i++)
+			{
+				//Setup ordering for new patch
+				if (getPatch(3)->Instruments[i] == -1)
+				{
+					getPatch(3)->Instruments[i] = instrumentSlotIndex;
+					break;
+				}
+			}
+
+			instrument->InstrumentDef.Enable = true;
+			instrument->InstrumentDef.initializeInstrumentSettings();
+			GIType::GIType type = patch->InstrumentDef.Type;
+			for (int i = 0; i < 10; i++)
+			{
+				if (type == GIType::FM)
+					instrument->InstrumentDef.Channels[i] = (i < 6) ? true : false;
+				else if (type == GIType::DAC)
+					instrument->InstrumentDef.Channels[i] = (i == 5) ? true : false;
+				else if (type == GIType::SN)
+					instrument->InstrumentDef.Channels[i] = (i > 5 && i != 9) ? true : false;
+				else if (type == GIType::SNDRUM)
+					instrument->InstrumentDef.Channels[i] = (i == 9) ? true : false;
+				else if (type == GIType::SNSPECIAL)
+					instrument->InstrumentDef.Channels[i] = (i == 8 || i == 9) ? true : false;
+			}
+			instrument->InstrumentDef.snMelodicEnable = type == GIType::SNSPECIAL;
+			instrument->setInstrumentMode(type, true);
 
 			reconnect();
-			setSelectedInstrumentIndex(instrumentIndex);
+			setSelectedInstrumentIndex(instrumentSlotIndex);
 		}
 	}
 	else if(control == _removeInstrumentButton)
@@ -212,62 +223,93 @@ void UIInstrumentsPanel::valueChanged (CControl* control)
 		{	
 			int num = getVst()->getNumInstruments();
 			if(num == 1)
-				return;
+				return;	
 
-			IndexBaron* baron = getIndexBaron();
-
-
-			int sel = _selection;
-
-			//Clear instrument type on selected instrument, this helps keep it as GIType::NONE
-			//when it's the 16th instrument.
-			getPatch(_selection)->InstrumentMode = GIType::NONE;
-			for(int i = _selection; i < 16; i++)
+			bool shifting = false;
+			int selectionIndex = 0;
+			for (int i = 0; i < kMaxInstruments; i++)
 			{
-				int indexnext = 0;
-				if(i + 1 < 16)
-					indexnext = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i + 1));
-
-				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
-				int patchIndex = -1;
-				if(i + 1 < 16)
+				//Reorganize patch ordering
+				if ((shifting || getPatch(3)->Instruments[i] == _selection))
 				{
-					int nextPatch =	getPatch(0)->getFromBaron(baron->getIndex(indexnext));
-					if(nextPatch > -1)
-						patchIndex = getPatchIndex(getPatch(nextPatch));
+					if (getPatch(3)->Instruments[i] == _selection)
+						selectionIndex = i;
 
-					//Removing an instrument, shuffle all lower instruments up
-					GennyPatch* p = (GennyPatch*)getPatch(i);
-					GennyPatch* nextp = (GennyPatch*)getPatch(i+1);
-					p->InstrumentDef.MidiChannel = nextp->InstrumentDef.MidiChannel;
-					for(int i = 0; i < 10; i++)
-							p->InstrumentDef.Channels[i] = nextp->InstrumentDef.Channels[i];
-					p->InstrumentDef.Octave = nextp->InstrumentDef.Octave;
-					p->InstrumentDef.Transpose = nextp->InstrumentDef.Transpose;
-					p->InstrumentDef.Panning = nextp->InstrumentDef.Panning;
-					p->InstrumentMode = nextp->InstrumentMode;
+					if(i + 1 < kMaxInstruments)
+						getPatch(3)->Instruments[i] = getPatch(3)->Instruments[i + 1];
+					else
+						getPatch(3)->Instruments[i] = -1;
+
+					shifting = true;
 				}
-
-
-				setTag(kInstrumentMappingStart + i);
-				float val = value;
-				value = patchIndex;
-				_owner->getOwner()->valueChanged(this);
-				value = val;
-
-				setTag(kInstrumentControlIndex);
-
-				if(patchIndex == -1)
-					break;
 			}
 
-			if(_topItem > 0)
-				_topItem -= 1;
+			getPatch(0)->Instruments[_selection] = -1;
 
-			if(sel == 0)
-				sel = 1;
-			setSelectedInstrumentIndex(sel - 1);
-			reconnect();		
+			while (selectionIndex > 0 && getPatch(3)->Instruments[selectionIndex] < 0)
+			{
+				selectionIndex--;
+			}
+
+			getPatch(0)->SelectedInstrument = getPatch(3)->Instruments[selectionIndex];
+
+
+
+			//int instrumentListIndex = getPatch(1)->Instruments[_selection];
+			//if (instrumentListIndex < 0)
+			//	instrumentListIndex = index;
+
+			////Clear instrument type on selected instrument, this helps keep it as GIType::NONE
+			////when it's the 16th instrument.
+			//getPatch(_selection)->InstrumentMode = GIType::NONE;
+			//for(int i = _selection; i < 16; i++)
+			//{
+			//	int indexnext = 0;
+			//	if(i + 1 < 16)
+			//		indexnext = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i + 1));
+
+			//	int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
+			//	int patchIndex = -1;
+			//	if(i + 1 < 16)
+			//	{
+			//		int nextPatch =	getPatch(0)->getFromBaron(baron->getIndex(indexnext));
+			//		if(nextPatch > -1)
+			//			patchIndex = getPatchIndex(getPatch(nextPatch));
+
+			//		//Removing an instrument, shuffle all lower instruments up
+			//		GennyPatch* p = (GennyPatch*)getPatch(i);
+			//		GennyPatch* nextp = (GennyPatch*)getPatch(i+1);
+			//		p->InstrumentDef.MidiChannel = nextp->InstrumentDef.MidiChannel;
+			//		for(int i = 0; i < 10; i++)
+			//				p->InstrumentDef.Channels[i] = nextp->InstrumentDef.Channels[i];
+			//		p->InstrumentDef.Octave = nextp->InstrumentDef.Octave;
+			//		p->InstrumentDef.Transpose = nextp->InstrumentDef.Transpose;
+			//		p->InstrumentDef.Panning = nextp->InstrumentDef.Panning;
+			//		p->InstrumentMode = nextp->InstrumentMode;
+			//	}
+
+
+			//	setTag(kInstrumentMappingStart + i);
+			//	float val = value;
+			//	value = patchIndex;
+			//	_owner->getOwner()->valueChanged(this);
+			//	value = val;
+
+			//	setTag(kInstrumentControlIndex);
+
+			//	if(patchIndex == -1)
+			//		break;
+			//}
+
+			//if(_topItem > 0)
+			//	_topItem -= 1;
+
+			//if(sel == 0)
+			//	sel = 1;
+			//setSelectedInstrumentIndex(sel - 1);
+
+			reconnect();	
+			reconnectSelectedInstrument();
 		}
 	}
 	else if(control == _scrollBarUp)
@@ -294,18 +336,28 @@ void UIInstrumentsPanel::valueChanged (CControl* control)
 	else if(control == _scrollBar)
 	{
 		std::vector<VSTPatch*> patches = getVst()->getPatches();
-		int numScrollItems = getVst()->getNumInstruments() - numInstruments;
+		GennyPatch* reorderPatch = (GennyPatch*)getPatch(3);
+		int actualNumInstruments = 0;
+		for (actualNumInstruments = 0; actualNumInstruments < kMaxInstruments; actualNumInstruments++)
+		{
+			if (reorderPatch->Instruments[actualNumInstruments] < 0)
+				break;
+		}
 
+		int numScrollItems = actualNumInstruments - numInstruments;
 		int top = ((control->getValue() * numScrollItems) + 0.5f);
 		if(top < 0)
 			top = 0;
 		if(top != _topItem)
 		{
 			_topItem = top;
+
+			_ignoreRescroll = true;
 			reorganize();
+			_ignoreRescroll = false;
 		}
 	}
-	else 
+	else if(control->specialFlags == kInstrumentElementFlags) //1337 is for instrument panel elements
 		setSelectedInstrumentIndex(control->getTag());
 }
 
@@ -333,20 +385,27 @@ void UIInstrumentsPanel::reorganize()
 	IndexBaron* baron = getIndexBaron();
 	std::vector<VSTPatch*> patches = getVst()->getPatches();
 	std::vector<int> indexes;
-	GennyPatch* reorderPatch = (GennyPatch*)getPatch(1);
-	for(int i = 0; i < 16; i++)
-	{
-		int idx = (int)((GennyPatch*)getVst()->getPatch(0))->Instruments[i]; 
-		if(reorderPatch->Instruments[i] >= 0)
-			idx = (int)((GennyPatch*)getVst()->getPatch(0))->Instruments[reorderPatch->Instruments[i]]; 
 
-		if(idx >= 0)
+
+
+	int selectedInstrumentIndex = 0;
+	GennyPatch* reorderPatch = (GennyPatch*)getPatch(3);
+	GennyPatch* zeroPatch = (GennyPatch*)getPatch(0);
+	for(int i = 0; i < kMaxInstruments; i++)
+	{
+		int idx = reorderPatch->Instruments[i];
+		if (idx >= 0)
+		{
 			indexes.push_back(idx);
+
+			if (idx == _selection)
+				selectedInstrumentIndex = i;
+		}
 	}
+
 	int numScrollItems = indexes.size() - numInstruments;
 	_scrollBar->setWheelInc(1.0f / numScrollItems);
-
-	_addInstrumentButton->setVisible(indexes.size() != 16);
+	_addInstrumentButton->setVisible(indexes.size() != kMaxInstruments);
 
 	if(indexes.size() > numInstruments)
 	{
@@ -360,23 +419,36 @@ void UIInstrumentsPanel::reorganize()
 		_topItem = 0;
 	}
 
+	if (_ignoreRescroll == false && (selectedInstrumentIndex > _topItem + (numInstruments - 1) || selectedInstrumentIndex < _topItem))
+	{
+		_topItem = selectedInstrumentIndex;
+		if (_topItem > indexes.size() - numInstruments)
+			_topItem = indexes.size() - numInstruments;
+
+		int numScrollItems = indexes.size() - numInstruments;
+		_scrollBar->setValue((float)(_topItem) / (float)numScrollItems);
+	}
+
 	if(indexes.size() > 0)
 	{
 		for(int i = 0; i < _elements.size(); i++)
 		{
 			_elements[i]->setWide(!(indexes.size() > numInstruments));
 
-			GennyPatch* patch = NULL;
 			if(_topItem + i < indexes.size())
-				patch = static_cast<GennyPatch*>(patches[indexes[_topItem + i]]);
-			
-			_elements[i]->setTag(_topItem + i);
-			_elements[i]->setPatchLink(patch);
+				_elements[i]->setInstrumentIndex(indexes[_topItem + i]);
+			else
+				_elements[i]->setInstrumentIndex(-1);
+
 			if(_elements[i]->getTag() == _selection)
 			{
 				_elements[i]->select();
-				_selectedInstrument->setPatchLink(patch);
-				_letterDisplay->setText(patch->Name);
+				GennyPatch* presetLink = _elements[i]->getPresetLink();
+				if (presetLink != nullptr)
+				{
+					_selectedInstrument->setPatchLink(presetLink);
+					_letterDisplay->setText(presetLink->Name);
+				}
 			}
 			else
 				_elements[i]->unselect();
@@ -401,16 +473,23 @@ void UIInstrumentsPanel::draw (CDrawContext* pContext)
 	CControl::setDirty(false);
 }
 
+
+void UIInstrumentsPanel::instrumentWasModified(int index)
+{
+	for (int i = 0; i < _elements.size(); i++)
+	{
+		if (_elements[i]->getInstrumentIndex() == index)
+		{
+			_elements[i]->setInstrumentIndex(index);
+			break;
+		}
+	}
+}
+
 void UIInstrumentsPanel::reconnect()
 {
-	IndexBaron* baron = getIndexBaron();
-	int index = baron->getPatchParamIndex(GPP_SelectedInstrument);
-
-	std::vector<VSTPatch*> patches = getVst()->getPatches();
-	int selection = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
-
 	_selection = -1;
-	setSelectedInstrumentIndex(selection);
+	setSelectedInstrumentIndex(getPatch(0)->SelectedInstrument);
 
 	_selectedInstrument->reconnect();
 	if(_selectedInstrument->getPatchLink() != NULL)
@@ -421,61 +500,80 @@ void UIInstrumentsPanel::reconnect()
 
 void UIInstrumentsPanel::setSelectedInstrumentIndex(int index)
 {
-	if(_selection != index)
-	{	
-		int totalInstruments = getVst()->getNumInstruments();
-		if(index >= 0 && index < totalInstruments)
-		{
-			int previousSelectionValue = _selection;
+	//if(_selection != index)
+	//{	
+	//	int totalInstruments = getVst()->getNumInstruments();
+	//	if(index >= 0 && index < totalInstruments)
+	//	{
+	//		int instrumentListIndex = getPatch(1)->Instruments[index];
+	//		if (instrumentListIndex < 0)
+	//			instrumentListIndex = index;
 
-			_selection = index;
-			setValue(index);
-			if(previousSelectionValue != -1)
-				_owner->valueChanged(this);
+	//		int previousSelectionValue = _selection;
 
-			if(_ignoreRescroll == false && (_selection > _topItem + (numInstruments - 1) || _selection < _topItem))
-			{
-				_topItem = _selection;
-				if(_topItem > totalInstruments - numInstruments)
-					_topItem = totalInstruments - numInstruments;
+	//		_selection = index;
+	//		setValue(index);
+	//		if(previousSelectionValue != -1)
+	//			_owner->valueChanged(this);
 
-				int numScrollItems = totalInstruments - numInstruments;
-				_scrollBar->setValue((float)(_topItem) / (float)numScrollItems);
-			}
+	//		if(_ignoreRescroll == false && (instrumentListIndex > _topItem + (numInstruments - 1) || instrumentListIndex < _topItem))
+	//		{
+	//			_topItem = instrumentListIndex;
+	//			if(_topItem > totalInstruments - numInstruments)
+	//				_topItem = totalInstruments - numInstruments;
 
-			reorganize();
-		}
+	//			int numScrollItems = totalInstruments - numInstruments;
+	//			_scrollBar->setValue((float)(_topItem) / (float)numScrollItems);
+	//		}
+
+	//		reorganize();
+	//	}
+	//}
+
+	if (_selection != index)
+	{
+		int previousSelectionValue = _selection;
+		_selection = index;
+		setValue(index);
+		if (previousSelectionValue != -1)
+			_owner->valueChanged(this);
+
+		reorganize();
 	}
 }
 
-bool UIInstrumentsPanel::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+bool UIInstrumentsPanel::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
 {
-	int numScrollItems = getVst()->getNumInstruments() - numInstruments;
-	_scrollBar->setValue((float)(_topItem - ((int)distance)) / (float)numScrollItems);
-	_scrollBar->valueChanged();
+	if (axis == CMouseWheelAxis::kMouseWheelAxisY)
+	{
+		int numScrollItems = getVst()->getNumInstruments() - numInstruments;
+		_scrollBar->setValue((float)(_topItem - ((int)distance)) / (float)numScrollItems);
+		_scrollBar->valueChanged();
 
+		return true;
+	}
 
-	return true;
+	return false;
 }
 
 void UIInstrumentsPanel::setSolo(int idx)
 {
 	bool allOn = true;
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
-		if(i != idx && getPatch(2)->Instruments[i] < 0)
+		if(i != idx && getPatch(i)->InstrumentDef.Enable)
 		{
 			allOn = false;
 			break;
 		}
 	}
 
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
 		if(idx == i || allOn)
-			getPatch(2)->Instruments[i] = -1;
+			getPatch(i)->InstrumentDef.Enable = true;
 		else
-			getPatch(2)->Instruments[i] = 1;
+			getPatch(i)->InstrumentDef.Enable = false;
 	}
 		
 	for(int i = 0; i < _elements.size(); i++)

@@ -7,7 +7,8 @@
 class YM2612;
 class SN76489Chip;
 class GennyVST;
-class GennyData;
+struct WaveData;
+struct GennyData;
 class VGMLogger
 {
 public:
@@ -26,10 +27,15 @@ public:
 	void resetSampleCounter();
 	void writeLoopPoint();
 
+	void prepareDrum(WaveData* drum, float velocity);
+
 private:
+	GennyVST* _vst;
 	YM2612* _ymChip;
 	SN76489Chip* _snChip;
 	std::fstream _dataStream;
+	std::ostringstream _dacStream;
+	std::ostringstream _commandStream;
 
 	long _sampleCounter;
 	long _DACsampleCounter;
@@ -37,4 +43,5 @@ private:
 	bool _logging;
 	int _loopPosition;
 	int _loopStartSample;
+	int _drumStreamPosition;
 };

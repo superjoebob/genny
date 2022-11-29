@@ -33,6 +33,12 @@ void VirtualInstrument::getParameterValue (int index, char* text)
 	text = nullptr;
 }
 
+void VirtualInstrument::getChannelName(int index, char* text)
+{
+	text = nullptr;
+}
+
+
 void VirtualInstrument::setPatchIndex(int index)
 {
 	setCurrentPatch(_patches[index]);
@@ -70,6 +76,9 @@ std::vector<VSTPatch*> VirtualInstrument::getPatches(std::string category)
 	return patches;
 }
 
+void VirtualInstrument::MidiLearn(int paramTag, int legacyTag) {}
+int VirtualInstrument::MidiForget(int paramTag, int legacyTag) { return -1; }
+
 void VirtualInstrument::midiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort)
 {
 	_base->MidiOut(pStatus, pData1, pData2, pPort);
@@ -87,7 +96,9 @@ void VirtualInstrument::setProgramName(char* name)
 		current->Name = name;
 }
 
+#if BUILD_VST
 void VirtualInstrument::setEditor(VSTEditor* editor)
 {
-	_base->setEditor(editor);
+	_base->setEditor((AEffEditor*)editor);
 }
+#endif

@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cocoatextedit.h"
 
@@ -39,11 +9,31 @@
 #import "cocoahelpers.h"
 #import "autoreleasepool.h"
 #import "../cfontmac.h"
+#import "../macstring.h"
 #import "../../../vstkeycode.h"
 
 using namespace VSTGUI;
 
-static Class textFieldClass = 0;
+static Class textFieldClass = nullptr;
+static Class secureTextFieldClass = nullptr;
+
+@interface NSObject (VSTGUI_NSTextField_Private)
+-(id)initWithTextEdit:(id)textEit;
+@end
+
+//------------------------------------------------------------------------------------
+namespace MacTextAlignment {
+
+#ifdef MAC_OS_X_VERSION_10_12
+static constexpr auto Right = ::NSTextAlignmentRight;
+static constexpr auto Center = ::NSTextAlignmentCenter;
+#else
+static constexpr auto Right = ::NSRightTextAlignment;
+static constexpr auto Center = ::NSCenterTextAlignment;
+#endif
+
+//------------------------------------------------------------------------------------
+} // MacTextAlignment
 
 //------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------
@@ -60,13 +50,26 @@ static id VSTGUI_NSTextField_Init (id self, SEL _cmd, void* textEdit)
 		NSView* containerView = [[NSView alloc] initWithFrame:editFrameRect];
 		[containerView setAutoresizesSubviews:YES];
 
+		if ([frameView wantsLayer])
+		{
+			containerView.wantsLayer = YES;
+			double maxZPosition = -1.;
+			for (CALayer* layer in frameView.layer.sublayers)
+			{
+				double zPosition = layer.zPosition;
+				if (zPosition > maxZPosition)
+					maxZPosition = zPosition;
+			}
+			[containerView layer].zPosition = static_cast<CGFloat> (maxZPosition + 1);
+		}
+		
 		CPoint textInset = tec->platformGetTextInset ();
 
-		editFrameRect.origin.x = textInset.x/2.;
-		editFrameRect.origin.y = textInset.y/2.;
+		editFrameRect.origin.x = static_cast<CGFloat> (textInset.x/2. - 1.);
+		editFrameRect.origin.y = static_cast<CGFloat> (textInset.y/2.);
 		editFrameRect.size.width -= textInset.x/2.;
-		editFrameRect.size.height -= textInset.y/2.;
-		self = objc_msgSendSuper (SUPER, @selector(initWithFrame:), editFrameRect);
+		editFrameRect.size.height -= textInset.y/2. - 1.;
+		self = SuperInitWithFrame (SUPER, @selector(initWithFrame:), editFrameRect);
 		if (!self)
 		{
 			[containerView release];
@@ -74,8 +77,7 @@ static id VSTGUI_NSTextField_Init (id self, SEL _cmd, void* textEdit)
 		}
 		OBJC_SET_VALUE (self, _textEdit, textEdit);
 
-		#if VSTGUI_USES_CORE_TEXT
-		CoreTextFont* ctf = dynamic_cast<CoreTextFont*> (tec->platformGetFont ()->getPlatformFont ());
+		CoreTextFont* ctf = tec->platformGetFont ()->getPlatformFont ().cast<CoreTextFont> ();
 		if (ctf)
 		{
 			CTFontRef fontRef = ctf->getFontRef ();
@@ -83,13 +85,13 @@ static id VSTGUI_NSTextField_Init (id self, SEL _cmd, void* textEdit)
 			{
 				CTFontDescriptorRef fontDesc = CTFontCopyFontDescriptor (fontRef);
 				
-				[self setFont:[NSFont fontWithDescriptor:(NSFontDescriptor *)fontDesc size:0]];
+				[self setFont:[NSFont fontWithDescriptor:(NSFontDescriptor *)fontDesc size:ctf->getSize ()]];
 				CFRelease (fontDesc);
 			}
 		}
-		#endif
 		
-		NSString* text = [NSString stringWithCString:tec->platformGetText () encoding:NSUTF8StringEncoding];
+		NSString* text = fromUTF8String<NSString*> (tec->platformGetText ());
+		NSString* placeholder = fromUTF8String<NSString*> (tec->platformGetPlaceholderText ());
 
 		[self setTextColor:nsColorFromCColor (tec->platformGetFontColor ())];
 		[self setBordered:NO];
@@ -102,7 +104,7 @@ static id VSTGUI_NSTextField_Init (id self, SEL _cmd, void* textEdit)
 		if ([self frame].size.height < editFrameRect.size.height)
 		{
 			CGFloat offset = editFrameRect.size.height - [self frame].size.height;
-			editFrameRect.origin.y = offset / 2.;
+			editFrameRect.origin.y = static_cast<CGFloat> (offset / 2.);
 			editFrameRect.size.height = [self frame].size.height;
 		}
 		else
@@ -118,16 +120,47 @@ static id VSTGUI_NSTextField_Init (id self, SEL _cmd, void* textEdit)
 		[cell setLineBreakMode: NSLineBreakByClipping];
 		[cell setScrollable:YES];
 		if (tec->platformGetHoriTxtAlign () == kCenterText)
-			[cell setAlignment:NSCenterTextAlignment];
+			[cell setAlignment:MacTextAlignment::Center];
 		else if (tec->platformGetHoriTxtAlign () == kRightText)
-			[cell setAlignment:NSRightTextAlignment];
+			[cell setAlignment:MacTextAlignment::Right];
+		if (placeholder.length > 0)
+		{
+			CColor color = tec->platformGetFontColor ();
+			color.alpha /= 2;
+			NSMutableParagraphStyle* paragraphStyle = [[[NSMutableParagraphStyle alloc] init] autorelease];
+			if (tec->platformGetHoriTxtAlign () == kCenterText)
+				paragraphStyle.alignment = MacTextAlignment::Center;
+			else if (tec->platformGetHoriTxtAlign () == kRightText)
+				paragraphStyle.alignment = MacTextAlignment::Right;
+			NSDictionary* attrDict =
+			    [NSDictionary dictionaryWithObjectsAndKeys:[self font], NSFontAttributeName,
+			                                               nsColorFromCColor (color),
+			                                               NSForegroundColorAttributeName,
+														   paragraphStyle,
+														   NSParagraphStyleAttributeName,
+														   nil];
+			NSAttributedString* as =
+			    [[[NSAttributedString alloc] initWithString:placeholder attributes:attrDict]
+			        autorelease];
+			[cell setPlaceholderAttributedString:as];
+		}
 
 		[self setDelegate:self];
 		[self setNextKeyView:frameView];
-		if ([frameView respondsToSelector:@selector(makeSubViewFirstResponder:)])
-			[frameView performSelector:@selector(makeSubViewFirstResponder:) withObject:self];
-		else
-			[[self window] makeFirstResponder: self];
+
+
+		if (auto tv = static_cast<NSTextView*> ([[self window] fieldEditor:YES forObject:self]))
+			tv.insertionPointColor = nsColorFromCColor (tec->platformGetFontColor ());
+
+		if ([frameView respondsToSelector:@selector (makeSubViewFirstResponder:)])
+			[frameView performSelector:@selector (makeSubViewFirstResponder:)
+							withObject:self];
+
+		dispatch_after (dispatch_time (DISPATCH_TIME_NOW, (int64_t) (1 * NSEC_PER_MSEC)),
+		                dispatch_get_main_queue (), ^{
+				              [[self window] makeFirstResponder:self];
+			            });
+
 	}
 	return self;
 }
@@ -141,24 +174,25 @@ static void VSTGUI_NSTextField_SyncSize (id self, SEL _cmd)
 	IPlatformTextEditCallback* tec = te->getTextEdit ();
 	NSView* containerView = [self superview];
 	CRect rect (tec->platformGetVisibleSize ());
+	rect.makeIntegral ();
 
 	[containerView setFrame:nsRectFromCRect (rect)];
 
-	rect.inset (-15, -15);
+	rect.extend (15,-15);
 	[[containerView superview] setNeedsDisplayInRect:nsRectFromCRect (rect)];
 }
 
 //------------------------------------------------------------------------------------
 static void VSTGUI_NSTextField_RemoveFromSuperview (id self, SEL _cmd)
 {
-	OBJC_SET_VALUE (self, _textEdit, 0);
+	OBJC_SET_VALUE (self, _textEdit, nullptr);
 	NSView* containerView = [self superview];
 	if (containerView)
 	{
 		[[containerView window] makeFirstResponder:[containerView superview]];
 		[containerView removeFromSuperview];
-		__OBJC_SUPER(self)
-		objc_msgSendSuper (SUPER, @selector(removeFromSuperview)); // [super removeFromSuperview];
+		__OBJC_SUPER(self)		
+		SuperRemoveFromSuperview (SUPER, @selector(removeFromSuperview)); // [super removeFromSuperview];
 		[containerView release];
 	}
 }
@@ -172,7 +206,7 @@ static void VSTGUI_NSTextField_TextDidChange (id self, SEL _cmd, NSNotification*
 		te->getTextEdit ()->platformTextDidChange ();
 	}
 	__OBJC_SUPER(self)
-	objc_msgSendSuper (SUPER, @selector(textDidChange:), notification);
+	SuperTextDidChange (SUPER, @selector(textDidChange:), notification);
 }
 
 //------------------------------------------------------------------------------------
@@ -184,12 +218,16 @@ static BOOL VSTGUI_NSTextField_DoCommandBySelector (id self, SEL _cmd, NSControl
 	IPlatformTextEditCallback* tec = te->getTextEdit ();
 	if (commandSelector == @selector (insertNewline:))
 	{
-		tec->platformLooseFocus (true);
-		return YES;
+		VstKeyCode keyCode = {};
+		keyCode.virt = VKEY_RETURN;
+		if (tec->platformOnKeyDown (keyCode))
+		{
+			return YES;
+		}
 	}
 	else if (commandSelector == @selector (insertTab:))
 	{
-		VstKeyCode keyCode = {0};
+		VstKeyCode keyCode = {};
 		keyCode.virt = VKEY_TAB;
 		if (tec->platformOnKeyDown (keyCode))
 		{
@@ -198,7 +236,7 @@ static BOOL VSTGUI_NSTextField_DoCommandBySelector (id self, SEL _cmd, NSControl
 	}
 	else if (commandSelector == @selector (insertBacktab:))
 	{
-		VstKeyCode keyCode = {0};
+		VstKeyCode keyCode = {};
 		keyCode.virt = VKEY_TAB;
 		keyCode.modifier = MODIFIER_SHIFT;
 		if (tec->platformOnKeyDown (keyCode))
@@ -208,13 +246,12 @@ static BOOL VSTGUI_NSTextField_DoCommandBySelector (id self, SEL _cmd, NSControl
 	}
 	else if (commandSelector == @selector (cancelOperation:))
 	{
-		VstKeyCode keyCode = {0};
+		VstKeyCode keyCode = {};
 		keyCode.virt = VKEY_ESCAPE;
-		if (!tec->platformOnKeyDown (keyCode))
+		if (tec->platformOnKeyDown (keyCode))
 		{
-			tec->platformLooseFocus (false);
+			return YES;
 		}
-		return YES; // return YES, otherwise it beeps !!!
 	}
 	return NO;
 }
@@ -226,47 +263,62 @@ __attribute__((__destructor__)) static void cleanup_VSTGUI_NSTextField ()
 {
 	if (textFieldClass)
 		objc_disposeClassPair (textFieldClass);
+	if (secureTextFieldClass)
+		objc_disposeClassPair (secureTextFieldClass);
 }
 
 //-----------------------------------------------------------------------------
 void CocoaTextEdit::initClass ()
 {
-	if (textFieldClass == 0)
+	if (textFieldClass == nullptr)
 	{
-		AutoreleasePool ap ();
+		AutoreleasePool ap;
 		NSMutableString* textFieldClassName = [[[NSMutableString alloc] initWithString:@"VSTGUI_NSTextField"] autorelease];
 		textFieldClass = generateUniqueClass (textFieldClassName, [NSTextField class]);
-		BOOL res = class_addMethod (textFieldClass, @selector(initWithTextEdit:), IMP (VSTGUI_NSTextField_Init), "@@:@:^:");
-		res = class_addMethod (textFieldClass, @selector(syncSize), IMP (VSTGUI_NSTextField_SyncSize), "v@:@:");
-		res = class_addMethod (textFieldClass, @selector(removeFromSuperview), IMP (VSTGUI_NSTextField_RemoveFromSuperview), "v@:@:");
-		res = class_addMethod (textFieldClass, @selector(control:textView:doCommandBySelector:), IMP (VSTGUI_NSTextField_DoCommandBySelector), "B@:@:@:@::");
-		res = class_addMethod (textFieldClass, @selector(textDidChange:), IMP (VSTGUI_NSTextField_TextDidChange), "v@:@:@@:");
-		res = class_addIvar (textFieldClass, "_textEdit", sizeof (void*), (uint8_t)log2(sizeof(void*)), @encode(void*));
+		VSTGUI_CHECK_YES(class_addMethod (textFieldClass, @selector(initWithTextEdit:), IMP (VSTGUI_NSTextField_Init), "@@:@:^:"))
+		VSTGUI_CHECK_YES(class_addMethod (textFieldClass, @selector(syncSize), IMP (VSTGUI_NSTextField_SyncSize), "v@:@:"))
+		VSTGUI_CHECK_YES(class_addMethod (textFieldClass, @selector(removeFromSuperview), IMP (VSTGUI_NSTextField_RemoveFromSuperview), "v@:@:"))
+		VSTGUI_CHECK_YES(class_addMethod (textFieldClass, @selector(control:textView:doCommandBySelector:), IMP (VSTGUI_NSTextField_DoCommandBySelector), "B@:@:@:@::"))
+		VSTGUI_CHECK_YES(class_addMethod (textFieldClass, @selector(textDidChange:), IMP (VSTGUI_NSTextField_TextDidChange), "v@:@:@@:"))
+		VSTGUI_CHECK_YES(class_addIvar (textFieldClass, "_textEdit", sizeof (void*), (uint8_t)log2(sizeof(void*)), @encode(void*)))
 		objc_registerClassPair (textFieldClass);
+
+		NSMutableString* secureTextFieldClassName = [[[NSMutableString alloc] initWithString:@"VSTGUI_NSSecureTextField"] autorelease];
+		secureTextFieldClass = generateUniqueClass (secureTextFieldClassName, [NSSecureTextField class]);
+		VSTGUI_CHECK_YES(class_addMethod (secureTextFieldClass, @selector(initWithTextEdit:), IMP (VSTGUI_NSTextField_Init), "@@:@:^:"))
+		VSTGUI_CHECK_YES(class_addMethod (secureTextFieldClass, @selector(syncSize), IMP (VSTGUI_NSTextField_SyncSize), "v@:@:"))
+		VSTGUI_CHECK_YES(class_addMethod (secureTextFieldClass, @selector(removeFromSuperview), IMP (VSTGUI_NSTextField_RemoveFromSuperview), "v@:@:"))
+		VSTGUI_CHECK_YES(class_addMethod (secureTextFieldClass, @selector(control:textView:doCommandBySelector:), IMP (VSTGUI_NSTextField_DoCommandBySelector), "B@:@:@:@::"))
+		VSTGUI_CHECK_YES(class_addMethod (secureTextFieldClass, @selector(textDidChange:), IMP (VSTGUI_NSTextField_TextDidChange), "v@:@:@@:"))
+		VSTGUI_CHECK_YES(class_addIvar (secureTextFieldClass, "_textEdit", sizeof (void*), (uint8_t)log2(sizeof(void*)), @encode(void*)))
+		objc_registerClassPair (secureTextFieldClass);
 	}
 }
 
 //-----------------------------------------------------------------------------
 CocoaTextEdit::CocoaTextEdit (NSView* parent, IPlatformTextEditCallback* textEdit)
 : IPlatformTextEdit (textEdit)
-, platformControl (0)
+, platformControl (nullptr)
 , parent (parent)
 {
 	initClass ();
-	platformControl = [[textFieldClass alloc] performSelector:@selector (initWithTextEdit:) withObject:(id)this];
+	if (textEdit->platformIsSecureTextEdit ())
+		platformControl = [[secureTextFieldClass alloc] initWithTextEdit:(id)this];
+	else
+		platformControl = [[textFieldClass alloc] initWithTextEdit:(id)this];
 }
 
 //-----------------------------------------------------------------------------
-CocoaTextEdit::~CocoaTextEdit ()
+CocoaTextEdit::~CocoaTextEdit () noexcept
 {
 	[platformControl performSelector:@selector(removeFromSuperview)];
 	[platformControl performSelector:@selector(autorelease)];
 }
 
 //-----------------------------------------------------------------------------
-UTF8StringPtr CocoaTextEdit::getText ()
+UTF8String CocoaTextEdit::getText ()
 {
-	return [[platformControl stringValue] UTF8String];
+	return [[[platformControl stringValue] decomposedStringWithCanonicalMapping] UTF8String];
 }
 
 //-----------------------------------------------------------------------------
@@ -277,13 +329,12 @@ bool CocoaTextEdit::updateSize ()
 }
 
 //-----------------------------------------------------------------------------
-bool CocoaTextEdit::setText (UTF8StringPtr text)
+bool CocoaTextEdit::setText (const UTF8String& text)
 {
-	NSString* nsText = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
-	[platformControl setStringValue:nsText];
+	[platformControl setStringValue:fromUTF8String<NSString*> (text)];
 	return true;
 }
 
-} // namespace
+} // VSTGUI
 
 #endif // MAC_COCOA

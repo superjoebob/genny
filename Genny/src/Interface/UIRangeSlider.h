@@ -5,13 +5,15 @@
 #include "UIDigitDisplay.h"
 #include "YM2612Enum.h"
 #include "UISlider.h"
+
 class UIPESelectedInstrument;
-class UIRangeSlider : public CControl, public CControlListener, public GennyInterfaceObject
+class UIRangeSlider : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
-	UIRangeSlider(const CPoint& vPosition, int vWidth, UIPESelectedInstrument* vOwner, bool vLow);
+	UIRangeSlider(const CPoint& vPosition, int vWidth, GennyInterfaceObject* vOwner, IControlListener* listener, bool vLow, bool flipRight = false);
 	~UIRangeSlider(void);
 	virtual bool attached (CView* parent);	
+	virtual void setVisible(bool visible);
 
 	void setValue(float val);
 	float getValue() const;
@@ -19,14 +21,13 @@ public:
 	void draw (CDrawContext* pContext);
 
 	void reconnect();
+	UISlider* _slider;
 
 	CLASS_METHODS(UIRangeSlider, CControl)
 
 private:
-	UIPESelectedInstrument* _owner;
-	UISlider* _slider;
-
 	bool _low;
+	bool _flipRight;
 	YM2612Param _param;
 	int _op;
 	float _width;

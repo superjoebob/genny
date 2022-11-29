@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "timingfunctions.h"
 #include "../vstguibase.h"
@@ -77,7 +47,7 @@ PowerTimingFunction::PowerTimingFunction (uint32_t length, float factor)
 float PowerTimingFunction::getPosition (uint32_t milliseconds)
 {
 	float pos = ((float)milliseconds) / ((float)length);
-	pos = pow (pos, factor);
+	pos = std::pow (pos, factor);
 	if (pos > 1.f)
 		pos = 1.f;
 	else if (pos < 0.f)
@@ -98,7 +68,7 @@ InterpolationTimingFunction::InterpolationTimingFunction (uint32_t length, float
 //-----------------------------------------------------------------------------
 void InterpolationTimingFunction::addPoint (float time, float pos)
 {
-	points.insert (std::make_pair ((uint32_t)((float)getLength () * time), pos));
+	points.emplace ((uint32_t)((float)getLength () * time), pos);
 }
 
 //-----------------------------------------------------------------------------
@@ -106,7 +76,7 @@ float InterpolationTimingFunction::getPosition (uint32_t milliseconds)
 {
 	uint32_t prevTime = getLength ();
 	float prevPos = points[prevTime];
-	std::map<uint32_t, float>::reverse_iterator it = points.rbegin ();
+	PointMap::reverse_iterator it = points.rbegin ();
 	while (it != points.rend ())
 	{
 		uint32_t time = it->first;
@@ -115,14 +85,69 @@ float InterpolationTimingFunction::getPosition (uint32_t milliseconds)
 			return pos;
 		else if (time <= milliseconds && prevTime > milliseconds)
 		{
-			float timePos = (float)(milliseconds - time) / (float)(prevTime - time);
-			return pos + ((prevPos - pos) * timePos);
+			double timePos = (double)(milliseconds - time) / (double)(prevTime - time);
+			return static_cast<float> (static_cast<double> (pos) + ((static_cast<double> (prevPos) - static_cast<double> (pos)) * timePos));
 		}
 		prevTime = time;
 		prevPos = pos;
-		it++;
+		++it;
 	}
 	return 1.f;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+CubicBezierTimingFunction::CubicBezierTimingFunction (uint32_t milliseconds, CPoint p1, CPoint p2)
+: TimingFunctionBase (milliseconds), p1 (p1), p2 (p2)
+{
+}
+
+//-----------------------------------------------------------------------------
+CPoint CubicBezierTimingFunction::lerp (CPoint p1, CPoint p2, float pos)
+{
+	return p1 * (1.f - pos) + p2 * pos;
+}
+
+//-----------------------------------------------------------------------------
+float CubicBezierTimingFunction::getPosition (uint32_t milliseconds)
+{
+	constexpr CPoint p0 (0, 0);
+	constexpr CPoint p3 (1, 1);
+
+	auto t = static_cast<float> (milliseconds) / static_cast<float> (length);
+
+	auto a = lerp (p0, p1, t);
+	auto b = lerp (p1, p2, t);
+	auto c = lerp (p2, p3, t);
+	auto d = lerp (a, b, t);
+	auto e = lerp (b, c, t);
+	auto result = lerp (d, e, t).y;
+	return static_cast<float> (result);
+}
+
+//-----------------------------------------------------------------------------
+CubicBezierTimingFunction CubicBezierTimingFunction::easy (uint32_t time)
+{
+	return CubicBezierTimingFunction (time, CPoint (0.25, 0.1), CPoint (0.25, 1.));
+}
+
+//-----------------------------------------------------------------------------
+CubicBezierTimingFunction CubicBezierTimingFunction::easyIn (uint32_t time)
+{
+	return CubicBezierTimingFunction (time, CPoint (0.42, 0.), CPoint (1., 1.));
+}
+
+//-----------------------------------------------------------------------------
+CubicBezierTimingFunction CubicBezierTimingFunction::easyOut (uint32_t time)
+{
+	return CubicBezierTimingFunction (time, CPoint (0., 0.), CPoint (0.58, 1.));
+}
+
+//-----------------------------------------------------------------------------
+CubicBezierTimingFunction CubicBezierTimingFunction::easyInOut (uint32_t time)
+{
+	return CubicBezierTimingFunction (time, CPoint (0.42, 0.), CPoint (0.58, 1.));
 }
 
 //-----------------------------------------------------------------------------
@@ -131,16 +156,16 @@ float InterpolationTimingFunction::getPosition (uint32_t milliseconds)
 RepeatTimingFunction::RepeatTimingFunction (TimingFunctionBase* tf, int32_t repeatCount, bool autoReverse)
 : tf (tf)
 , repeatCount (repeatCount)
+, runCounter (0)
 , autoReverse (autoReverse)
 , isReverse (false)
-, runCounter (0)
 {
 }
 
 //-----------------------------------------------------------------------------
-RepeatTimingFunction::~RepeatTimingFunction ()
+RepeatTimingFunction::~RepeatTimingFunction () noexcept
 {
-	CBaseObject* obj = dynamic_cast<CBaseObject*> (tf);
+	auto obj = dynamic_cast<IReference*> (tf);
 	if (obj)
 		obj->forget ();
 	else
@@ -166,10 +191,11 @@ bool RepeatTimingFunction::isDone (uint32_t milliseconds)
 		runCounter++;
 		if (autoReverse)
 			isReverse = !isReverse;
-		if (runCounter >= repeatCount)
+		if ((uint64_t)runCounter >= (uint64_t)repeatCount)
 			return true;
 	}
 	return false;
 }
 
 }} // namespaces
+

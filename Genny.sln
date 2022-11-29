@@ -1,12 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32106.194
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Genny", "Genny\Genny.vcxproj", "{7BF8BDD9-0B61-4267-B419-130BFDA38709}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9B0BDD3A-E996-4628-B17C-C3D8C4D35EB9} = {9B0BDD3A-E996-4628-B17C-C3D8C4D35EB9}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VSTGui", "VSTGui\VSTGui.vcxproj", "{9B0BDD3A-E996-4628-B17C-C3D8C4D35EB9}"
 EndProject
@@ -54,5 +51,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A23F1976-81E4-4129-AC64-345F9AA967D2}
 	EndGlobalSection
 EndGlobal

@@ -6,10 +6,10 @@
 #include "YM2612Enum.h"
 #include "UISlider.h"
 class UIOperator;
-class UIDigitSlider : public CControl, public CControlListener, public GennyInterfaceObject
+class UIDigitSlider : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
-	UIDigitSlider(const CPoint& pos, int width, UIOperator* owner, YM2612Param param, int op);
+	UIDigitSlider(const CPoint& pos, int width, UIOperator* owner, YM2612Param param, int op, int offset);
 	~UIDigitSlider(void);
 	void setValue(float val);
 	float getValue() const;

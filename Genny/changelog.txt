@@ -1,0 +1,72 @@
+TODO
+------------------------------
+X-Make VST note priorities for releases and logging notes work like FL version
+-Allow sample auditioning while picking files
+X-Test VGM logging
+-Allow custom piano roll parameter bindings
+-Piano roll bends don't work on sampled instruments (or DO they?)
+
+X-Clicking DAC sample waveform should trigger it
+X-Make L R mute buttons work
+-Add ping-pong effect
+-Add option for single channel delay
+-Fix switching between accurate and clean mode while playing
+
+
+February 23rd 2022
+---------------------------------------------
+Major changes-
+
+
+FL Version Specific Changes
+-Instrument names are now shown on the channel color picker in the piano roll (super helpful!!)
+-Improved FL integration (will now show parameter names/values when hovering controls, Type in value and set value options should now work along with event editor stuff)
+
+-GENNY now supports non 44100hz sample rates
+-VGM Logging accuracy and efficiency has been greatly improved, drum levels should now export correctly. 
+-DAC(drum) samplerate can now be set to either 8000hz, 11025hz, 16000hz, or 22050hz. The MEGAMIDI firmware has been updated to support this, though in practice only 8000hz and 11025hz samplerates work well for streaming to it due to bandwidth limitations.
+-Samples imported into drumkits are now automatically resampled to the drumkit's samplerate, this greatly improves drum sound quality. This may cause a brief hitch when loading old projects as the resampled data will need to be generated.
+-If an imported sample is already the same samplerate as the drumkit, it will not be resampled allowing you to do your own kit sound downsampling beforehand.
+-Accurate mode now uses Eke-Eke's Genesis Plus GX SN76489 (PSG) emulation for vastly improved SQ channel sound quality (Clean mode still uses the old implementation, as it has less chip noise).
+-Accurate emulation mode is now enabled by default (old projects will still use their existing settings for this)
+-Due to the above two changes, GENNY now sounds much closer to actual hardware when used with it's default settings
+-Added support for Channel 3 special mode, which allows an instrument to define separate frequencies for each of its operators
+-Added 3+Fuzz link button, allowing melodic noise to be used easily (SQ Channel 3 pitch can control the noise channel pitch)
+-Added MONO/LEGATO buttons to allow instruments to behave monophonically (solo mode)
+-Added portamento (GLIDE) setting
+-Added detune setting for instruments
+-Added pitch bend range setting under chip tab in the VST version
+-Added more right click menu settings for parameters
+-Notes are now much better at not cutting each other off when working with channel limitations
+-Virtually all parameters can now be correctly automated
+-Changed LFO setting to be global instead of on a per patch basis, allowing it to be used correctly
+-Fixed a million automation and UI issues, fixed a bunch of crashes
+-Upgraded to latest version of VSTGUI which should fix a number of oddities and crash bugs (especially on Windows 7)
+-Global pitch settings should now work properly with GENNY
+-Control Click now solos a channel, making it so you can assign a single channel to an instrument without having to manually toggle all other channels off
+
+Tons of bug fixes-
+-Presets can now be renamed by right clicking them in the VST version
+-Drum samples can now be loaded by right clicking the note name in the sample selector
+-Greatly improved drum sound quality with MEGA MIDI (though you'll need to install the new firmware to take advantage of this)
+-Saving a .gen instrument with a custom file name now applies that name to the preset when reloaded
+-VST version now properly takes DAW virtual keyboard note input while adjusting knobs
+-"Set" knob from right click menu should now work properly in the FL version
+-Added ability to type in and to copy and paste values with the VST control right click menus
+-Fixed dozens of issues caused by re-organizing instruments (dragging them around)
+-Quickly dragging one instrument will no longer mix up other instrument positions as you move it around
+-Mega Midi notes are now cleared when Stop is pressed to prevent notes from getting stuck
+-Fixed issue where first few notes played with a new KS value would sound incorrect
+-Fixed issue where OP2 and OP3 had their Detune, Freq and Env Scale sliders swapped (oops..)
+-Fixed incorrect DR1 and RR value displays with SQ envelope UI
+-Fixed incorrect Detune display with SQ UI
+-Fixed incorrect Periodic display with SQ UI
+-VST version of the plugin now uses normalized values for automation, this should fix automation glitches in Ableton
+-Automation values are no longer inverted for TL, RR, D1R and D2R (they are still inverted in old projects)
+-Fixed operator UI automation updating for operators 2 and 3
+-Fixed a number of automation related crashes in the VST version
+-Fixed issue where automated parameters would be applied to their individual patch instead of to the instrument, which caused weird things such as automations
+coming undone upon changing patches, then mysteriously returning when they are reselected. Compatibility with the old system is maintained in the VST version and 
+semi maintained in the FL version (this may cause some automations to come undone in old FL projects), but new Midi Learns should work correctly.
+
+

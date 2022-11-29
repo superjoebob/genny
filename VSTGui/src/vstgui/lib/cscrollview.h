@@ -1,55 +1,23 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins :
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistributions of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this
-//     software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED.
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cscrollview__
-#define __cscrollview__
+#pragma once
 
+#include "vstguifwd.h"
 #include "cviewcontainer.h"
-#include "controls/ccontrol.h"
+#include "iviewlistener.h"
+#include "controls/icontrollistener.h"
 
 namespace VSTGUI {
-
-class CScrollbar;
 class CScrollContainer;
-class CVSTGUITimer;
 
 //-----------------------------------------------------------------------------
 // CScrollView Declaration
 //! @brief a scrollable container view with scrollbars
 /// @ingroup containerviews
 //-----------------------------------------------------------------------------
-class CScrollView : public CViewContainer, public CControlListener
+class CScrollView : public CViewContainer, public IControlListener, public ViewListenerAdapter
 {
 protected:
 	enum
@@ -58,20 +26,34 @@ protected:
 		kVerticalScrollbarFlag,
 		kDontDrawFrameFlag,
 		kAutoDragScollingFlag,
+		kOverlayScrollbarsFlag,
+		kFollowFocusViewFlag,
+		kAutoHideScrollbarsFlag,
 
 		kLastScrollViewStyleFlag
 	};
 
 public:
-	CScrollView (const CRect& size, const CRect& containerSize, CFrame* pParent, int32_t style, CCoord scrollbarWidth = 16, CBitmap* pBackground = 0);
+	CScrollView (const CRect& size, const CRect& containerSize, int32_t style, CCoord scrollbarWidth = 16, CBitmap* pBackground = nullptr);
 	CScrollView (const CScrollView& scrollView);
 
+	/** Scroll View Style Flags */
 	enum CScrollViewStyle
 	{
-		kHorizontalScrollbar	= 1 << kHorizontalScrollbarFlag,	///< add a horizontal scrollbar
-		kVerticalScrollbar 		= 1 << kVerticalScrollbarFlag,		///< add a vertical scrollbar
-		kDontDrawFrame			= 1 << kDontDrawFrameFlag,			///< don't draw frame
-		kAutoDragScrolling		= 1 << kAutoDragScollingFlag		///< automatic scrolling for drag moves
+		/** add a horizontal scrollbar */
+		kHorizontalScrollbar = 1 << kHorizontalScrollbarFlag,
+		/** add a vertical scrollbar */
+		kVerticalScrollbar = 1 << kVerticalScrollbarFlag,
+		/** don't draw frame */
+		kDontDrawFrame = 1 << kDontDrawFrameFlag,
+		/** automatic scrolling for drag moves */
+		kAutoDragScrolling = 1 << kAutoDragScollingFlag,
+		/** scrollbars are overlayed of the content */
+		kOverlayScrollbars = 1 << kOverlayScrollbarsFlag,
+		/** scroll to focus view when focus view changes */
+		kFollowFocusView = 1 << kFollowFocusViewFlag,
+		/** automatically hides the scrollbar if the container size is smaller than the size of the scrollview */
+		kAutoHideScrollbars = 1 << kAutoHideScrollbarsFlag
 	};
 
 	//-----------------------------------------------------------------------------
@@ -80,42 +62,52 @@ public:
 	//@{
 	int32_t getStyle () const { return style; }
 	void setStyle (int32_t newStyle);
+	
+	int32_t getActiveScrollbars () const { return activeScrollbarStyle; }
 
 	CCoord getScrollbarWidth () const { return scrollbarWidth; }
 	void setScrollbarWidth (CCoord width);
 
-	virtual void setContainerSize (const CRect& cs, bool keepVisibleArea = false);	///< set the virtual size of this container
+	/** set the virtual size of this container */
+	virtual void setContainerSize (const CRect& cs, bool keepVisibleArea = false);
 	const CRect& getContainerSize () const { return containerSize; }
-	const CPoint& getScrollOffset () const;				///< get scroll offset
+	/** get scroll offset */
+	const CPoint& getScrollOffset () const;
+	void resetScrollOffset ();
 
-	CScrollbar* getVerticalScrollbar () const { return vsb; }	///< get the vertical scrollbar
-	CScrollbar* getHorizontalScrollbar () const { return hsb; }	///< get the horizontal scrollbar
+	/** get the vertical scrollbar */
+	CScrollbar* getVerticalScrollbar () const { return vsb; }
+	/** get the horizontal scrollbar */
+	CScrollbar* getHorizontalScrollbar () const { return hsb; }
 
-	virtual void makeRectVisible (const CRect& rect);	///< set scrollview to show rect
+	/** set scrollview to show rect */
+	virtual void makeRectVisible (const CRect& rect);
 	//@}
 
 	// overwrite
-	bool addView (CView* pView);
-	bool addView (CView* pView, const CRect& mouseableArea, bool mouseEnabled = true);
-	bool addView (CView* pView, CView* pBefore);
-	bool removeView (CView* pView, bool withForget = true);
-	bool removeAll (bool withForget = true);
-	int32_t getNbViews () const;
-	CView* getView (int32_t index) const;
-	void drawBackgroundRect (CDrawContext* pContext, const CRect& _updateRect);
-	bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
-	void valueChanged (CControl* pControl);
-	void setTransparency (bool val);
-	void setBackgroundColor (const CColor& color);
-	void setViewSize (const CRect& rect, bool invalid = true);
-	void setAutosizeFlags (int32_t flags);
-	CMessageResult notify (CBaseObject* sender, IdStringPtr message);
+	bool addView (CView* pView, CView* pBefore = nullptr) override;
+	bool removeView (CView* pView, bool withForget = true) override;
+	bool removeAll (bool withForget = true) override;
+	uint32_t getNbViews () const override;
+	CView* getView (uint32_t index) const override;
+	bool changeViewZOrder (CView* view, uint32_t newIndex) override;
+	void drawBackgroundRect (CDrawContext* pContext, const CRect& _updateRect) override;
+	bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons) override;
+	void valueChanged (CControl* pControl) override;
+	void setTransparency (bool val) override;
+	void setBackgroundColor (const CColor& color) override;
+	void setViewSize (const CRect& rect, bool invalid = true) override;
+	void setAutosizeFlags (int32_t flags) override;
+	CMessageResult notify (CBaseObject* sender, IdStringPtr message) override;
 
 	CLASS_METHODS(CScrollView, CViewContainer)
 //-----------------------------------------------------------------------------
 protected:
-	~CScrollView ();
-	void recalculateSubViews ();
+	~CScrollView () noexcept override = default;
+	virtual void recalculateSubViews ();
+
+	void viewSizeChanged (CView* view, const CRect& oldSize) override;
+	void viewWillDelete (CView* view) override;
 
 	CScrollContainer* sc;
 	CScrollbar* vsb;
@@ -124,100 +116,12 @@ protected:
 	CRect containerSize;
 	CCoord scrollbarWidth;
 	int32_t style;
-
+	int32_t activeScrollbarStyle;
+	bool recalculateSubViewsRecursionGard {false};
 	enum {
 		kHSBTag,
 		kVSBTag
 	};
 };
 
-class IScrollbarDrawer;
-
-//-----------------------------------------------------------------------------
-// CScrollbar Declaration
-//! @brief a scrollbar control
-/// @ingroup controls
-//-----------------------------------------------------------------------------
-class CScrollbar : public CControl
-{
-public:
-	enum ScrollbarDirection {
-		kHorizontal,
-		kVertical
-	};
-
-	CScrollbar (const CRect& size, CControlListener* listener, int32_t tag, ScrollbarDirection style, const CRect& scrollSize);
-	CScrollbar (const CScrollbar& scrollbar);
-
-	//-----------------------------------------------------------------------------
-	/// @name CScrollbar Methods
-	//-----------------------------------------------------------------------------
-	//@{
-	virtual void setDrawer (IScrollbarDrawer* d) { drawer = d; }
-	virtual void setScrollSize (const CRect& ssize);
-	virtual void setStep (float newStep) { stepValue = newStep; }
-
-	CRect& getScrollSize (CRect& rect) const { rect = scrollSize; return rect; }
-	float getStep () const { return stepValue; }
-
-	virtual void setFrameColor (const CColor& color) { frameColor = color; }
-	virtual void setScrollerColor (const CColor& color) { scrollerColor = color; }
-	virtual void setBackgroundColor (const CColor& color) { backgroundColor = color; }
-
-	CColor getFrameColor () const { return frameColor; }
-	CColor getScrollerColor () const { return scrollerColor; }
-	CColor getBackgroundColor () const { return backgroundColor; }
-	//@}
-
-	// overwrite
-	void draw (CDrawContext* pContext);
-	bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
-	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	CMessageResult notify (CBaseObject* sender, IdStringPtr message);
-	void setViewSize (const CRect& newSize, bool invalid);
-
-	CLASS_METHODS(CScrollbar, CControl)
-//-----------------------------------------------------------------------------
-protected:
-	void drawBackground (CDrawContext* pContext);
-	void drawScroller (CDrawContext* pContext, const CRect& size);
-
-	void calculateScrollerLength ();
-	CRect getScrollerRect ();
-	void doStepping ();
-
-	ScrollbarDirection direction;
-	CRect scrollSize;
-	CRect scrollerArea;
-
-	float stepValue;
-	CCoord scrollerLength;
-
-	CColor frameColor;
-	CColor scrollerColor;
-	CColor backgroundColor;
-
-	IScrollbarDrawer* drawer;
-private:
-	~CScrollbar ();
-	CVSTGUITimer* timer;
-	CPoint startPoint;
-	CRect scrollerRect;
-	bool scrolling;
-	float startValue;
-};
-
-//-----------------------------------------------------------------------------
-class IScrollbarDrawer
-//-----------------------------------------------------------------------------
-{
-public:
-	virtual void drawScrollbarBackground (CDrawContext* pContext, const CRect& size, CScrollbar::ScrollbarDirection direction, CScrollbar* bar) = 0;
-	virtual void drawScrollbarScroller (CDrawContext* pContext, const CRect& size, CScrollbar::ScrollbarDirection direction, CScrollbar* bar) = 0;
-};
-
-} // namespace
-
-#endif
+} // VSTGUI

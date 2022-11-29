@@ -87,7 +87,7 @@ public:
 
 	}
 
-	int Fir_Resampler_initialize( int new_size );
+	int Fir_Resampler_initialize( int new_size);
 	void Fir_Resampler_shutdown( void );
 	void Fir_Resampler_clear( void );
 	double Fir_Resampler_time_ratio( double new_factor, double rolloff );

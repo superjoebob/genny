@@ -6,7 +6,7 @@ class UIInstrumentsPanel;
 class UIPresetsPanel;
 class UIImportPanel;
 class UIMegaMidiPanel;
-class UIPresetsAndInstrumentsPanel : public CView, public CControlListener, public GennyInterfaceObject
+class UIPresetsAndInstrumentsPanel : public CView, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIPresetsAndInstrumentsPanel(const CRect& size, GennyInterface* owner);
@@ -42,6 +42,9 @@ private:
 	CKickButton* _presetsTabButton;
 	CKickButton* _importTabButton;
 	CKickButton* _megamidiTabButton;
+
+	CKickButton* _infoTabButton;
+
 	UIInstrumentsPanel* _instrumentView;
 
 
@@ -49,5 +52,7 @@ private:
 	int _tab;
 
 	UIImage* _presetTab;
+	UIImage* _infoTab;
+	CTextLabel* _infoLabel;
 };
 

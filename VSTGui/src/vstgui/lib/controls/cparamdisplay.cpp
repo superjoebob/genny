@@ -1,39 +1,14 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cparamdisplay.h"
 #include "../cbitmap.h"
+#include "../cframe.h"
+#include "../cstring.h"
+#include "../cgraphicspath.h"
+#include "../cdrawcontext.h"
+#include <string>
 
 namespace VSTGUI {
 
@@ -45,15 +20,16 @@ Define a rectangle view where a text-value can be displayed with a given font an
 The user can specify its convert function (from float to char) by default the string format is "%2.2f".
 The text-value is centered in the given rect.
 */
-CParamDisplay::CParamDisplay (const CRect& size, CBitmap* background, const int32_t style)
-: CControl (size, 0, -1, background)
-, valueToString (0)
-, valueToStringUserData (0)
+CParamDisplay::CParamDisplay (const CRect& size, CBitmap* background, int32_t inStyle)
+: CControl (size, nullptr, -1, background)
 , horiTxtAlign (kCenterText)
-, style (style)
-, bTextTransparencyEnabled (true)
-, bAntialias (true)
+, style (inStyle)
+, valuePrecision (2)
+, roundRectRadius (6.)
+, frameWidth (1.)
+, textRotation (0.)
 {
+	setBit (style, kAntialias, true);
 	backOffset (0, 0);
 
 	fontID      = kNormalFont; fontID->remember ();
@@ -61,70 +37,162 @@ CParamDisplay::CParamDisplay (const CRect& size, CBitmap* background, const int3
 	backColor   = kBlackCColor;
 	frameColor  = kBlackCColor;
 	shadowColor = kRedCColor;
-	if (style & kNoDrawStyle)
+	if (hasBit (style, kNoDrawStyle))
 		setDirty (false);
 }
 
 //------------------------------------------------------------------------
 CParamDisplay::CParamDisplay (const CParamDisplay& v)
 : CControl (v)
-, valueToString (v.valueToString)
-, valueToStringUserData (v.valueToStringUserData)
+, valueToStringFunction (v.valueToStringFunction)
 , horiTxtAlign (v.horiTxtAlign)
 , style (v.style)
+, valuePrecision (v.valuePrecision)
 , fontID (v.fontID)
 , fontColor (v.fontColor)
 , backColor (v.backColor)
 , frameColor (v.frameColor)
 , shadowColor (v.shadowColor)
 , textInset (v.textInset)
-, bTextTransparencyEnabled (v.bTextTransparencyEnabled)
-, bAntialias (v.bAntialias)
+, backOffset (v.backOffset)
+, roundRectRadius (v.roundRectRadius)
+, frameWidth (v.frameWidth)
+, textRotation (v.textRotation)
 {
 	fontID->remember ();
 }
 
 //------------------------------------------------------------------------
-CParamDisplay::~CParamDisplay ()
+CParamDisplay::~CParamDisplay () noexcept
 {
 	if (fontID)
 		fontID->forget ();
 }
 
 //------------------------------------------------------------------------
+bool CParamDisplay::removed (CView* parent)
+{
+	return CControl::removed (parent);
+}
+
+//------------------------------------------------------------------------
 void CParamDisplay::setStyle (int32_t val)
 {
+	setBit (val, kAntialias, hasBit (style, kAntialias));
 	if (style != val)
 	{
 		style = val;
-		setDirty ();
+		drawStyleChanged ();
 	}
 }
 
 //------------------------------------------------------------------------
-void CParamDisplay::setValueToStringProc (CParamDisplayValueToStringProc proc, void* userData)
+int32_t CParamDisplay::getStyle () const
 {
-	valueToString = proc;
-	valueToStringUserData = userData;
+	auto tmp = style;
+	setBit (tmp, kAntialias, false);
+	return tmp;
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setPrecision (uint8_t precision)
+{
+	if (valuePrecision != precision)
+	{
+		valuePrecision = precision;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setValueToStringFunction2 (const ValueToStringFunction2& valueToStringFunc)
+{
+	valueToStringFunction = valueToStringFunc;
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setValueToStringFunction2 (ValueToStringFunction2&& valueToStringFunc)
+{
+	valueToStringFunction = std::move (valueToStringFunc);
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setValueToStringFunction (const ValueToStringFunction& func)
+{
+	if (!func)
+	{
+		setValueToStringFunction2 (nullptr);
+		return;
+	}
+	setValueToStringFunction2 ([=] (float value, std::string& str, CParamDisplay* display) {
+		char string[256];
+		string[0] = 0;
+		if (func (value, string, display))
+		{
+			str = string;
+			return true;
+		}
+		return false;
+	});
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setValueToStringFunction (ValueToStringFunction&& func)
+{
+	setValueToStringFunction (func);
+}
+
+//------------------------------------------------------------------------
+bool CParamDisplay::getFocusPath (CGraphicsPath& outPath)
+{
+	if (wantsFocus ())
+	{
+        auto lineWidth = getFrameWidth ();
+        if (lineWidth < 0.)
+            lineWidth = 1.;
+		CCoord focusWidth = getFrame ()->getFocusWidth ();
+		CRect r (getViewSize ());
+		if (hasBit (style, kRoundRectStyle))
+		{
+			r.inset (lineWidth / 2., lineWidth / 2.);
+			outPath.addRoundRect (r, roundRectRadius);
+			outPath.closeSubpath ();
+			r.extend (focusWidth, focusWidth);
+			outPath.addRoundRect (r, roundRectRadius);
+		}
+		else
+		{
+			r.inset (lineWidth / 2., lineWidth / 2.);
+			outPath.addRect (r);
+			r.extend (focusWidth, focusWidth);
+			outPath.addRect (r);
+		}
+	}
+	return true;
 }
 
 //------------------------------------------------------------------------
 void CParamDisplay::draw (CDrawContext *pContext)
 {
-	if (style & kNoDrawStyle)
+	if (hasBit (style, kNoDrawStyle))
 		return;
 
-	char string[256];
-	string[0] = 0;
+	std::string string;
 
 	bool converted = false;
-	if (valueToString)
-		converted = valueToString (value, string, valueToStringUserData);
+	if (valueToStringFunction)
+		converted = valueToStringFunction (value, string, this);
 	if (!converted)
-		sprintf (string, "%2.2f", value);
+	{
+		char tmp[255];
+		char precisionStr[10];
+		sprintf (precisionStr, "%%.%hhuf", valuePrecision);
+		sprintf (tmp, precisionStr, value);
+		string = tmp;
+	}
 
 	drawBack (pContext);
-	drawText (pContext, string);
+	drawPlatformText (pContext, UTF8String (string).getPlatformString ());
 	setDirty (false);
 }
 
@@ -132,92 +200,175 @@ void CParamDisplay::draw (CDrawContext *pContext)
 void CParamDisplay::drawBack (CDrawContext* pContext, CBitmap* newBack)
 {
 	pContext->setDrawMode (kAliasing);
+	auto lineWidth = getFrameWidth ();
+	if (lineWidth < 0.)
+		lineWidth = pContext->getHairlineSize ();
 	if (newBack)
 	{
 		newBack->draw (pContext, getViewSize (), backOffset);
 	}
-	else if (pBackground)
+	else if (getDrawBackground ())
 	{
-		pBackground->draw (pContext, getViewSize (), backOffset);
+		getDrawBackground ()->draw (pContext, getViewSize (), backOffset);
 	}
 	else
 	{
 		if (!getTransparency ())
 		{
+			bool strokePath = !(hasBit (style, (k3DIn|k3DOut|kNoFrame)));
 			pContext->setFillColor (backColor);
-			pContext->drawRect (getViewSize (), kDrawFilled);
-	
-			if (!(style & (k3DIn|k3DOut|kNoFrame))) 
+			if (hasBit (style, kRoundRectStyle))
 			{
-				pContext->setLineStyle (kLineSolid);
-				pContext->setLineWidth (1);
-				pContext->setFrameColor (frameColor);
-				pContext->drawRect (getViewSize ());
+				CRect pathRect = getViewSize ();
+				pathRect.inset (lineWidth/2., lineWidth/2.);
+				SharedPointer<CGraphicsPath> path = owned (pContext->createRoundRectGraphicsPath (pathRect, roundRectRadius));
+				if (path)
+				{
+					pContext->setDrawMode (kAntiAliasing);
+					pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
+					if (strokePath)
+					{
+						pContext->setLineStyle (kLineSolid);
+						pContext->setLineWidth (lineWidth);
+						pContext->setFrameColor (frameColor);
+						pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
+					}
+				}
+			}
+			else
+			{
+				pContext->setDrawMode (kAntiAliasing);
+				SharedPointer<CGraphicsPath> path = owned (pContext->createGraphicsPath ());
+				if (path)
+				{
+					CRect frameRect = getViewSize ();
+					if (strokePath)
+						frameRect.inset (lineWidth/2., lineWidth/2.);
+					path->addRect (frameRect);
+					pContext->drawGraphicsPath (path, CDrawContext::kPathFilled);
+					if (strokePath)
+					{
+						pContext->setLineStyle (kLineSolid);
+						pContext->setLineWidth (lineWidth);
+						pContext->setFrameColor (frameColor);
+						pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
+					}
+				}
+				else
+				{
+					pContext->drawRect (getViewSize (), kDrawFilled);
+			
+					if (strokePath)
+					{
+						CRect frameRect = getViewSize ();
+						frameRect.inset (lineWidth/2., lineWidth/2.);
+
+						pContext->setLineStyle (kLineSolid);
+						pContext->setLineWidth (lineWidth);
+						pContext->setFrameColor (frameColor);
+						pContext->drawRect (frameRect);
+					}
+				}
 			}
 		}
 	}
 	// draw the frame for the 3D effect
-	if (style & (k3DIn|k3DOut)) 
+	if (hasBit (style, (k3DIn|k3DOut)))
 	{
 		CRect r (getViewSize ());
-		r.right--; r.top++;
-		pContext->setLineWidth (1);
+		r.inset (lineWidth/2., lineWidth/2.);
+		pContext->setDrawMode (kAliasing);
+		pContext->setLineWidth (lineWidth);
 		pContext->setLineStyle (kLineSolid);
-		if (style & k3DIn)
+		if (hasBit (style, k3DIn))
 			pContext->setFrameColor (backColor);
 		else
 			pContext->setFrameColor (frameColor);
+
 		CPoint p;
-		pContext->moveTo (p (r.left, r.bottom));
-		pContext->lineTo (p (r.left, r.top));
-		pContext->lineTo (p (r.right, r.top));
+		SharedPointer<CGraphicsPath> path = owned (pContext->createGraphicsPath ());
+		if (path)
+		{
+			path->beginSubpath (p (r.left, r.bottom));
+			path->addLine (p (r.left, r.top));
+			path->addLine (p (r.right, r.top));
+			pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
+		}
+		else
+		{
+			pContext->drawLine (CPoint (r.left, r.bottom), CPoint (r.left, r.top));
+			pContext->drawLine (CPoint (r.left, r.top), CPoint (r.right, r.top));
+		}
 
-		if (style & k3DIn)
+		if (hasBit (style, k3DIn))
 			pContext->setFrameColor (frameColor);
 		else
 			pContext->setFrameColor (backColor);
-		pContext->moveTo (p (r.right, r.top));
-		pContext->lineTo (p (r.right, r.bottom));
-		pContext->lineTo (p (r.left, r.bottom));
-	}
-}
 
-//------------------------------------------------------------------------
-void CParamDisplay::drawText (CDrawContext *pContext, UTF8StringPtr string)
-{
-	if (!(style & kNoTextStyle) && string && strlen (string))
-	{
-		CRect textRect (getViewSize ());
-		textRect.inset (textInset.x, textInset.y);
-		CRect oldClip;
-		pContext->getClipRect (oldClip);
-		CRect newClip (textRect);
-		newClip.bound (oldClip);
-		pContext->setClipRect (newClip);
-		pContext->setFont (fontID);
-	
-		// draw darker text (as shadow)
-		if (style & kShadowText) 
+		path = owned (pContext->createGraphicsPath ());
+		if (path)
 		{
-			CRect newSize (textRect);
-			newSize.offset (1, 1);
-			pContext->setFontColor (shadowColor);
-			pContext->drawString (string, newSize, horiTxtAlign, bAntialias);
+			path->beginSubpath (p (r.right, r.top));
+			path->addLine (p (r.right, r.bottom));
+			path->addLine (p (r.left, r.bottom));
+			pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
 		}
-		pContext->setFontColor (fontColor);
-		pContext->drawString (string, textRect, horiTxtAlign, bAntialias);
-		pContext->setClipRect (oldClip);
+		else
+		{
+			pContext->drawLine (CPoint (r.right, r.top), CPoint (r.right, r.bottom));
+			pContext->drawLine (CPoint (r.right, r.bottom), CPoint (r.left, r.bottom));
+		}
 	}
 }
 
 //------------------------------------------------------------------------
-void CParamDisplay::setFont (CFontRef fontID)
+void CParamDisplay::drawPlatformText (CDrawContext* pContext, IPlatformString* string)
 {
-	setDirty ();
-	if (this->fontID)
-		this->fontID->forget ();
-	this->fontID = fontID;
-	fontID->remember ();
+	drawPlatformText (pContext, string, getViewSize ());
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::drawPlatformText (CDrawContext* pContext, IPlatformString* string, const CRect& size)
+{
+	if (!hasBit (style, kNoTextStyle))
+	{
+		pContext->saveGlobalState ();
+		CRect textRect (size);
+		textRect.inset (textInset.x, textInset.y);
+
+		drawClipped (pContext, textRect, [&] () {
+			CPoint center (textRect.getCenter ());
+			CGraphicsTransform transform;
+			transform.rotate (textRotation, center);
+			CDrawContext::Transform ctxTransform (*pContext, transform);
+
+			pContext->setDrawMode (kAntiAliasing);
+			pContext->setFont (fontID);
+
+			// draw darker text (as shadow)
+			if (hasBit (style, kShadowText))
+			{
+				CRect newSize (textRect);
+				newSize.offset (shadowTextOffset);
+				pContext->setFontColor (shadowColor);
+				pContext->drawString (string, newSize, horiTxtAlign, hasBit (style, kAntialias));
+			}
+			pContext->setFontColor (fontColor);
+			pContext->drawString (string, textRect, horiTxtAlign, hasBit (style, kAntialias));
+		});
+		pContext->restoreGlobalState ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setFont (CFontRef inFontID)
+{
+	if (fontID)
+		fontID->forget ();
+	fontID = inFontID;
+	if (fontID)
+		fontID->remember ();
+	drawStyleChanged ();
 }
 
 //------------------------------------------------------------------------
@@ -225,8 +376,10 @@ void CParamDisplay::setFontColor (CColor color)
 {
 	// to force the redraw
 	if (fontColor != color)
-		setDirty ();
-	fontColor = color;
+	{
+		fontColor = color;
+		drawStyleChanged ();
+	}
 }
 
 //------------------------------------------------------------------------
@@ -234,8 +387,10 @@ void CParamDisplay::setBackColor (CColor color)
 {
 	// to force the redraw
 	if (backColor != color)
-		setDirty ();
-	backColor = color;
+	{
+		backColor = color;
+		drawStyleChanged ();
+	}
 }
 
 //------------------------------------------------------------------------
@@ -243,8 +398,10 @@ void CParamDisplay::setFrameColor (CColor color)
 {
 	// to force the redraw
 	if (frameColor != color)
-		setDirty ();
-	frameColor = color;
+	{
+		frameColor = color;
+		drawStyleChanged ();
+	}
 }
 
 //------------------------------------------------------------------------
@@ -252,8 +409,20 @@ void CParamDisplay::setShadowColor (CColor color)
 {
 	// to force the redraw
 	if (shadowColor != color)
-		setDirty ();
-	shadowColor = color;
+	{
+		shadowColor = color;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setShadowTextOffset (const CPoint& offset)
+{
+	if (shadowTextOffset != offset)
+	{
+		shadowTextOffset = offset;
+		drawStyleChanged ();
+	}
 }
 
 //------------------------------------------------------------------------
@@ -261,8 +430,72 @@ void CParamDisplay::setHoriAlign (CHoriTxtAlign hAlign)
 {
 	// to force the redraw
 	if (horiTxtAlign != hAlign)
-		setDirty ();
-	horiTxtAlign = hAlign;
+	{
+		horiTxtAlign = hAlign;
+		drawStyleChanged ();
+	}
 }
 
-} // namespace
+//------------------------------------------------------------------------
+void CParamDisplay::setTextInset (const CPoint& p)
+{
+	if (textInset != p)
+	{
+		textInset = p;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setTextRotation (double angle)
+{
+	while (angle < 0.)
+		angle += 360.;
+	while (angle > 360.)
+		angle -= 360.;
+	if (textRotation != angle)
+	{
+		textRotation = angle;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setRoundRectRadius (const CCoord& radius)
+{
+	if (roundRectRadius != radius)
+	{
+		roundRectRadius = radius;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setFrameWidth (const CCoord& width)
+{
+	if (frameWidth != width)
+	{
+		frameWidth = width;
+		drawStyleChanged ();
+	}
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::drawStyleChanged ()
+{
+	setDirty ();
+}
+
+//------------------------------------------------------------------------
+void CParamDisplay::setBackOffset (const CPoint &offset)
+{
+	backOffset = offset;
+}
+
+//-----------------------------------------------------------------------------
+void CParamDisplay::copyBackOffset ()
+{
+	backOffset (getViewSize ().left, getViewSize ().top);
+}
+
+} // VSTGUI

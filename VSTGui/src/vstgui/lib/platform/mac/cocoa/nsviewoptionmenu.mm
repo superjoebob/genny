@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #import "nsviewoptionmenu.h"
 
@@ -38,12 +8,32 @@
 
 #import "cocoahelpers.h"
 #import "nsviewframe.h"
+#import "../../../cbitmap.h"
+#import "../../../cframe.h"
 #import "../../../controls/coptionmenu.h"
 #import "../cgbitmap.h"
+#import "../macstring.h"
 
-using namespace VSTGUI;
+@interface NSObject (VSTGUI_NSMenu_Private)
+-(id)initWithOptionMenu:(id)menu;
+@end
 
-static Class menuClass = 0;
+namespace VSTGUI {
+
+#if DEBUG
+static int32_t menuClassCount = 0;
+#endif
+
+static Class menuClass = nullptr;
+
+#ifndef MAC_OS_X_VERSION_10_14
+#define MAC_OS_X_VERSION_10_14 101400
+#endif
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_14
+static constexpr auto NSControlStateValueOn = NSOnState;
+static constexpr auto NSControlStateValueOff = NSOffState;
+#endif
 
 //------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------
@@ -58,8 +48,11 @@ struct VSTGUI_NSMenu_Var
 //------------------------------------------------------------------------------------
 static id VSTGUI_NSMenu_Init (id self, SEL _cmd, void* _menu)
 {
+#if DEBUG
+	menuClassCount++;
+#endif
 	__OBJC_SUPER(self)
-	self = objc_msgSendSuper (SUPER, @selector(init));
+	self = SuperInit (SUPER, @selector(init));
 	if (self)
 	{
 		NSMenu* nsMenu = (NSMenu*)self;
@@ -67,22 +60,22 @@ static id VSTGUI_NSMenu_Init (id self, SEL _cmd, void* _menu)
 		VSTGUI_NSMenu_Var* var = new VSTGUI_NSMenu_Var;
 		var->_optionMenu = menu;
 		var->_selectedItem = 0;
-		var->_selectedMenu = 0;
+		var->_selectedMenu = nullptr;
 		OBJC_SET_VALUE(self, _private, var);
 
 		int32_t index = -1;
-		bool multipleCheck = menu->getStyle () & (kMultipleCheckStyle & ~kCheckStyle);
+		bool multipleCheck = menu->isMultipleCheckStyle ();
 		CConstMenuItemIterator it = menu->getItems ()->begin ();
 		while (it != menu->getItems ()->end ())
 		{
 			CMenuItem* item = (*it);
 			it++;
 			index++;
-			NSMenuItem* nsItem = 0;
-			NSMutableString* itemTitle = [[[NSMutableString alloc] initWithCString:item->getTitle () encoding:NSUTF8StringEncoding] autorelease];
+			NSMenuItem* nsItem = nullptr;
+			NSMutableString* itemTitle = [[[NSMutableString alloc] initWithString:fromUTF8String<NSString*> (item->getTitle ())] autorelease];
 			if (menu->getPrefixNumbers ())
 			{
-				NSString* prefixString = 0;
+				NSString* prefixString = nullptr;
 				switch (menu->getPrefixNumbers ())
 				{
 					case 2:	prefixString = [NSString stringWithFormat:@"%1d ", index+1]; break;
@@ -94,8 +87,12 @@ static id VSTGUI_NSMenu_Init (id self, SEL _cmd, void* _menu)
 			if (item->getSubmenu ())
 			{
 				nsItem = [nsMenu addItemWithTitle:itemTitle action:nil keyEquivalent:@""];
-				NSMenu* subMenu = [[menuClass alloc] performSelector:@selector(initWithOptionMenu:) withObject:(id)item->getSubmenu ()];
+				NSMenu* subMenu = [[[menuClass alloc] initWithOptionMenu:(id)item->getSubmenu ()] autorelease];
 				[nsMenu setSubmenu: subMenu forItem:nsItem];
+				if (multipleCheck && item->isChecked ())
+					[nsItem setState:NSControlStateValueOn];
+				else
+					[nsItem setState:NSControlStateValueOff];
 			}
 			else if (item->isSeparator ())
 			{
@@ -109,29 +106,38 @@ static id VSTGUI_NSMenu_Init (id self, SEL _cmd, void* _menu)
 				[nsItem setTarget:nsMenu];
 				[nsItem setTag: index];
 				if (multipleCheck && item->isChecked ())
-					[nsItem setState:NSOnState];
+					[nsItem setState:NSControlStateValueOn];
 				else
-					[nsItem setState:NSOffState];
-				if (item->getKeycode ())
+					[nsItem setState:NSControlStateValueOff];
+				NSString* keyEquivalent = nil;
+				if (!item->getKeycode ().empty ())
 				{
-					[nsItem setKeyEquivalent:[NSString stringWithCString:item->getKeycode () encoding:NSUTF8StringEncoding]];
+					keyEquivalent = fromUTF8String<NSString*> (item->getKeycode ());
+				}
+				else if (item->getVirtualKeyCode ())
+				{
+					keyEquivalent = GetVirtualKeyCodeString (item->getVirtualKeyCode ());
+				}
+				if (keyEquivalent)
+				{
+					[nsItem setKeyEquivalent:keyEquivalent];
 					uint32_t keyModifiers = 0;
 					if (item->getKeyModifiers () & kControl)
-						keyModifiers |= NSCommandKeyMask;
+						keyModifiers |= MacEventModifier::CommandKeyMask;
 					if (item->getKeyModifiers () & kShift)
-						keyModifiers |= NSShiftKeyMask;
+						keyModifiers |= MacEventModifier::ShiftKeyMask;
 					if (item->getKeyModifiers () & kAlt)
-						keyModifiers |= NSAlternateKeyMask;
+						keyModifiers |= MacEventModifier::AlternateKeyMask;
 					if (item->getKeyModifiers () & kApple)
-						keyModifiers |= NSControlKeyMask;
+						keyModifiers |= MacEventModifier::ControlKeyMask;
 					[nsItem setKeyEquivalentModifierMask:keyModifiers];
 				}
 			}
 			if (nsItem && item->getIcon ())
 			{
 				IPlatformBitmap* platformBitmap = item->getIcon ()->getPlatformBitmap ();
-				CGBitmap* cgBitmap = platformBitmap ? dynamic_cast<CGBitmap*> (platformBitmap) : 0;
-				CGImageRef image = cgBitmap ? cgBitmap->getCGImage () : 0;
+				CGBitmap* cgBitmap = platformBitmap ? dynamic_cast<CGBitmap*> (platformBitmap) : nullptr;
+				CGImageRef image = cgBitmap ? cgBitmap->getCGImage () : nullptr;
 				if (image)
 				{
 					NSImage* nsImage = imageFromCGImageRef (image);
@@ -150,11 +156,14 @@ static id VSTGUI_NSMenu_Init (id self, SEL _cmd, void* _menu)
 //-----------------------------------------------------------------------------
 static void VSTGUI_NSMenu_Dealloc (id self, SEL _cmd)
 {
+#if DEBUG
+	menuClassCount--;
+#endif
 	VSTGUI_NSMenu_Var* var = (VSTGUI_NSMenu_Var*)OBJC_GET_VALUE(self, _private);
 	if (var)
 		delete var;
 	__OBJC_SUPER(self)
-	objc_msgSendSuper (SUPER, @selector(dealloc)); // [super dealloc];
+	SuperDealloc (SUPER, @selector(dealloc)); // [super dealloc];
 }
 
 //------------------------------------------------------------------------------------
@@ -187,14 +196,14 @@ static void VSTGUI_NSMenu_MenuItemSelected (id self, SEL _cmd, id item)
 static void* VSTGUI_NSMenu_OptionMenu (id self, SEL _cmd)
 {
 	VSTGUI_NSMenu_Var* var = (VSTGUI_NSMenu_Var*)OBJC_GET_VALUE(self, _private);
-	return var ? var->_optionMenu : 0;
+	return var ? var->_optionMenu : nullptr;
 }
 
 //------------------------------------------------------------------------------------
 static void* VSTGUI_NSMenu_SelectedMenu (id self, SEL _cmd)
 {
 	VSTGUI_NSMenu_Var* var = (VSTGUI_NSMenu_Var*)OBJC_GET_VALUE(self, _private);
-	return var ? var->_selectedMenu : 0;
+	return var ? var->_selectedMenu : nullptr;
 }
 
 //------------------------------------------------------------------------------------
@@ -220,8 +229,6 @@ static void VSTGUI_NSMenu_SetSelectedItem (id self, SEL _cmd, int32_t item)
 		var->_selectedItem = item;
 }
 
-namespace VSTGUI {
-
 //-----------------------------------------------------------------------------
 __attribute__((__destructor__)) static void cleanup_VSTGUI_NSMenu ()
 {
@@ -232,76 +239,82 @@ __attribute__((__destructor__)) static void cleanup_VSTGUI_NSMenu ()
 //-----------------------------------------------------------------------------
 bool NSViewOptionMenu::initClass ()
 {
-	if (menuClass == 0)
+	if (menuClass == nullptr)
 	{
 		NSMutableString* menuClassName = [[[NSMutableString alloc] initWithString:@"VSTGUI_NSMenu"] autorelease];
 		menuClass = generateUniqueClass (menuClassName, [NSMenu class]);
-		BOOL res = class_addMethod (menuClass, @selector(initWithOptionMenu:), IMP (VSTGUI_NSMenu_Init), "@@:@:^:");
-		res = class_addMethod (menuClass, @selector(dealloc), IMP (VSTGUI_NSMenu_Dealloc), "v@:@:");
-		res = class_addMethod (menuClass, @selector(validateMenuItem:), IMP (VSTGUI_NSMenu_ValidateMenuItem), "B@:@:@:");
-		res = class_addMethod (menuClass, @selector(menuItemSelected:), IMP (VSTGUI_NSMenu_MenuItemSelected), "v@:@:@:");
-		res = class_addMethod (menuClass, @selector(optionMenu), IMP (VSTGUI_NSMenu_OptionMenu), "^@:@:");
-		res = class_addMethod (menuClass, @selector(selectedMenu), IMP (VSTGUI_NSMenu_SelectedMenu), "^@:@:");
-		res = class_addMethod (menuClass, @selector(selectedItem), IMP (VSTGUI_NSMenu_SelectedItem), "i@:@:");
-		res = class_addMethod (menuClass, @selector(setSelectedMenu:), IMP (VSTGUI_NSMenu_SetSelectedMenu), "^@:@:^:");
-		res = class_addMethod (menuClass, @selector(setSelectedItem:), IMP (VSTGUI_NSMenu_SetSelectedItem), "^@:@:i:");
-		res = class_addIvar (menuClass, "_private", sizeof (VSTGUI_NSMenu_Var*), (uint8_t)log2(sizeof(VSTGUI_NSMenu_Var*)), @encode(VSTGUI_NSMenu_Var*));
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(initWithOptionMenu:), IMP (VSTGUI_NSMenu_Init), "@@:@:^:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(dealloc), IMP (VSTGUI_NSMenu_Dealloc), "v@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(validateMenuItem:), IMP (VSTGUI_NSMenu_ValidateMenuItem), "B@:@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(menuItemSelected:), IMP (VSTGUI_NSMenu_MenuItemSelected), "v@:@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(optionMenu), IMP (VSTGUI_NSMenu_OptionMenu), "^@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(selectedMenu), IMP (VSTGUI_NSMenu_SelectedMenu), "^@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(selectedItem), IMP (VSTGUI_NSMenu_SelectedItem), "i@:@:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(setSelectedMenu:), IMP (VSTGUI_NSMenu_SetSelectedMenu), "^@:@:^:"))
+		VSTGUI_CHECK_YES (class_addMethod (menuClass, @selector(setSelectedItem:), IMP (VSTGUI_NSMenu_SetSelectedItem), "^@:@:i:"))
+		VSTGUI_CHECK_YES (class_addIvar (menuClass, "_private", sizeof (VSTGUI_NSMenu_Var*), (uint8_t)log2(sizeof(VSTGUI_NSMenu_Var*)), @encode(VSTGUI_NSMenu_Var*)))
 		objc_registerClassPair (menuClass);
 	}
-	return menuClass != 0;
+	return menuClass != nullptr;
 }
 
 //-----------------------------------------------------------------------------
-PlatformOptionMenuResult NSViewOptionMenu::popup (COptionMenu* optionMenu)
+void NSViewOptionMenu::popup (COptionMenu* optionMenu, const Callback& callback)
 {
-	PlatformOptionMenuResult result = {0};
+	vstgui_assert (optionMenu && callback, "arguments are required");
 
-	if (!initClass ())
-		return result;
+	PlatformOptionMenuResult result = {};
 
 	CFrame* frame = optionMenu->getFrame ();
-	if (!frame || !frame->getPlatformFrame ())
-		return result;
-	NSViewFrame* nsViewFrame = dynamic_cast<NSViewFrame*> (frame->getPlatformFrame ());
-
-	bool multipleCheck = optionMenu->getStyle () & (kMultipleCheckStyle & ~kCheckStyle);
-	NSView* view = nsViewFrame->getPlatformControl ();
-	NSMenu* nsMenu = [[menuClass alloc] performSelector:@selector(initWithOptionMenu:) withObject:(id)optionMenu];
-	CPoint p (optionMenu->getViewSize ().left, optionMenu->getViewSize ().top);
-	optionMenu->localToFrame (p);
-	NSRect cellFrameRect = {0};
-	cellFrameRect.origin = nsPointFromCPoint (p);
-	cellFrameRect.size.width = optionMenu->getViewSize ().getWidth ();
-	cellFrameRect.size.height = optionMenu->getViewSize ().getHeight ();
-	if (!(optionMenu->getStyle () & kPopupStyle))
+	if (!initClass () || !frame || !frame->getPlatformFrame ())
 	{
-		NSMenuItem* item = [nsMenu insertItemWithTitle:@"" action:nil keyEquivalent:@"" atIndex:0];
-		[item setTag:-1];
+		callback (optionMenu, result);
+		return;
 	}
-	if (!multipleCheck && optionMenu->getStyle () & kCheckStyle)
-		[[nsMenu itemWithTag:(NSInteger)optionMenu->getValue ()] setState:NSOnState];
 
-	NSView* cellContainer = [[NSView alloc] initWithFrame:cellFrameRect];
-	[view addSubview:cellContainer];
-	cellFrameRect.origin.x = 0;
-	cellFrameRect.origin.y = 0;
+	NSViewFrame* nsViewFrame = dynamic_cast<NSViewFrame*> (frame->getPlatformFrame ());
+	nsViewFrame->setMouseCursor (kCursorDefault);
 
-	NSPopUpButtonCell* cell = [[NSPopUpButtonCell alloc] initTextCell:@"" pullsDown:optionMenu->getStyle () & kPopupStyle ? NO : YES];
-	[cell setAltersStateOfSelectedItem: NO];
-	[cell setAutoenablesItems:NO];
-	[cell setMenu:nsMenu];
-	if (optionMenu->getStyle () & kPopupStyle)
-		[cell selectItemWithTag:(NSInteger)optionMenu->getValue ()];
-	[cell performClickWithFrame:cellFrameRect inView:cellContainer];
-	[cellContainer removeFromSuperviewWithoutNeedingDisplay];
-	[cellContainer release];
+	CRect globalSize = optionMenu->translateToGlobal (optionMenu->getViewSize ());
+	globalSize.offset (-frame->getViewSize ().getTopLeft ());
+
+	bool multipleCheck = optionMenu->isMultipleCheckStyle ();
+	NSView* view = nsViewFrame->getNSView ();
+	NSMenu* nsMenu = [[menuClass alloc] initWithOptionMenu:(id)optionMenu];
+	CPoint p = globalSize.getTopLeft ();
+	NSRect cellFrameRect = {};
+	cellFrameRect.origin = nsPointFromCPoint (p);
+	cellFrameRect.size.width = static_cast<CGFloat> (globalSize.getWidth ());
+	cellFrameRect.size.height = static_cast<CGFloat> (globalSize.getHeight ());
+	if (!optionMenu->isPopupStyle ())
+		cellFrameRect.origin.y += cellFrameRect.size.height;
+	if (!multipleCheck && optionMenu->isCheckStyle ())
+	{
+		[[nsMenu itemWithTag:static_cast<NSInteger> (optionMenu->getCurrentIndex (true))]
+		    setState:NSControlStateValueOn];
+	}
+	nsMenu.minimumWidth = cellFrameRect.size.width;
+	
+	NSView* menuContainer = [[NSView alloc] initWithFrame:cellFrameRect];
+	[view addSubview:menuContainer];
+
+	NSMenuItem* selectedItem = nil;
+	if (optionMenu->isPopupStyle ())
+		selectedItem = [nsMenu itemAtIndex:optionMenu->getValue ()];
+	[nsMenu popUpMenuPositioningItem:selectedItem
+	                      atLocation:NSMakePoint (0, menuContainer.frame.size.height)
+	                          inView:menuContainer];
+
+	[menuContainer removeFromSuperviewWithoutNeedingDisplay];
+	[menuContainer release];
 	result.menu = (COptionMenu*)[nsMenu performSelector:@selector(selectedMenu)];
 	result.index = (int32_t)(intptr_t)[nsMenu performSelector:@selector(selectedItem)];
+	[nsMenu release];
 
-	return result;
+	callback (optionMenu, result);
 }
 
 
-} // namespace
+} // VSTGUI
 
 #endif // MAC_COCOA

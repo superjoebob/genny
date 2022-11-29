@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cocoahelpers.h"
 
@@ -43,9 +13,8 @@
 HIDDEN Class generateUniqueClass (NSMutableString* className, Class baseClass)
 {
 	NSString* _className = [NSString stringWithString:className];
-	NSInteger iteration = 0;
-	id cl = nil;
-	while ((cl = objc_lookUpClass ([className UTF8String])) != nil)
+	int32_t iteration = 0;
+	while (objc_lookUpClass ([className UTF8String]) != nil)
 	{
 		iteration++;
 		[className setString:[NSString stringWithFormat:@"%@_%d", _className, iteration]];
@@ -61,7 +30,7 @@ using namespace VSTGUI;
 //------------------------------------------------------------------------------------
 HIDDEN VstKeyCode CreateVstKeyCodeFromNSEvent (NSEvent* theEvent)
 {
-	VstKeyCode kc = {0};
+	VstKeyCode kc = {};
     NSString *s = [theEvent charactersIgnoringModifiers];
     if ([s length] == 1)
 	{
@@ -132,7 +101,7 @@ HIDDEN VstKeyCode CreateVstKeyCodeFromNSEvent (NSEvent* theEvent)
 						if ((c >= 'A') && (c <= 'Z'))
 							c += ('a' - 'A');
 						else
-							c = tolower (c);
+							c = static_cast<unichar> (tolower (c));
 						kc.character = c;
 						break;
 					}
@@ -142,27 +111,96 @@ HIDDEN VstKeyCode CreateVstKeyCodeFromNSEvent (NSEvent* theEvent)
     }
 
 	NSUInteger modifiers = [theEvent modifierFlags];
-	if (modifiers & NSShiftKeyMask)
+	if (modifiers & MacEventModifier::ShiftKeyMask)
 		kc.modifier |= MODIFIER_SHIFT;
-	if (modifiers & NSCommandKeyMask)
+	if (modifiers & MacEventModifier::CommandKeyMask)
 		kc.modifier |= MODIFIER_CONTROL;
-	if (modifiers & NSAlternateKeyMask)
+	if (modifiers & MacEventModifier::AlternateKeyMask)
 		kc.modifier |= MODIFIER_ALTERNATE;
-	if (modifiers & NSControlKeyMask)
+	if (modifiers & MacEventModifier::ControlKeyMask)
 		kc.modifier |= MODIFIER_COMMAND;
 
 	return kc;
 }
 
 //------------------------------------------------------------------------------------
+HIDDEN NSString* GetVirtualKeyCodeString (int32_t virtualKeyCode)
+{
+	unichar character = 0;
+	switch (virtualKeyCode)
+	{
+		case VKEY_BACK: character = NSDeleteCharacter; break;
+		case VKEY_TAB: character = NSTabCharacter; break;
+		case VKEY_CLEAR: character = NSClearLineFunctionKey; break;
+		case VKEY_RETURN: character = NSCarriageReturnCharacter; break;
+		case VKEY_PAUSE: character = NSPauseFunctionKey; break;
+		case VKEY_ESCAPE: character = 0x1b; break;
+		case VKEY_SPACE: character = ' '; break;
+		case VKEY_NEXT: character = NSNextFunctionKey; break;
+		case VKEY_END: character = NSEndFunctionKey; break;
+		case VKEY_HOME: character = NSHomeFunctionKey; break;
+		case VKEY_LEFT: character = NSLeftArrowFunctionKey; break;
+		case VKEY_UP: character = NSUpArrowFunctionKey; break;
+		case VKEY_RIGHT: character = NSRightArrowFunctionKey; break;
+		case VKEY_DOWN: character = NSDownArrowFunctionKey; break;
+		case VKEY_PAGEUP: character = NSPageUpFunctionKey; break;
+		case VKEY_PAGEDOWN: character = NSPageDownFunctionKey; break;
+		case VKEY_SELECT: character = NSSelectFunctionKey; break;
+		case VKEY_PRINT: character = NSPrintFunctionKey; break;
+		case VKEY_ENTER: character = NSEnterCharacter; break;
+		case VKEY_SNAPSHOT: break;
+		case VKEY_INSERT: character = NSInsertFunctionKey; break;
+		case VKEY_DELETE: character = NSDeleteFunctionKey; break;
+		case VKEY_HELP: character = NSHelpFunctionKey; break;
+		case VKEY_NUMPAD0: break;
+		case VKEY_NUMPAD1: break;
+		case VKEY_NUMPAD2: break;
+		case VKEY_NUMPAD3: break;
+		case VKEY_NUMPAD4: break;
+		case VKEY_NUMPAD5: break;
+		case VKEY_NUMPAD6: break;
+		case VKEY_NUMPAD7: break;
+		case VKEY_NUMPAD8: break;
+		case VKEY_NUMPAD9: break;
+		case VKEY_MULTIPLY: break;
+		case VKEY_ADD: break;
+		case VKEY_SEPARATOR: break;
+		case VKEY_SUBTRACT: break;
+		case VKEY_DECIMAL: break;
+		case VKEY_DIVIDE: break;
+		case VKEY_F1: character = NSF1FunctionKey; break;
+		case VKEY_F2: character = NSF2FunctionKey; break;
+		case VKEY_F3: character = NSF3FunctionKey; break;
+		case VKEY_F4: character = NSF4FunctionKey; break;
+		case VKEY_F5: character = NSF5FunctionKey; break;
+		case VKEY_F6: character = NSF6FunctionKey; break;
+		case VKEY_F7: character = NSF7FunctionKey; break;
+		case VKEY_F8: character = NSF8FunctionKey; break;
+		case VKEY_F9: character = NSF9FunctionKey; break;
+		case VKEY_F10: character = NSF10FunctionKey; break;
+		case VKEY_F11: character = NSF11FunctionKey; break;
+		case VKEY_F12: character = NSF12FunctionKey; break;
+		case VKEY_NUMLOCK: break;
+		case VKEY_SCROLL: break;
+		case VKEY_EQUALS: break;
+	}
+	if (character != 0)
+		return [NSString stringWithFormat:@"%C", character];
+	return nil;
+}
+
+//------------------------------------------------------------------------------------
 HIDDEN int32_t eventButton (NSEvent* theEvent)
 {
-	if ([theEvent type] == NSMouseMoved)
+	if ([theEvent type] == MacEventType::MouseMoved)
+	{
 		return 0;
+	}
+
 	int32_t buttons = 0;
 	switch ([theEvent buttonNumber])
 	{
-		case 0: buttons = ([theEvent modifierFlags] & NSControlKeyMask) ? kRButton : kLButton; break;
+		case 0: buttons = ([theEvent modifierFlags] & MacEventModifier::ControlKeyMask) ? kRButton : kLButton; break;
 		case 1: buttons = kRButton; break;
 		case 2: buttons = kMButton; break;
 		case 3: buttons = kButton4; break;
@@ -170,5 +208,19 @@ HIDDEN int32_t eventButton (NSEvent* theEvent)
 	}
 	return buttons;
 }
+
+//-----------------------------------------------------------------------------
+HIDDEN void convertPointToGlobal (NSView* view, NSPoint& p)
+{
+	p = [view convertPoint:p toView:nil];
+	if ([view window] == nil)
+		return;
+
+	NSRect r = {};
+	r.origin = p;
+	r = [[view window] convertRectToScreen:r];
+	p = r.origin;
+}
+
 
 #endif // MAC_COCOA

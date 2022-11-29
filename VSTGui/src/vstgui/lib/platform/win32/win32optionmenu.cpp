@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "win32optionmenu.h"
 
@@ -59,10 +29,9 @@ COptionMenu* getItemMenu (int32_t idx, int32_t &idxInMenu, int32_t &offsetIdx, C
 	{
 		idxInMenu = idx - oldIDx;
 		return _menu;
-	}
-	
+	}	
 
-	COptionMenu *menu = 0;
+	COptionMenu *menu = nullptr;
 	CMenuItemIterator it = _menu->getItems ()->begin ();
 	while (it != _menu->getItems ()->end ())
 	{
@@ -78,39 +47,38 @@ COptionMenu* getItemMenu (int32_t idx, int32_t &idxInMenu, int32_t &offsetIdx, C
 }
 
 //-----------------------------------------------------------------------------
-PlatformOptionMenuResult Win32OptionMenu::popup (COptionMenu* optionMenu)
+void Win32OptionMenu::popup (COptionMenu* optionMenu, const Callback& callback)
 {
-	PlatformOptionMenuResult result = {0};
+	vstgui_assert (optionMenu && callback, "arguments are required");
+
+	PlatformOptionMenuResult result = {};
 	
 	//---Transform local coordinates to global coordinates
-	CRect rect (optionMenu->getViewSize ());
-	CPoint p (0, 0);
-	optionMenu->localToFrame (p);
-	rect.offset (p.x, p.y);
+	CRect rect = optionMenu->translateToGlobal (optionMenu->getViewSize ());
+	rect.offset (-optionMenu->getFrame ()->getViewSize ().getTopLeft ());
 
 	int32_t offset;
 
-	if (optionMenu->getStyle () & kPopupStyle)
+	if (optionMenu->isPopupStyle ())
 		offset = 0;
 	else
-		offset = (int32_t)optionMenu->getViewSize ().getHeight ();
+		offset = static_cast<int32_t> (rect.getHeight ());
 
-	CCoord gx = 0, gy = 0;
-	optionMenu->getFrame()->getPosition (gx, gy);
-	gy += rect.top + offset;
-	gx += rect.left;
+	POINT p;
+	p.x = static_cast<LONG> (rect.left);
+	p.y = static_cast<LONG> (rect.top + offset);
+	ClientToScreen (windowHandle, &p);
 
 	int32_t offsetIndex = 0;
-	HMENU menu = createMenu (optionMenu, offsetIndex);
-	if (menu)
+	if (HMENU menu = createMenu (optionMenu, offsetIndex))
 	{
-		int flags = TPM_LEFTALIGN;
+		UINT flags = TPM_LEFTALIGN;
 
 // do we need the following ?
 //		if (lastButton & kRButton)
 //			flags |= TPM_RIGHTBUTTON;
 
-		if (TrackPopupMenu (menu, flags, (int)gx, (int)gy, 0, windowHandle, 0))
+		if (TrackPopupMenu (menu, flags, p.x, p.y, 0, windowHandle, nullptr))
 		{
 			MSG msg;
 			if (PeekMessage (&msg, windowHandle, WM_COMMAND, WM_COMMAND, PM_REMOVE))
@@ -140,7 +108,7 @@ PlatformOptionMenuResult Win32OptionMenu::popup (COptionMenu* optionMenu)
 		}
 		DestroyMenu (menu);
 	}
-	return result;
+	callback (optionMenu, result);
 }
 
 //-----------------------------------------------------------------------------
@@ -148,26 +116,14 @@ HMENU Win32OptionMenu::createMenu (COptionMenu* _menu, int32_t& offsetIdx)
 {
 	HMENU menu = CreatePopupMenu ();
 
-	bool multipleCheck = _menu->getStyle () & (kMultipleCheckStyle & ~kCheckStyle);
+	bool multipleCheck = _menu->isMultipleCheckStyle ();
 
-#if 0
-	if (!multipleCheck && !(_menu->getStyle () & kCheckStyle))
-	{
-		MENUINFO mi = {0};
-		mi.cbSize = sizeof (MENUINFO);
-		mi.fMask = MIM_STYLE;
-		mi.dwStyle = MNS_NOCHECK;
-		SetMenuInfo (menu, &mi);
-	}
-#endif
-
-	MENUINFO mi = {0};
+	MENUINFO mi = {};
 	mi.cbSize = sizeof (MENUINFO);
 	mi.dwStyle = MNS_CHECKORBMP;
 	SetMenuInfo (menu, &mi);
 
 	int flags = 0;
-	int32_t idxSubmenu = 0;
 	int32_t offset = offsetIdx;
 	int32_t nbEntries = _menu->getNbEntries ();
 	offsetIdx += nbEntries;
@@ -178,43 +134,46 @@ HMENU Win32OptionMenu::createMenu (COptionMenu* _menu, int32_t& offsetIdx)
 		CMenuItem* item = (*it);
 		if (item->isSeparator ())
 		{
-			AppendMenu (menu, MF_SEPARATOR, 0, 0);
+			AppendMenu (menu, MF_SEPARATOR, 0, nullptr);
 		}
 		else
 		{
-			char* titleWithPrefixNumbers = 0;
+			char* titleWithPrefixNumbers = nullptr;
 			if (_menu->getPrefixNumbers ())
 			{
-				titleWithPrefixNumbers = (char*)malloc (strlen (item->getTitle ()) + 50);
+				titleWithPrefixNumbers = (char*)std::malloc (strlen (item->getTitle ()) + 50);
 				switch (_menu->getPrefixNumbers ())
 				{
 					case 2:
 					{
-						sprintf (titleWithPrefixNumbers, "%1d %s", inc+1, item->getTitle ());
+						sprintf (titleWithPrefixNumbers, "%1d %s", inc+1, item->getTitle ().data ());
 						break;
 					}
 					case 3:
 					{
-						sprintf (titleWithPrefixNumbers, "%02d %s", inc+1, item->getTitle ());
+						sprintf (titleWithPrefixNumbers, "%02d %s", inc+1, item->getTitle ().data ());
 						break;
 					}
 					case 4:
 					{
-						sprintf (titleWithPrefixNumbers, "%03d %s", inc+1, item->getTitle ());
+						sprintf (titleWithPrefixNumbers, "%03d %s", inc+1, item->getTitle ().data ());
 						break;
 					}
 				}
 			}
-			UTF8StringHelper entryText (titleWithPrefixNumbers ? titleWithPrefixNumbers : item->getTitle ());
+			UTF8StringHelper entryText (titleWithPrefixNumbers ? titleWithPrefixNumbers : item->getTitle ().data ());
 			flags = MF_STRING;
 			if (nbEntries < 160 && _menu->getNbItemsPerColumn () > 0 && inc && !(inc % _menu->getNbItemsPerColumn ()))
 				flags |= MF_MENUBARBREAK;
 
 			if (item->getSubmenu ())
 			{
-				HMENU submenu = createMenu (item->getSubmenu (), offsetIdx);
-				if (submenu)
+				if (HMENU submenu = createMenu (item->getSubmenu (), offsetIdx))
 				{
+					if (multipleCheck && item->isChecked())
+					{
+						flags |= MF_CHECKED;
+					}
 					AppendMenu (menu, flags|MF_POPUP|MF_ENABLED, (UINT_PTR)submenu, (const TCHAR*)entryText);
 				}
 			}
@@ -226,34 +185,37 @@ HMENU Win32OptionMenu::createMenu (COptionMenu* _menu, int32_t& offsetIdx)
 					flags |= MF_GRAYED;
 				if (item->isTitle ())
 					flags |= MF_DISABLED;
-				if (multipleCheck && item->isChecked ())
+				if (multipleCheck)
+				{
+					if (item->isChecked ())
+						flags |= MF_CHECKED;
+				}
+				else if (_menu->isCheckStyle () && inc == _menu->getCurrentIndex (true))
 					flags |= MF_CHECKED;
-				if (_menu->getStyle () & kCheckStyle && inc == _menu->getCurrentIndex ())
-					flags |= MF_CHECKED;
+
 				if (!(flags & MF_CHECKED))
 					flags |= MF_UNCHECKED;
+
 				AppendMenu (menu, flags, offset + inc, entryText);
-				IPlatformBitmap* platformBitmap = item->getIcon () ? item->getIcon ()->getPlatformBitmap () : 0;
+				IPlatformBitmap* platformBitmap = item->getIcon () ? item->getIcon ()->getPlatformBitmap () : nullptr;
 				if (platformBitmap)
 				{
-					Win32BitmapBase* win32Bitmap = dynamic_cast<Win32BitmapBase*> (platformBitmap);
-					if (win32Bitmap)
+					if (auto* win32Bitmap = dynamic_cast<Win32BitmapBase*> (platformBitmap))
 					{
-						MENUITEMINFO mInfo = {0};
+						MENUITEMINFO mInfo = {};
 						mInfo.cbSize = sizeof (MENUITEMINFO);
 						mInfo.fMask = MIIM_BITMAP;
-						HBITMAP hBmp = win32Bitmap->createHBitmap ();
-						if (hBmp)
+						if (HBITMAP hBmp = win32Bitmap->createHBitmap ())
 						{
 							mInfo.hbmpItem = hBmp;
 							SetMenuItemInfo (menu, offset + inc, TRUE, &mInfo);
-							bitmaps.push_back (hBmp);
+							bitmaps.emplace_back (hBmp);
 						}
 					}
 				}
 			}
 			if (titleWithPrefixNumbers)
-				free (titleWithPrefixNumbers);
+				std::free (titleWithPrefixNumbers);
 		}
 		inc++;
 		it++;
@@ -261,6 +223,6 @@ HMENU Win32OptionMenu::createMenu (COptionMenu* _menu, int32_t& offsetIdx)
 	return menu;
 }
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS

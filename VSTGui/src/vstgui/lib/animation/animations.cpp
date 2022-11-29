@@ -1,42 +1,12 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "animations.h"
 #include "../cview.h"
 #include "../cframe.h"
 #include "../controls/ccontrol.h"
-#include <assert.h>
+#include <cassert>
 #include <cmath>
 
 namespace VSTGUI {
@@ -134,41 +104,168 @@ ExchangeViewAnimation::ExchangeViewAnimation (CView* oldView, CView* newView, An
 , viewToRemove (oldView)
 , style (style)
 {
-	assert (newView->isAttached () == false);
-	assert (viewToRemove->isAttached ());
+	vstgui_assert (newView->isAttached () == false);
+	vstgui_assert (viewToRemove->isAttached ());
 
-	viewToRemove->remember ();
-	newView->remember ();
-	CViewContainer* parent = reinterpret_cast<CViewContainer*> (viewToRemove->getParentView ());
-	if (parent)
+	if (auto parent = viewToRemove->getParentView ()->asViewContainer ())
 		parent->addView (newView);
 
-	newViewValueEnd = newView->getAlphaValue ();
-	newView->setAlphaValue (0.f);
+	init ();
 }
 
 //-----------------------------------------------------------------------------
-ExchangeViewAnimation::~ExchangeViewAnimation ()
+ExchangeViewAnimation::~ExchangeViewAnimation () noexcept
 {
-	viewToRemove->forget ();
-	newView->forget ();
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::updateViewSize (CView* view, const CRect& rect)
+{
+	view->invalid ();
+	view->setViewSize (rect);
+	view->setMouseableArea (rect);
+	view->invalid ();
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::init ()
+{
+	if (style == kAlphaValueFade)
+	{
+		oldViewAlphaValueStart = viewToRemove->getAlphaValue ();
+		newViewAlphaValueEnd = newView->getAlphaValue ();
+		newView->setAlphaValue (0.f);
+	}
+	else
+	{
+		destinationRect = viewToRemove->getViewSize ();
+		switch (style)
+		{
+			case kAlphaValueFade: break;
+			case kPushInFromLeft:
+			{
+				doPushInFromLeft (0.f);
+				break;
+			}
+			case kPushInFromRight:
+			{
+				doPushInFromRight (0.f);
+				break;
+			}
+			case kPushInFromTop:
+			{
+				doPushInFromTop (0.f);
+				break;
+			}
+			case kPushInFromBottom:
+			{
+				doPushInFromBottom (0.f);
+				break;
+			}
+			case kPushInOutFromLeft:
+			{
+				doPushInOutFromLeft (0.f);
+				break;
+			}
+			case kPushInOutFromRight:
+			{
+				doPushInOutFromRight (0.f);
+				break;
+			}
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doAlphaFade (float pos)
+{
+	float alpha = oldViewAlphaValueStart - (oldViewAlphaValueStart * pos);
+	viewToRemove->setAlphaValue (alpha);
+	alpha = newViewAlphaValueEnd * pos;
+	newView->setAlphaValue (alpha);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInFromLeft (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord leftOrigin = destinationRect.left;
+	CCoord offset = viewSize.getWidth () * (1.f - pos);
+	viewSize.offset (-viewSize.left, 0);
+	viewSize.offset (leftOrigin - offset, 0);
+	updateViewSize (newView, viewSize);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInFromRight (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord rightOrigin = destinationRect.left + destinationRect.getWidth ();
+	CCoord offset = viewSize.getWidth () * pos;
+	viewSize.offset (-viewSize.left, 0);
+	viewSize.offset (rightOrigin - offset, 0);
+	updateViewSize (newView, viewSize);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInFromTop (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord topOrigin = destinationRect.top;
+	CCoord offset = viewSize.getHeight () * (1.f - pos);
+	viewSize.offset (0, -viewSize.top);
+	viewSize.offset (0, topOrigin - offset);
+	updateViewSize (newView, viewSize);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInFromBottom (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord bottomOrigin = destinationRect.top + destinationRect.getHeight ();
+	CCoord offset = viewSize.getHeight () * pos;
+	viewSize.offset (0, -viewSize.top);
+	viewSize.offset (0, bottomOrigin - offset);
+	updateViewSize (newView, viewSize);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInOutFromLeft (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord offset = viewSize.getWidth () * (1.f - pos);
+	viewSize.offset (-viewSize.left, 0);
+	viewSize.offset (destinationRect.left - offset, 0);
+	updateViewSize (newView, viewSize);
+	
+	offset = viewToRemove->getWidth () * pos;
+	viewSize = destinationRect;
+	viewSize.offset (offset, 0);
+	updateViewSize (viewToRemove, viewSize);
+}
+
+//-----------------------------------------------------------------------------
+void ExchangeViewAnimation::doPushInOutFromRight (float pos)
+{
+	CRect viewSize (newView->getViewSize ());
+	CCoord offset = viewSize.getWidth () * pos;
+	viewSize.offset (-viewSize.left, 0);
+	viewSize.offset ((destinationRect.left + destinationRect.getWidth ()) - offset, 0);
+	updateViewSize (newView, viewSize);
+	
+	offset = viewToRemove->getWidth () * pos;
+	viewSize = destinationRect;
+	viewSize.offset (-offset, 0);
+	updateViewSize (viewToRemove, viewSize);
 }
 
 //-----------------------------------------------------------------------------
 void ExchangeViewAnimation::animationStart (CView* view, IdStringPtr name)
 {
 	#if DEBUG
-	CViewContainer* parent = reinterpret_cast<CViewContainer*> (viewToRemove->getParentView ());
-	assert (view == parent);
+	CViewContainer* parent = viewToRemove->getParentView ()->asViewContainer ();
+	vstgui_assert (view == parent);
 	#endif
-	if (style == kAlphaValueFade)
-	{
-		oldViewValueStart = viewToRemove->getAlphaValue ();
-	}
-	else
-	{
-		newView->setAlphaValue (newViewValueEnd);
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -178,62 +275,37 @@ void ExchangeViewAnimation::animationTick (CView* view, IdStringPtr name, float 
 	{
 		case kAlphaValueFade:
 		{
-			float alpha = oldViewValueStart - (oldViewValueStart * pos);
-			viewToRemove->setAlphaValue (alpha);
-			alpha = newViewValueEnd * pos;
-			newView->setAlphaValue (alpha);
+			doAlphaFade (pos);
 			break;
 		}
 		case kPushInFromLeft:
 		{
-			CRect viewSize (newView->getViewSize ());
-			CCoord leftOrigin = viewToRemove->getViewSize ().left;
-			CCoord offset = viewSize.getWidth () * (1.f - pos);
-			viewSize.offset (-viewSize.left, 0);
-			viewSize.offset (leftOrigin - offset, 0);
-			newView->invalid ();
-			newView->setViewSize (viewSize);
-			newView->setMouseableArea (viewSize);
-			newView->invalid ();
+			doPushInFromLeft (pos);
 			break;
 		}
 		case kPushInFromRight:
 		{
-			CRect viewSize (newView->getViewSize ());
-			CCoord rightOrigin = viewToRemove->getViewSize ().left + viewToRemove->getViewSize ().getWidth ();
-			CCoord offset = viewSize.getWidth () * pos;
-			viewSize.offset (-viewSize.left, 0);
-			viewSize.offset (rightOrigin - offset, 0);
-			newView->invalid ();
-			newView->setViewSize (viewSize);
-			newView->setMouseableArea (viewSize);
-			newView->invalid ();
+			doPushInFromRight (pos);
 			break;
 		}
 		case kPushInFromTop:
 		{
-			CRect viewSize (newView->getViewSize ());
-			CCoord topOrigin = viewToRemove->getViewSize ().top;
-			CCoord offset = viewSize.getHeight () * (1.f - pos);
-			viewSize.offset (0, -viewSize.top);
-			viewSize.offset (0, topOrigin - offset);
-			newView->invalid ();
-			newView->setViewSize (viewSize);
-			newView->setMouseableArea (viewSize);
-			newView->invalid ();
+			doPushInFromTop (pos);
 			break;
 		}
 		case kPushInFromBottom:
 		{
-			CRect viewSize (newView->getViewSize ());
-			CCoord bottomOrigin = viewToRemove->getViewSize ().top + viewToRemove->getViewSize ().getHeight ();
-			CCoord offset = viewSize.getHeight () * pos;
-			viewSize.offset (0, -viewSize.top);
-			viewSize.offset (0, bottomOrigin - offset);
-			newView->invalid ();
-			newView->setViewSize (viewSize);
-			newView->setMouseableArea (viewSize);
-			newView->invalid ();
+			doPushInFromBottom (pos);
+			break;
+		}
+		case kPushInOutFromLeft:
+		{
+			doPushInOutFromLeft (pos);
+			break;
+		}
+		case kPushInOutFromRight:
+		{
+			doPushInOutFromRight (pos);
 			break;
 		}
 	}
@@ -242,13 +314,10 @@ void ExchangeViewAnimation::animationTick (CView* view, IdStringPtr name, float 
 //-----------------------------------------------------------------------------
 void ExchangeViewAnimation::animationFinished (CView* view, IdStringPtr name, bool wasCanceled)
 {
-	if (wasCanceled)
+	animationTick (nullptr, nullptr, 1.f);
+	if (auto viewContainer = viewToRemove->getParentView ()->asViewContainer ())
 	{
-		animationTick (0, 0, 1.f);
-	}
-	if (viewToRemove->getParentView ())
-	{
-		reinterpret_cast<CViewContainer*> (viewToRemove->getParentView ())->removeView (viewToRemove);
+		viewContainer->removeView (viewToRemove);
 	}
 }
 
@@ -266,7 +335,7 @@ ControlValueAnimation::ControlValueAnimation (float endValue, bool forceEndValue
 //-----------------------------------------------------------------------------
 void ControlValueAnimation::animationStart (CView* view, IdStringPtr name)
 {
-	CControl* control = dynamic_cast<CControl*> (view);
+	auto* control = dynamic_cast<CControl*> (view);
 	if (control)
 		startValue = control->getValue ();
 }
@@ -274,18 +343,20 @@ void ControlValueAnimation::animationStart (CView* view, IdStringPtr name)
 //-----------------------------------------------------------------------------
 void ControlValueAnimation::animationTick (CView* view, IdStringPtr name, float pos)
 {
-	CControl* control = dynamic_cast<CControl*> (view);
+	auto* control = dynamic_cast<CControl*> (view);
 	if (control)
 	{
 		float value = startValue + (endValue - startValue) * pos;
 		control->setValue (value);
+		if (control->isDirty ())
+			control->invalid ();
 	}
 }
 
 //-----------------------------------------------------------------------------
 void ControlValueAnimation::animationFinished (CView* view, IdStringPtr name, bool wasCanceled)
 {
-	CControl* control = dynamic_cast<CControl*> (view);
+	auto* control = dynamic_cast<CControl*> (view);
 	if (control)
 	{
 		if (!wasCanceled || forceEndValueOnFinish)

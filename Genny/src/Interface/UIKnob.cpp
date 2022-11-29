@@ -6,7 +6,7 @@
 #include "UIContextMenu.h"
 #include "lib/platform/win32/win32frame.h"
 
-UIKnob::UIKnob (const CRect& size, CControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset):
+UIKnob::UIKnob (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset):
 	CAnimKnob(size, listener, tag, subPixmaps, heightOfOneImage, background, offset),
 	GennyInterfaceObject(iface)
 {
@@ -27,64 +27,21 @@ UIKnob::~UIKnob()
 
 CMouseEventResult UIKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
 {
-	if(buttons.isRightButton())
+
+	if (buttons.isRightButton())
 	{
-		VSTBase* b = getVst()->getBase();
-
-		Win32Frame* winFrame = (Win32Frame*)_interface->getFrame()->getPlatformFrame();
-		CPoint mousePos, globalPos;
-		winFrame->getCurrentMousePosition(mousePos);
-		winFrame->getGlobalPosition(globalPos);
-		mousePos = mousePos + globalPos;
-
-		
-		GennyPatch* patch0 = static_cast<GennyPatch*>(getVst()->getPatch(0));
-		int numParams = GennyPatch::getNumParameters();
-		int patchNum = patch0->SelectedInstrument;
-		int paramTag = (numParams * patchNum) + tag;
-
-
-#if !BUILD_VST
-		b->AdjustParamPopup(ContextMenu, paramTag, 0, DefaultMenuID);
-
-		//unsigned int flags = MF_STRING; 
-		//AppendMenuA(ContextMenu, MF_SEPARATOR, 9999, "Separator");
-		//AppendMenuA(ContextMenu, flags, 100, "Assign To Note Velocity");
-
-		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow() , NULL);
-		if (r)
-		{
-			//if (r > 100 && r < 200) //FL Studio menu options seem to lie in the range of 1024 - whatever
-			//{
-			//	if (r == 100)
-			//	{
-			//	}
-			//}
-			//else
-				int val = b->PlugHost->Dispatcher(b->HostTag, FHD_ParamMenu, paramTag, r - DefaultMenuID);
-		}
-#else
-		
-		int count = GetMenuItemCount(ContextMenu);
-		while (count > 0) {
-			DeleteMenu(ContextMenu, count - 1, MF_BYPOSITION);
-			count--;
-		}
-
-		unsigned int flags = MF_STRING;
-		AppendMenuA(ContextMenu, flags, 1, "MIDI Learn");
-		AppendMenuA(ContextMenu, flags, 2, "MIDI Forget");
-		BOOL r = TrackPopupMenu(ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow(), NULL);
-		if (r == 1)
-			b->MidiLearn(paramTag);		
-		else if (r == 2)
-			b->MidiForget(paramTag);
-#endif
-
+		onMouseUpContext(tag);
 		return kMouseEventHandled;
 	}
-	//else
-	//	return CKnob::onMouseUp(where, buttons);
+	return __super::onMouseUp(where, buttons);
+}
+
+CMouseEventResult UIKnob::onMouseMoved(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+		return kMouseEventHandled;
+
+	return __super::onMouseMoved(where, buttons);
 }
 
 CMouseEventResult UIKnob::onMouseDown (CPoint& where, const CButtonState& buttons)
@@ -92,7 +49,19 @@ CMouseEventResult UIKnob::onMouseDown (CPoint& where, const CButtonState& button
 	if(buttons.isRightButton())
 		return kMouseEventHandled;
 	else 
-		return CKnob::onMouseDown(where, buttons);
+		return __super::onMouseDown(where, buttons);
+}
+
+CMouseEventResult UIKnob::onMouseEntered(CPoint& where, const CButtonState& buttons)
+{
+	getInterface()->hoverControl(this);
+	return __super::onMouseEntered(where, buttons);
+}
+
+CMouseEventResult UIKnob::onMouseExited(CPoint& where, const CButtonState& buttons)
+{
+	getInterface()->unhoverControl(this);
+	return __super::onMouseExited(where, buttons);
 }
 
 void UIKnob::setValue(float val)

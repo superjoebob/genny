@@ -18,8 +18,11 @@ void SN76489::Reset()
     send(0xFF);  
 }
 
+#define PIN_WE_LOW PORTE &= ~(1 << PE4)
+#define PIN_WE_HIGH PORTE |= (1 << PE4)
 void SN76489::send(uint8_t data)
 {
+    cli();
     //Byte 1
     // 1   REG ADDR        DATA
     //|1| |R0|R1|R2| |F6||F7|F8|F9|
@@ -28,11 +31,12 @@ void SN76489::send(uint8_t data)
     //  0           DATA
     //|0|0| |F0|F1|F2|F3|F4|F5|
 
-    digitalWriteFast(_WE, HIGH);
+    PIN_WE_HIGH;
     PORTF = data;
-    digitalWriteFast(_WE, LOW);
-    delayMicroseconds(25);
-    digitalWriteFast(_WE, HIGH);
+    PIN_WE_LOW;
+    delayMicroseconds(10);
+    PIN_WE_HIGH;
+    sei();
 }
 
 

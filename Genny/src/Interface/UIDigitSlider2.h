@@ -6,7 +6,7 @@
 #include "YM2612Enum.h"
 #include "UISlider.h"
 class UIOperator;
-class UIDigitSlider2 : public CControl, public CControlListener, public GennyInterfaceObject
+class UIDigitSlider2 : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIDigitSlider2(const CPoint& pos, int width, UIInstrument* owner, YM2612Param param, int op);

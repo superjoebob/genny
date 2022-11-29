@@ -63,6 +63,10 @@ avrdude -c arduino -p usb1286 -P COM16 -b 19200 -U flash:w:"LOCATION_OF_YOUR_PRO
 #include <LiquidCrystal.h>
 #include <EEPROM.h>
 #include "LCDChars.h"
+#include <util/atomic.h>
+#include <usb_api2.h>
+
+//usb_midi_class2		usbMIDI2 = usb_midi_class2();
 
 //Music
 #include "Adjustments.h" //Look in this file for tuning & pitchbend settings
@@ -123,12 +127,14 @@ char fileName[MAX_FILE_NAME_SIZE];
 uint32_t numberOfFiles = 0;
 uint32_t currentFileNumber = 0;
 bool isFileValid = false;
-int lightFade[8];
+bool lightState[8];
+bool lightStatePrev[8];
 
 //Favorites
 uint8_t currentFavorite = 0xFF; //If favorite = 0xFF, go back to SD card voices
 
 //Prototypes
+void HandleSample(byte smp1, byte smp2);
 void KeyOn(byte channel, byte key, byte velocity);
 void KeyOff(byte channel, byte key, byte velocity);
 void ProgramChange(byte channel, byte program);
@@ -156,32 +162,126 @@ void ProgramNewFavorite();
 void SDReadFailure();
 Voice GetFavoriteFromEEPROM(uint16_t index);
 
+volatile unsigned short samplesReady = 0;
+volatile bool fast = false;
 const int kSampleBufferSize = 1024;
 byte _sampleBuffer[kSampleBufferSize];
-int _currentSample = 0;
-int _lastFlushSample = 0;
+volatile unsigned short _sampleBufferWritePosition = 0;
+volatile unsigned short _sampleBufferReadPosition = 0;
+volatile unsigned char _sampleReady;
+volatile unsigned short _samplesInBuffer = 0;
 
-int writeSample = 0;
+unsigned char counterSetting = 0;
+volatile int _lastMicros = 0;
+volatile int _microsCalc = 0;
+
+
+volatile bool feed = false;
 ISR(TIMER2_OVF_vect) //Timer updates at 11025hz for DAC timing
 {
-  writeSample++;
-  TCNT2 = 74;
-  TCNT2 = 81;
+  TCNT2 = _samplesInBuffer > 48 ? (counterSetting + 4) : counterSetting;
+
+  //TCNT2 = _samplesInBuffer > 64 ? 80 : 74;
+
+
+
+  //TCNT2 = _samplesInBuffer > 30 ? 75 : 74;
+  //TCNT2 = 75;
+  feed = true;
+
+  //TCNT2 = 74;
+
+
+
+
+
+  //TCNT2 = fast ? 81 : 79;
+
+  //74 is exact number for 11025hz
+  //164 is exact number for 22050hz
+  //TCNT2 = 90;
+  //TCNT2 = 165;
+
+  //YM2612::interrupted = true;
+
+  //samplesReady++;
+
+  /*if(_sampleBufferReadPosition != _sampleBufferWritePosition)
+  {    
+      ym2612.interruptSendLower(0x2A, _sampleBuffer[_sampleBufferReadPosition]);
+      //ym2612.interruptSend(0x2A, _sampleBuffer[_sampleBufferReadPosition], false);
+      _sampleBufferReadPosition = (_sampleBufferReadPosition + 1) % kSampleBufferSize;
+  } */
+
+  /*int microSeconds = micros();
+  _microsCalc = microSeconds - _lastMicros;
+
+  //it took 181ms, so we want 181ms
+  //it took 200ms, so we want
+
+  TCNT2 = 181 - min(microSeconds - _lastMicros, 181);
+  _lastMicros = microSeconds;*/
 }
 
+const int numSampleRates = 4;
+int sampleRates[numSampleRates]
+{
+  8000, 11025, 16000, 22050
+};
+volatile unsigned char sampleRateIndex = 1;
+volatile unsigned char lastSampleRateIndex = 1;
+
+
+int dacRate = 11025;
+void updateDACSamplerate(int rate)
+{
+  dacRate = rate;
+
+  lcd.setCursor(0,3);
+  lcd.print("Drums: ");
+  lcd.print(rate);
+  lcd.print("hz");
+
+  //(16mhz / 8(prescaler)) = 2000000.  5 is fudgynumber
+  counterSetting = (255 - (2000000.0f / rate)) + 2;
+}
+
+bool gennyLightsEnabled = true;
+void LCDRedraw_GENNY()
+{
+  lcd.clear();
+  lcd.home();
+  
+  lcd.setCursor(0,0);
+  lcd.print("Ready for GENNY!");
+  lcd.setCursor(0,1);
+  lcd.print("Press KNOB to Exit");
+  lcd.setCursor(0,2);
+  lcd.print("or turn it to dim.");
+  updateDACSamplerate(sampleRates[sampleRateIndex]);
+}
+
+
 bool gennyMode = true;
+bool gennyModeChange = true;
 void setup() 
 {
+  //_readySamples = 0;
+  _sampleBufferWritePosition = 0;
+  _sampleBufferReadPosition = 0;
+  
   //DAC timer
   TCNT2 = 74;
 	TCCR2A = 0x00;
-	TCCR2B = (1<<CS11);  // Timer mode with 8 prescler
-  TIMSK2 = (1 << TOIE2);
+  TCCR2B = TCCR2B & B11111000 |  bit (CS11); // Divide clock by 8 (only CS11 does this, the other bits are generic settings that don't need touching)
+  //TCCR2B = TCCR2B & B11111000 | B00000010;
+  TIMSK2 = (1 << TOIE2); //Enable timer interrupt
 
   //YM2612 and PSG Clock Generation
   pinMode(25, OUTPUT);
   pinMode(16, OUTPUT);
   
+
   //8MHz on PB5 (YM2612)
   // set up Timer 1
   TCCR1A = bit (COM1A0);  // toggle OC1A on Compare Match
@@ -194,15 +294,6 @@ void setup()
   TCCR3B = bit (WGM32) | bit (CS30);   // CTC, no prescaling
   OCR3A =  1; //Divide by 4
 
-
-  lightFade[0] = 0;
-  lightFade[1] = 0;
-  lightFade[2] = 0;
-  lightFade[3] = 0;
-  lightFade[4] = 0;
-  lightFade[5] = 0;
-  lightFade[6] = 0;
-  lightFade[7] = 0;
 
   Serial.begin(115200);
   lcd.createChar(0, arrowCharLeft);
@@ -225,11 +316,12 @@ void setup()
   sn76489.Reset();
   ym2612.Reset();
 
-  usbMIDI.setHandleNoteOn(KeyOn);
-  usbMIDI.setHandleNoteOff(KeyOff);
-  usbMIDI.setHandleProgramChange(ProgramChange);
-  usbMIDI.setHandlePitchChange(PitchChange);
-  usbMIDI.setHandleControlChange(ControlChange);
+  usbMIDI2.setHandleSampleMessage(HandleSample);
+  usbMIDI2.setHandleNoteOn(KeyOn);
+  usbMIDI2.setHandleNoteOff(KeyOff);
+  usbMIDI2.setHandleProgramChange(ProgramChange);
+  usbMIDI2.setHandlePitchChange(PitchChange);
+  usbMIDI2.setHandleControlChange(ControlChange);
 
   MIDI.setHandleNoteOn(KeyOn);
   MIDI.setHandleNoteOff(KeyOff);
@@ -253,16 +345,12 @@ void setup()
   {
     pinMode(leds[i], OUTPUT);
     digitalWrite(leds[i], LOW);
+    lightState[i] = false;
+    lightStatePrev[i] = false;
   }
   IntroLEDs();
 
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Ready for GENNY!");
-  lcd.setCursor(0,2);
-  lcd.print("Press KNOB to");
-  lcd.setCursor(0,3);
-  lcd.print("exit GENNY mode.");
+  LCDRedraw_GENNY();
 
   attachInterrupt(digitalPinToInterrupt(ENC_BTN), HandleRotaryButtonDown, FALLING);
 }
@@ -280,6 +368,7 @@ void ExitGennyMode()
   ym2612.SetVoice(voices[0]);
   DumpVoiceData(voices[0]);
   LCDRedraw();
+  gennyMode = false;
 }
 
 void PutFavoriteIntoEEPROM(Voice v, uint16_t index)
@@ -517,7 +606,7 @@ void removeMeta() //Remove useless meta files
 void HandleRotaryButtonDown()
 {
   if(gennyMode)
-    ExitGennyMode();
+    gennyModeChange = false;
     else
   {
     lcdSelectionIndex++;
@@ -585,6 +674,7 @@ void LCDRedraw(uint8_t graphicCursorPos)
     lcd.print("Voice #"); lcd.print(fv.voiceNumber); lcd.print("   "); lcd.write(2); lcd.print(currentFavorite);
   }
 }
+
 
 void ResetSoundChips()
 {
@@ -729,71 +819,117 @@ void PitchChange(byte channel, int pitch)
   }
 }
 
+int dacLight = 0;
 void KeyOn(byte channel, byte key, byte velocity)
 {
   if(gennyMode)
   {
-    if(key == 123 && velocity == 124)
+    dacLight = 1000;
+
+    channel -= 1;
+    byte val1 = (key << 1) | ((channel >> 1) & 1);
+    byte val2 = (velocity << 1) | ((channel) & 1);
+
+    _sampleBuffer[_sampleBufferWritePosition] = val2;
+    _sampleBufferWritePosition = (_sampleBufferWritePosition + 1) % kSampleBufferSize;
+    _sampleBuffer[_sampleBufferWritePosition] = val1;
+    _sampleBufferWritePosition = (_sampleBufferWritePosition + 1) % kSampleBufferSize;
+
+    /*if(key == 123 && velocity == 124)
     {
       BlinkLED(1);
       ym2612.ReleaseSustainedKeys();
       sn76489.ReleaseSustainedKeys();
-    }
+    }*/
     return;
   }
-
-  stopLCDFileUpdate = true;
-  if(channel == YM_CHANNEL || channel == YM_VELOCITY_CHANNEL)
-  {
-    if(isFileValid || currentFavorite != 0xFF)
-      ym2612.SetChannelOn(key+SEMITONE_ADJ_YM, velocity, channel == YM_VELOCITY_CHANNEL);
-  }
-  else if(channel == PSG_CHANNEL || channel == PSG_VELOCITY_CHANNEL)
-  {
-    sn76489.SetChannelOn(key+SEMITONE_ADJ_PSG, velocity, channel == PSG_VELOCITY_CHANNEL);
-  }
-  else if(channel == PSG_NOISE_CHANNEL)
-  {
-    sn76489.SetNoiseOn(key, velocity, 1);
-  }
 }
+
+bool eating = false;
+bool trySampling()
+{
+    int buf = 32 * (sampleRateIndex + 1);
+    if(_samplesInBuffer > buf)
+      eating = true;
+    else if(_samplesInBuffer < 8)
+      eating = false;
+
+    if(eating && feed)
+    {
+      feed = false;
+      if(_sampleBufferReadPosition != _sampleBufferWritePosition)
+      {    
+          ym2612.sendLower(0x2A, _sampleBuffer[_sampleBufferReadPosition]);
+          //ym2612.interruptSend(0x2A, _sampleBuffer[_sampleBufferReadPosition], false);
+          _sampleBufferReadPosition = (_sampleBufferReadPosition + 1) % kSampleBufferSize;
+          _samplesInBuffer--;
+      } 
+      return true;
+    } 
+
+    return false;
+}
+
+void HandleSample(byte smp1, byte smp2)
+{
+    dacLight = 1000;
+    _sampleBuffer[_sampleBufferWritePosition] = smp1;
+    _sampleBufferWritePosition = (_sampleBufferWritePosition + 1) % kSampleBufferSize;
+    _sampleBuffer[_sampleBufferWritePosition] = smp2;
+    _sampleBufferWritePosition = (_sampleBufferWritePosition + 1) % kSampleBufferSize;
+
+    _samplesInBuffer += 2;
+}
+
+
 
 void KeyOff(byte channel, byte key, byte velocity)
 {
   if(gennyMode)
   {
-    channel -= 1;
-
-    byte val1 = (key << 1) | ((channel >> 1) & 1);
-    byte val2 = (velocity << 1) | ((channel) & 1);
-    
-    channel = channel >> 2;
-    if(channel == 3)
+    if(channel == 2)
     {
-      _sampleBuffer[_currentSample] = val2;
-      _currentSample = (_currentSample + 1) % kSampleBufferSize;
-      _sampleBuffer[_currentSample] = val1;
-      _currentSample = (_currentSample + 1) % kSampleBufferSize;
+       if(velocity < 10)
+       {
+          sn76489.send(key);
+          if(velocity > 0)
+          {
+            if(velocity == 1)
+              lightState[6] = true;
+            else if(velocity == 2)
+              lightState[6] = false;
+            else if(velocity == 3)
+              lightState[7] = true;
+            else if(velocity == 4)
+              lightState[7] = false;
+          }
+       }
+      else
+      {
+        sampleRateIndex = key;
+        LCDRedraw_GENNY();
+      }
     }
-    else if(channel == 2)
-      sn76489.send(val1);
     else if(channel == 1)
-        ym2612.send(val1, val2, true);
+      ym2612.sendUpper(key, velocity);
     else if(channel == 0)
     {
-        if(val1 == 0x28)
-        {
-          byte chan = val2 & 0x7;
-          if(chan > 2)
-            chan -= 1;  
+      if(key == 0x28)
+      {
+        byte chan = velocity & 0x7;
+        if(chan > 2)
+          chan -= 1;  
 
-          if((val2 & 0xF0) != 0)
-            lightFade[chan] = 3;
-          else
-            lightFade[chan] = 1;
-        }
+        if(chan == 5)
+          dacLight = 0;
+          
+        if((velocity & 0xF0) != 0)
+          lightState[chan] = true;
+        else
+          lightState[chan] = false;
+      }
 
-        ym2612.send(val1, val2, false);
+      ym2612.sendLower(key, velocity);
     }
   }
   else
@@ -989,6 +1125,25 @@ void HandleSerialIn()
   // }
 }
 
+void setLightState(int light, bool state)
+{
+  if(light < 6)
+  {
+    if(state)
+      PORTD |= (1 << leds[light]);
+    else
+      PORTD &= ~(1 << leds[light]);
+  }
+  else
+  {
+    if(state)
+      PORTB |= (1 << (leds[light] - 20));
+    else
+      PORTB &= ~(1 << (leds[light] - 20));
+  }
+}
+
+
 void HandleRotaryEncoder()
 {
   long enc = encoder.read();
@@ -1024,6 +1179,50 @@ void HandleRotaryEncoder()
     encoderPos = enc;
   }
 }
+
+void HandleRotaryEncoder_GENNY()
+{
+  long enc = encoder.read();
+  if(enc != encoderPos && enc % 4 == 0) //Rotary encoders often have multiple steps between each descrete 'click.' In this case, it is 4
+  {
+    bool isEncoderUp = enc > encoderPos;
+    if(isEncoderUp)
+      gennyLightsEnabled = true;
+    else
+    {
+      gennyLightsEnabled = false;
+      for(int i = 0; i < 8; i++)
+      {
+          setLightState(i, false);
+          lightStatePrev[i] = false;
+      }
+    }
+  }
+  encoderPos = enc;
+
+  /*long enc = encoder.read();
+  if(enc != encoderPos && enc % 4 == 0) //Rotary encoders often have multiple steps between each descrete 'click.' In this case, it is 4
+  {
+    bool isEncoderUp = enc > encoderPos;
+
+    if(isEncoderUp)
+      sampleRateIndex += 1;
+    else if(sampleRateIndex > 0)
+      sampleRateIndex -= 1;
+
+    if(sampleRateIndex >= numSampleRates)
+      sampleRateIndex = numSampleRates - 1;
+    if(sampleRateIndex < 0)
+      sampleRateIndex = 0;
+
+    if(lastSampleRateIndex != sampleRateIndex)
+      LCDRedraw_GENNY(); 
+
+    lastSampleRateIndex = sampleRateIndex;
+  }
+  encoderPos = enc;*/
+}
+
 
 uint32_t prevMilli = 0;
 uint16_t scrollDelay = 500;
@@ -1185,13 +1384,14 @@ void ProgramNewFavorite()
 }
 
 
+bool sampling = false;
+int ref = 0;
 void loop() 
 {
-  usbMIDI.read();
-  MIDI.read();
-
+  usbMIDI2.read(0, gennyMode);
   if(gennyMode == false)
   {
+    MIDI.read();
     HandleRotaryEncoder();
     if(redrawLCDOnNextLoop)
     {
@@ -1205,35 +1405,68 @@ void loop()
     byte portARead = ~PINA;
     if(portARead)
       HandleFavoriteButtons(portARead);
-
   }
   else
-  {
-    for(int i = 0; i < 8; i++)
+  { 
+    HandleRotaryEncoder_GENNY();
+    if(gennyModeChange != gennyMode)
     {
-      if(lightFade[i] == 1)
+      if(gennyModeChange == false)
+        ExitGennyMode();
+    }
+
+    if(lastSampleRateIndex != sampleRateIndex)
+    {
+      LCDRedraw_GENNY();    
+      lastSampleRateIndex = sampleRateIndex;
+    }
+
+
+    if(dacLight > 0)
+    {
+      if(dacLight == 1)
+        lightState[5] = false;
+      else
+        lightState[5] = true;
+      dacLight--;
+    }
+
+    if(gennyLightsEnabled)
+    {
+      for(int i = 0; i < 8; i++)
       {
-        digitalWriteFast(leds[i], LOW);
-        lightFade[i] = 0;
-      }
-      else if(lightFade[i] == 3)  
-      {
-        digitalWriteFast(leds[i], HIGH);
-        lightFade[i] = 2;
+        if(lightState[i] != lightStatePrev[i])
+        {
+          setLightState(i, lightState[i]);
+          lightStatePrev[i] = lightState[i];
+        }
       }
     }
 
-    while(writeSample > 0)
+    trySampling();
+
+    /* ref++;
+    if(ref > 2000)
     {
-      if(_currentSample != _lastFlushSample)
+      int wr = _sampleBufferWritePosition;
+      int rr = _sampleBufferReadPosition;
+      if(wr < rr)
+        wr += kSampleBufferSize;
+
+      int dif = abs(wr - rr);
+      int numLights = (int)((dif / (float)512)* 8.5f); 
+      fast = numLights > 0;
+
+      if(dif > 0)
+        numLights += 1;
+
+
+      for(int i = 0; i <= 7; i++)
       {
-          ym2612.send(0x2A, _sampleBuffer[_lastFlushSample], false);
-          _lastFlushSample++;
-          if(_lastFlushSample >= kSampleBufferSize)
-            _lastFlushSample = 0;
+          lightState[i] = (numLights - 1 > i);
       }
-      writeSample--;
-    }
+      ref = 0;
+    } */
   }
 }
  

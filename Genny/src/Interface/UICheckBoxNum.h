@@ -2,11 +2,18 @@
 #include "UIImage.h"
 #include "UICheckbox.h"
 class GennyInterface;
+class UIAlgorithmSelector;
 class UICheckBoxNum : public UICheckbox
 {
 public:
-	UICheckBoxNum(const CRect& size, int num, CControlListener* listener, long tag, CBitmap* bitmap, GennyInterface* ins, bool special = false, const long style = kRight, int topoff = 0);
+	UICheckBoxNum(const CRect& size, int num, IControlListener* listener, long tag, CBitmap* bitmap, GennyInterface* ins, bool special = false, const long style = (1 << 4), int topoff = 0, UIAlgorithmSelector* algSelector = nullptr);
 	~UICheckBoxNum();
+	virtual CMouseEventResult onMouseUp(CPoint& where, const CButtonState& buttons);
+
+	virtual CMouseEventResult onMouseEntered(CPoint& where, const CButtonState& buttons);
+	virtual CMouseEventResult onMouseExited(CPoint& where, const CButtonState& buttons);
+	virtual bool onWheel(const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
+
 	virtual bool attached (CView* parent);	
 	virtual void setVisible(bool visible);
 
@@ -18,5 +25,6 @@ private:
 	int _num;
 	int _topOff;
 	bool _special;
+	UIAlgorithmSelector* _algSelector;
 	UIImage* _label;
 };

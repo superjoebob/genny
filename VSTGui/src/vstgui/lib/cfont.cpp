@@ -1,38 +1,11 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins :
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistributions of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this
-//     software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED.
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cfont.h"
+#include "cstring.h"
+#include "platform/platformfactory.h"
+#include "platform/iplatformfont.h"
 
 namespace VSTGUI {
 
@@ -40,6 +13,16 @@ namespace VSTGUI {
 // Global Fonts
 //-----------------------------------------------------------------------------
 #if MAC
+	#if TARGET_OS_IPHONE
+	static CFontDesc gSystemFont ("Helvetica", 12);
+	static CFontDesc gNormalFontVeryBig ("ArialMT", 18);
+	static CFontDesc gNormalFontBig ("ArialMT", 14);
+	static CFontDesc gNormalFont ("ArialMT", 12);
+	static CFontDesc gNormalFontSmall ("ArialMT", 11);
+	static CFontDesc gNormalFontSmaller ("ArialMT", 10);
+	static CFontDesc gNormalFontVerySmall ("ArialMT", 9);
+	static CFontDesc gSymbolFont ("Symbol", 12);
+	#else
 	static CFontDesc gSystemFont ("Lucida Grande", 12);
 	static CFontDesc gNormalFontVeryBig ("Arial", 18);
 	static CFontDesc gNormalFontBig ("Arial", 14);
@@ -48,6 +31,7 @@ namespace VSTGUI {
 	static CFontDesc gNormalFontSmaller ("Arial", 10);
 	static CFontDesc gNormalFontVerySmall ("Arial", 9);
 	static CFontDesc gSymbolFont ("Symbol", 12);
+	#endif
 
 #elif WINDOWS
 	static CFontDesc gSystemFont ("Arial", 12);
@@ -60,13 +44,13 @@ namespace VSTGUI {
 	static CFontDesc gSymbolFont ("Symbol", 13);
 
 #else
-	static CFontDesc gSystemFont ("FreeSans", 12);
-	static CFontDesc gNormalFontVeryBig ("FreeSans", 18);
-	static CFontDesc gNormalFontBig ("FreeSans", 14);
-	static CFontDesc gNormalFont ("FreeSans", 12);
-	static CFontDesc gNormalFontSmall ("FreeSans", 11);
-	static CFontDesc gNormalFontSmaller ("FreeSans", 10);
-	static CFontDesc gNormalFontVerySmall ("FreeSans", 9);
+	static CFontDesc gSystemFont ("Arial", 12);
+	static CFontDesc gNormalFontVeryBig ("Arial", 18);
+	static CFontDesc gNormalFontBig ("Arial", 14);
+	static CFontDesc gNormalFont ("Arial", 12);
+	static CFontDesc gNormalFontSmall ("Arial", 11);
+	static CFontDesc gNormalFontSmaller ("Arial", 10);
+	static CFontDesc gNormalFontVerySmall ("Arial", 9);
 	static CFontDesc gSymbolFont ("Symbol", 13);
 
 #endif
@@ -85,76 +69,66 @@ const CFontRef kSymbolFont				= &gSymbolFont;
 /*! @class CFontDesc
 The CFontDesc class replaces the old font handling. You have now the possibilty to use whatever font you like
 as long as it is available on the system. You should cache your own CFontDesc as this speeds up drawing on some systems.
+
+\note New in 4.9: It's now possible to use custom fonts. Fonts must reside inside the Bundle/Package at PackageRoot/Resources/Fonts/.
 */
 //-----------------------------------------------------------------------------
-CFontDesc::CFontDesc (UTF8StringPtr inName, const CCoord& inSize, const int32_t inStyle)
-: name (0)
-, size (inSize)
+CFontDesc::CFontDesc (const UTF8String& inName, const CCoord& inSize, const int32_t inStyle)
+: size (inSize)
 , style (inStyle)
-, platformFont (0)
+, platformFont (nullptr)
 {
 	setName (inName);
 }
 
 //-----------------------------------------------------------------------------
 CFontDesc::CFontDesc (const CFontDesc& font)
-: name (0)
-, size (0)
+: size (0)
 , style (0)
-, platformFont (0)
+, platformFont (nullptr)
 {
 	*this = font;
 }
 
+//------------------------------------------------------------------------
+CFontDesc::~CFontDesc () noexcept = default;
+
 //-----------------------------------------------------------------------------
-CFontDesc::~CFontDesc ()
+void CFontDesc::beforeDelete ()
 {
 	freePlatformFont ();
-	setName (0);
 }
 
 //-----------------------------------------------------------------------------
-IPlatformFont* CFontDesc::getPlatformFont ()
+auto CFontDesc::getPlatformFont () const -> const PlatformFontPtr
 {
-	if (platformFont == 0)
-		platformFont = IPlatformFont::create (name, size, style);
+	if (platformFont == nullptr)
+		platformFont = getPlatformFactory ().createFont (name, size, style);
 	return platformFont;
 }
 
 //-----------------------------------------------------------------------------
-IFontPainter* CFontDesc::getFontPainter ()
+const IFontPainter* CFontDesc::getFontPainter () const
 {
-	IPlatformFont
-* pf = getPlatformFont ();
+	IPlatformFont* pf = getPlatformFont ();
 	if (pf)
 		return pf->getPainter ();
-	return 0;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
 void CFontDesc::freePlatformFont ()
 {
-	if (platformFont)
-	{
-		platformFont->forget ();
-		platformFont = 0;
-	}
+	platformFont = nullptr;
 }
 
 //-----------------------------------------------------------------------------
-void CFontDesc::setName (UTF8StringPtr newName)
+void CFontDesc::setName (const UTF8String& newName)
 {
-	if (newName && name && !strcmp (newName, name))
+	if (name == newName)
 		return;
 
-	if (name)
-		free (name);
-	name = 0;
-	if (newName)
-	{
-		name = (UTF8StringBuffer)malloc (strlen (newName) + 1);
-		strcpy (name, newName);
-	}
+	name = newName;
 	freePlatformFont ();
 }
 
@@ -184,11 +158,11 @@ CFontDesc& CFontDesc::operator = (const CFontDesc& f)
 //-----------------------------------------------------------------------------
 bool CFontDesc::operator == (const CFontDesc& f) const
 {
-	if (strcmp (name, f.getName ()))
-		return false;
 	if (size != f.getSize ())
 		return false;
 	if (style != f.getStyle ())
+		return false;
+	if (name != f.getName ())
 		return false;
 	return true;
 }
@@ -206,4 +180,4 @@ void CFontDesc::cleanup ()
 	gSymbolFont.freePlatformFont ();
 }
 
-} // namespace
+} // VSTGUI

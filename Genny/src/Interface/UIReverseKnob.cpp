@@ -7,7 +7,7 @@
 #include "UIOperator.h"
 #include "UIDigitDisplay.h"
 
-UIReverseKnob::UIReverseKnob(const CRect& size, CControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset):
+UIReverseKnob::UIReverseKnob(const CRect& size, IControlListener* listener, long tag, long subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset):
 	UIKnob(size, this, tag, subPixmaps, heightOfOneImage, background, iface, offset)
 {
 	_realListener = listener;

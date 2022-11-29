@@ -19,7 +19,7 @@ UIDigitSlider2::UIDigitSlider2(const CPoint& pos, int width, UIInstrument* owner
 {
 	int offset = 0;
 
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = getIndexBaron();
 	int index = baron->getYMParamIndex(param, op);
 	tag = index;

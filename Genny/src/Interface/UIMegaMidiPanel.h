@@ -4,7 +4,8 @@
 #include "UIPresetsAndInstrumentsPanel.h"
 class UIPresetElement;
 class UIMegaMidiPortSpinner;
-class UIMegaMidiPanel : public CControl, public CControlListener, public GennyInterfaceObject
+class UIBendRangeSpinner;
+class UIMegaMidiPanel : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIMegaMidiPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner);
@@ -30,6 +31,7 @@ private:
 #else
 	UIMegaMidiPortSpinner* _portSelector;
 #endif
+	UIBendRangeSpinner* _bendSelector;
 	CCheckBox* _muteCheck;
 	CCheckBox* _emuCheck;
 

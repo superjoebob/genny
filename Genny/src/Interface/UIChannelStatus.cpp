@@ -10,7 +10,7 @@ UIChannelStatus::UIChannelStatus(UIInstrument* owner):
 	GennyInterfaceObject(owner),
 	_owner(owner)
 {
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
 	UIBitmap buttonImage(PNG_CHANNELRADIO);

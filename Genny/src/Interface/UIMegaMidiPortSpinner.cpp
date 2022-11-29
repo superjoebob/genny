@@ -7,7 +7,7 @@
 #include "UIInstrumentsPanel.h"
 
 UIMegaMidiPortSpinner::UIMegaMidiPortSpinner(CPoint point, GennyInterfaceObject* owner):
-	CControl(CRect(point.x, point.y, point.x + 20, point.y + 30), (CControlListener*)owner),
+	CControl(CRect(point.x, point.y, point.x + 20, point.y + 30), (IControlListener*)owner),
 	GennyInterfaceObject(owner),
 	_owner(owner),
 	_position(point)
@@ -28,10 +28,10 @@ bool UIMegaMidiPortSpinner::attached (CView* parent)
 	setMax(16);
 
 	float xoff = 20.0f;
-	_upButton = new CKickButton(CRect(_position.x + xoff, _position.y, _position.x + xoff + 16, _position.y + 8), this, 9999999, 10, UIBitmap(PNG_LITTLEUPARROW));
+	_upButton = new CKickButton(CRect(_position.x + xoff, _position.y, _position.x + xoff + 16, _position.y + 8), this, 9999999, 8, UIBitmap(PNG_LITTLEUPARROW));
 	frame->addView(_upButton);
 
-	_downButton = new CKickButton(CRect(_position.x + xoff, _position.y + 10, _position.x + xoff + 16, _position.y + 10 + 8), this, 99999999, 10, UIBitmap(PNG_LITTLEDOWNARROW));
+	_downButton = new CKickButton(CRect(_position.x + xoff, _position.y + 10, _position.x + xoff + 16, _position.y + 10 + 8), this, 99999999, 8, UIBitmap(PNG_LITTLEDOWNARROW));
 	frame->addView(_downButton);
 
 	_midiLabel = new CTextLabel(CRect(_position.x - 4, _position.y - 8, _position.x + 25, _position.y - 4 + 25), "16");
@@ -101,7 +101,7 @@ void UIMegaMidiPortSpinner::setVisible(bool visible)
 	_downButton->setVisible(visible);
 }
 
-bool UIMegaMidiPortSpinner::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)
+bool UIMegaMidiPortSpinner::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
 {		
 	if(distance > 0 && getValue() < 17)
 			setValue(getValue() + 1.0f);

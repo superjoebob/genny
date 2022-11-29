@@ -1,44 +1,394 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cknob.h"
 #include "../cbitmap.h"
 #include "../cdrawcontext.h"
 #include "../cframe.h"
+#include "../cgraphicspath.h"
+#include "../cvstguitimer.h"
 #include <cmath>
 
 namespace VSTGUI {
+#if TARGET_OS_IPHONE
+static const float kCKnobRange = 300.f;
+#else
+static const float kCKnobRange = 200.f;
+#endif
+
+static constexpr CViewAttributeID kCKnobMouseStateAttribute = 'knms';
+//------------------------------------------------------------------------
+struct CKnobBase::MouseEditingState
+{
+	CPoint firstPoint;
+	CPoint lastPoint;
+	float startValue;
+	float entryState;
+	float range;
+	float coef;
+	CButtonState oldButton;
+	bool modeLinear;
+};
+
+//------------------------------------------------------------------------
+CKnobBase::CKnobBase (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background)
+: CControl (size, listener, tag, background)
+{
+	rangeAngle = 1.f;
+	setStartAngle ((float)(3.f * Constants::quarter_pi));
+	setRangeAngle ((float)(3.f * Constants::half_pi));
+	zoomFactor = 1.5f;
+}
+
+//------------------------------------------------------------------------
+CKnobBase::CKnobBase (const CKnobBase& k)
+: CControl (k)
+, startAngle (k.startAngle)
+, rangeAngle (k.rangeAngle)
+, zoomFactor (k.zoomFactor)
+, inset (k.inset)
+{
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::setViewSize (const CRect &rect, bool invalid)
+{
+	CControl::setViewSize (rect, invalid);
+	compute ();
+}
+
+//------------------------------------------------------------------------
+bool CKnobBase::sizeToFit ()
+{
+	if (getDrawBackground ())
+	{
+		CRect vs (getViewSize ());
+		vs.setWidth (getDrawBackground ()->getWidth ());
+		vs.setHeight (getDrawBackground ()->getHeight ());
+		setViewSize (vs);
+		setMouseableArea (vs);
+		return true;
+	}
+	return false;
+}
+
+//------------------------------------------------------------------------
+auto CKnobBase::getMouseEditingState () -> MouseEditingState&
+{
+	MouseEditingState* state = nullptr;
+	if (!getAttribute (kCKnobMouseStateAttribute, state))
+	{
+		state = new MouseEditingState;
+		setAttribute (kCKnobMouseStateAttribute, state);
+	}
+	return *state;
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::clearMouseEditingState ()
+{
+	MouseEditingState* state = nullptr;
+	if (!getAttribute (kCKnobMouseStateAttribute, state))
+		return;
+	delete state;
+	removeAttribute (kCKnobMouseStateAttribute);
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CKnobBase::onMouseDown (CPoint& where, const CButtonState& buttons)
+{
+	if (!buttons.isLeftButton ())
+		return kMouseEventNotHandled;
+
+	invalidMouseWheelEditTimer (this);
+	beginEdit ();
+
+	if (checkDefaultValue (buttons))
+	{
+		endEdit ();
+		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
+	}
+
+	auto& mouseState = getMouseEditingState ();
+	mouseState.firstPoint = where;
+	mouseState.lastPoint (-1, -1);
+	mouseState.startValue = getOldValue ();
+
+	mouseState.modeLinear = false;
+	mouseState.entryState = value;
+	mouseState.range = kCKnobRange;
+	mouseState.coef = (getMax () - getMin ()) / mouseState.range;
+	mouseState.oldButton = buttons;
+
+	int32_t mode    = kCircularMode;
+	int32_t newMode = getFrame ()->getKnobMode ();
+	if (kLinearMode == newMode)
+	{
+		if (!(buttons & kAlt))
+			mode = newMode;
+	}
+	else if (buttons & kAlt)
+	{
+		mode = kLinearMode;
+	}
+
+	if (mode == kLinearMode)
+	{
+		if (buttons & kZoomModifier)
+			mouseState.range *= zoomFactor;
+		mouseState.lastPoint = where;
+		mouseState.modeLinear = true;
+		mouseState.coef = (getMax () - getMin ()) / mouseState.range;
+	}
+	else
+	{
+		CPoint where2 (where);
+		where2.offset (-getViewSize ().left, -getViewSize ().top);
+		mouseState.startValue = valueFromPoint (where2);
+		mouseState.lastPoint = where;
+	}
+
+	return onMouseMoved (where, buttons);
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CKnobBase::onMouseUp (CPoint& where, const CButtonState& buttons)
+{
+	if (isEditing ())
+	{
+		endEdit ();
+		clearMouseEditingState ();
+	}
+	return kMouseEventHandled;
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CKnobBase::onMouseCancel ()
+{
+	if (isEditing ())
+	{
+		auto& mouseState = getMouseEditingState ();
+		value = mouseState.startValue;
+		if (isDirty ())
+		{
+			valueChanged ();
+			invalid ();
+		}
+		endEdit ();
+		clearMouseEditingState ();
+	}
+	return kMouseEventHandled;
+}
+
+//------------------------------------------------------------------------
+CMouseEventResult CKnobBase::onMouseMoved (CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isLeftButton () && isEditing ())
+	{
+		auto& mouseState = getMouseEditingState ();
+
+		float middle = (getMax () - getMin ()) * 0.5f;
+
+		if (where != mouseState.lastPoint)
+		{
+			mouseState.lastPoint = where;
+			if (mouseState.modeLinear)
+			{
+				CCoord diff = (mouseState.firstPoint.y - where.y) + (where.x - mouseState.firstPoint.x);
+				if (buttons != mouseState.oldButton)
+				{
+					mouseState.range = kCKnobRange;
+					if (buttons & kZoomModifier)
+						mouseState.range *= zoomFactor;
+
+					float coef2 = (getMax () - getMin ()) / mouseState.range;
+					mouseState.entryState += (float)(diff * (mouseState.coef - coef2));
+					mouseState.coef = coef2;
+					mouseState.oldButton = buttons;
+				}
+				value = (float)(mouseState.entryState + diff * mouseState.coef);
+				bounceValue ();
+			}
+			else
+			{
+				where.offset (-getViewSize ().left, -getViewSize ().top);
+				value = valueFromPoint (where);
+				if (mouseState.startValue - value > middle)
+					value = getMax ();
+				else if (value - mouseState.startValue > middle)
+					value = getMin ();
+				else
+					mouseState.startValue = value;
+			}
+			if (value != getOldValue ())
+				valueChanged ();
+			if (isDirty ())
+				invalid ();
+		}
+		return kMouseEventHandled;
+	}
+	return kMouseEventNotHandled;
+}
+
+//------------------------------------------------------------------------
+bool CKnobBase::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float &distance, const CButtonState &buttons)
+{
+	if (!getMouseEnabled ())
+		return false;
+
+	onMouseWheelEditing (this);
+
+	float v = getValueNormalized ();
+	if (buttons & kZoomModifier)
+		v += 0.1f * distance * getWheelInc ();
+	else
+		v += distance * getWheelInc ();
+	setValueNormalized (v);
+
+	if (isDirty ())
+	{
+		invalid ();
+		valueChanged ();
+	}
+	return true;
+}
+
+//------------------------------------------------------------------------
+int32_t CKnobBase::onKeyDown (VstKeyCode& keyCode)
+{
+	switch (keyCode.virt)
+	{
+		case VKEY_UP :
+		case VKEY_RIGHT :
+		case VKEY_DOWN :
+		case VKEY_LEFT :
+		{
+			float distance = 1.f;
+			if (keyCode.virt == VKEY_DOWN || keyCode.virt == VKEY_LEFT)
+				distance = -distance;
+
+			float v = getValueNormalized ();
+			if (mapVstKeyModifier (keyCode.modifier) & kZoomModifier)
+				v += 0.1f * distance * getWheelInc ();
+			else
+				v += distance * getWheelInc ();
+			setValueNormalized (v);
+
+			if (isDirty ())
+			{
+				invalid ();
+
+				// begin of edit parameter
+				beginEdit ();
+				
+				valueChanged ();
+			
+				// end of edit parameter
+				endEdit ();
+			}
+			return 1;
+		}
+		case VKEY_ESCAPE:
+		{
+			if (isEditing ())
+			{
+				onMouseCancel ();
+				return 1;
+			}
+			break;
+		}
+	}
+	return -1;
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::setStartAngle (float val)
+{
+	startAngle = val;
+	compute ();
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::setRangeAngle (float val)
+{
+	rangeAngle = val;
+	compute ();
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::compute ()
+{
+	setDirty ();
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::valueToPoint (CPoint &point) const
+{
+	float alpha = (value - getMin()) / (getMax() - getMin());
+	alpha = startAngle + alpha*rangeAngle;
+
+	CPoint c (getViewSize ().getWidth () / 2., getViewSize ().getHeight () / 2.);
+	double xradius = c.x - inset;
+	double yradius = c.y - inset;
+
+	point.x = (CCoord)(c.x + cosf (alpha) * xradius + 0.5f);
+	point.y = (CCoord)(c.y + sinf (alpha) * yradius + 0.5f);
+}
+
+//------------------------------------------------------------------------
+float CKnobBase::valueFromPoint (CPoint &point) const
+{
+	float v;
+	double d = rangeAngle * 0.5;
+	double a = startAngle + d;
+
+	CPoint c (getViewSize ().getWidth () / 2., getViewSize ().getHeight () / 2.);
+	double xradius = c.x - inset;
+	double yradius = c.y - inset;
+
+	double dx = (point.x - c.x) / xradius;
+	double dy = (point.y - c.y) / yradius;
+
+	double alpha = atan2 (dy, dx) - a;
+	while (alpha >= Constants::pi)
+		alpha -= Constants::double_pi;
+	while (alpha < -Constants::pi)
+		alpha += Constants::double_pi;
+
+	if (d < 0.0)
+		alpha = -alpha;
+
+	if (alpha > d)
+		v = getMax ();
+	else if (alpha < -d)
+		v = getMin ();
+	else
+	{
+		v = float (0.5 + alpha / rangeAngle);
+		v = getMin () + (v * getRange ());
+	}
+
+	return v;
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::setMin (float val)
+{
+	CControl::setMin (val);
+	if (getValue () < val)
+		setValue (val);
+	compute ();
+}
+
+//------------------------------------------------------------------------
+void CKnobBase::setMax (float val)
+{
+	CControl::setMax (val);
+	if (getValue () > val)
+		setValue (val);
+	compute ();
+}
 
 //------------------------------------------------------------------------
 // CKnob
@@ -61,13 +411,14 @@ By clicking alt modifier and left mouse button the value changes with a vertical
  * @param drawStyle draw style
  */
 //------------------------------------------------------------------------
-CKnob::CKnob (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, CBitmap* handle, const CPoint& offset, int32_t drawStyle)
-: CControl (size, listener, tag, background)
-, drawStyle (drawStyle)
+CKnob::CKnob (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, CBitmap* handle, const CPoint& offset, int32_t drawStyle)
+: CKnobBase (size, listener, tag, background)
 , offset (offset)
-, pHandle (handle)
+, drawStyle (drawStyle)
 , handleLineWidth (1.)
 , coronaInset (0)
+, coronaOutlineWidthAdd (2.)
+, pHandle (handle)
 {
 	if (pHandle)
 	{
@@ -81,76 +432,201 @@ CKnob::CKnob (const CRect& size, CControlListener* listener, int32_t tag, CBitma
 	
 	colorShadowHandle = kGreyCColor;
 	colorHandle = kWhiteCColor;
-
-	rangeAngle = 1.f;
-	setStartAngle ((float)(3.f * kPI / 4.f));
-	setRangeAngle ((float)(3.f * kPI / 2.f));
-	zoomFactor = 1.5f;
+	coronaLineStyle = kLineOnOffDash;
+	coronaLineStyle.getDashLengths ()[1] = 2.;
 
 	setWantsFocus (true);
-
-	reverse = false;
 }
 
 //------------------------------------------------------------------------
 CKnob::CKnob (const CKnob& v)
-: CControl (v)
+: CKnobBase (v)
 , offset (v.offset)
 , drawStyle (v.drawStyle)
 , colorHandle (v.colorHandle)
 , colorShadowHandle (v.colorShadowHandle)
 , handleLineWidth (v.handleLineWidth)
-, inset (v.inset)
 , coronaInset (v.coronaInset)
-, startAngle (v.startAngle)
-, rangeAngle (v.rangeAngle)
-, zoomFactor (v.zoomFactor)
+, coronaOutlineWidthAdd (v.coronaInset)
+, coronaLineStyle (v.coronaLineStyle)
 , pHandle (v.pHandle)
 {
 	if (pHandle)
 		pHandle->remember ();
-
-	reverse = false;
 }
 
 //------------------------------------------------------------------------
-CKnob::~CKnob ()
+CKnob::~CKnob () noexcept
 {
 	if (pHandle)
 		pHandle->forget ();
 }
 
 //------------------------------------------------------------------------
-void CKnob::setViewSize (const CRect &rect, bool invalid)
+bool CKnob::drawFocusOnTop ()
 {
-	CControl::setViewSize (rect, invalid);
-	compute ();
+	if (drawStyle & kCoronaDrawing && wantsFocus ())
+	{
+		return false;
+	}
+	return CKnobBase::drawFocusOnTop ();
 }
 
 //------------------------------------------------------------------------
-bool CKnob::sizeToFit ()
+bool CKnob::getFocusPath (CGraphicsPath &outPath)
 {
-	if (pBackground)
+	if (drawStyle & kCoronaDrawing && wantsFocus ())
 	{
-		CRect vs (getViewSize ());
-		vs.setWidth (pBackground->getWidth ());
-		vs.setHeight (pBackground->getHeight ());
-		setViewSize (vs);
-		setMouseableArea (vs);
+		CRect corona (getViewSize ());
+		corona.inset (coronaInset, coronaInset);
+		corona.inset (handleLineWidth/2., handleLineWidth/2.);
+		outPath.addEllipse (corona);
 		return true;
 	}
-	return false;
+	return CKnobBase::getFocusPath (outPath);
 }
 
 //------------------------------------------------------------------------
 void CKnob::draw (CDrawContext *pContext)
 {
-	if (pBackground)
+	if (getDrawBackground ())
 	{
-		pBackground->draw (pContext, getViewSize (), offset);
+		getDrawBackground ()->draw (pContext, getViewSize (), offset);
 	}
-	drawHandle (pContext);
+	if (pHandle)
+		drawHandle (pContext);
+	else
+	{
+		if (drawStyle & kCoronaOutline)
+			drawCoronaOutline (pContext);
+		if (drawStyle & kCoronaDrawing)
+			drawCorona (pContext);
+		if (!(drawStyle & kSkipHandleDrawing))
+		{
+			if (drawStyle & kHandleCircleDrawing)
+				drawHandleAsCircle (pContext);
+			else
+				drawHandleAsLine (pContext);
+		}
+	}
 	setDirty (false);
+}
+
+//------------------------------------------------------------------------
+void CKnob::addArc (CGraphicsPath* path, const CRect& r, double startAngle, double sweepAngle)
+{
+	CCoord w = r.getWidth ();
+	CCoord h = r.getHeight ();
+	double endAngle = startAngle + sweepAngle;
+	if (w != h)
+	{
+		startAngle = atan2 (sin (startAngle) * h, cos (startAngle) * w);
+		endAngle = atan2 (sin (endAngle) * h, cos (endAngle) * w);
+	}
+	path->addArc (r, startAngle / Constants::pi * 180, endAngle / Constants::pi * 180, sweepAngle >= 0);
+}
+
+//------------------------------------------------------------------------
+void CKnob::drawCoronaOutline (CDrawContext* pContext) const
+{
+	auto path = owned (pContext->createGraphicsPath ());
+	if (path == nullptr)
+		return;
+	CRect corona (getViewSize ());
+	corona.inset (coronaInset, coronaInset);
+	auto start = startAngle;
+	auto range = rangeAngle;
+	if (coronaOutlineWidthAdd && (drawStyle & kCoronaLineCapButt))
+	{
+		auto a = static_cast<float> (coronaOutlineWidthAdd / getWidth ());
+		start -= a;
+		range += a * 2.f;
+	}
+	addArc (path, corona, start, range);
+	pContext->setFrameColor (colorShadowHandle);
+	CLineStyle lineStyle (kLineSolid);
+	if (!(drawStyle & kCoronaLineCapButt))
+		lineStyle.setLineCap (CLineStyle::kLineCapRound);
+	pContext->setLineStyle (lineStyle);
+	pContext->setLineWidth (handleLineWidth+coronaOutlineWidthAdd);
+	pContext->setDrawMode (kAntiAliasing | kNonIntegralMode);
+	pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
+}
+
+//------------------------------------------------------------------------
+void CKnob::drawCorona (CDrawContext* pContext) const
+{
+	auto path = owned (pContext->createGraphicsPath ());
+	if (path == nullptr)
+		return;
+	float coronaValue = getValueNormalized ();
+	if (drawStyle & kCoronaInverted)
+		coronaValue = 1.f - coronaValue;
+	CRect corona (getViewSize ());
+	corona.inset (coronaInset, coronaInset);
+	if (drawStyle & kCoronaFromCenter)
+		addArc (path, corona, 1.5 * Constants::pi, rangeAngle * (coronaValue - 0.5));
+	else
+	{
+		if (drawStyle & kCoronaInverted)
+			addArc (path, corona, startAngle + rangeAngle, -rangeAngle * coronaValue);
+		else
+			addArc (path, corona, startAngle, rangeAngle * coronaValue);
+	}
+	pContext->setFrameColor (coronaColor);
+	if (!(drawStyle & kCoronaLineCapButt))
+	{
+		CLineStyle lineStyle (kLineSolid);
+		lineStyle.setLineCap (CLineStyle::kLineCapRound);
+		pContext->setLineStyle (lineStyle);
+	}
+	else if (drawStyle & kCoronaLineDashDot)
+		pContext->setLineStyle (coronaLineStyle);
+	else
+		pContext->setLineStyle (kLineSolid);
+
+	pContext->setLineWidth (handleLineWidth);
+	pContext->setDrawMode (kAntiAliasing | kNonIntegralMode);
+	pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
+}
+
+//------------------------------------------------------------------------
+void CKnob::drawHandleAsCircle (CDrawContext* pContext) const
+{
+	CPoint where;
+	valueToPoint (where);
+
+	where.offset (getViewSize ().left, getViewSize ().top);
+	CRect r (where.x - 0.5, where.y - 0.5, where.x + 0.5, where.y + 0.5);
+	r.extend (handleLineWidth, handleLineWidth);
+	pContext->setDrawMode (kAntiAliasing);
+	pContext->setFrameColor (colorShadowHandle);
+	pContext->setFillColor (colorHandle);
+	pContext->setLineWidth (0.5);
+	pContext->setLineStyle (kLineSolid);
+	pContext->setDrawMode (kAntiAliasing | kNonIntegralMode);
+	pContext->drawEllipse (r, kDrawFilledAndStroked);
+}
+
+//------------------------------------------------------------------------
+void CKnob::drawHandleAsLine (CDrawContext* pContext) const
+{
+	CPoint where;
+	valueToPoint (where);
+
+	CPoint origin (getViewSize ().getWidth () / 2, getViewSize ().getHeight () / 2);
+	where.offset (getViewSize ().left - 1, getViewSize ().top);
+	origin.offset (getViewSize ().left - 1, getViewSize ().top);
+	pContext->setFrameColor (colorShadowHandle);
+	pContext->setLineWidth (handleLineWidth);
+	pContext->setLineStyle (CLineStyle (CLineStyle::kLineCapRound));
+	pContext->setDrawMode (kAntiAliasing | kNonIntegralMode);
+	pContext->drawLine (where, origin);
+	
+	where.offset (1, -1);
+	origin.offset (1, -1);
+	pContext->setFrameColor (colorHandle);
+	pContext->drawLine (where, origin);
 }
 
 //------------------------------------------------------------------------
@@ -159,355 +635,16 @@ void CKnob::drawHandle (CDrawContext *pContext)
 	CPoint where;
 	valueToPoint (where);
 
-	if (pHandle)
-	{
-		CCoord width  = pHandle->getWidth ();
-		CCoord height = pHandle->getHeight ();
-		where.offset (getViewSize ().left - width / 2, getViewSize ().top - height / 2);
+	CCoord width  = pHandle->getWidth ();
+	CCoord height = pHandle->getHeight ();
+	where.offset (getViewSize ().left - width / 2, getViewSize ().top - height / 2);
 
-		where.x = floor (where.x);
-		where.y = floor (where.y);
+	where.x = floor (where.x);
+	where.y = floor (where.y);
 
-		CRect handleSize (0, 0, width, height);
-		handleSize.offset (where.h, where.v);
-		pHandle->draw (pContext, handleSize);
-	}
-	else
-	{
-		pContext->setDrawMode (kAntiAliasing);
-		if (drawStyle & kCoronaOutline)
-		{
-			CGraphicsPath* path = pContext->createGraphicsPath ();
-			if (path)
-			{
-				CRect corona (getViewSize ());
-				corona.inset (coronaInset, coronaInset);
-				double rangeDegree = (rangeAngle / kPI * 180.);
-				double startDegree = (startAngle / kPI * 180.);
-				path->addArc (corona, startDegree, startDegree + rangeDegree, rangeDegree > 0);
-				pContext->setFrameColor (colorShadowHandle);
-				pContext->setLineStyle (kLineSolid);
-				pContext->setLineWidth (handleLineWidth+2.);
-				pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
-				path->forget ();
-			}
-		}
-		if (drawStyle & kCoronaDrawing)
-		{
-			CGraphicsPath* path = pContext->createGraphicsPath ();
-			if (path)
-			{
-				float coronaValue = getValueNormalized ();
-				if (drawStyle & kCoronaInverted)
-					coronaValue = 1.f - coronaValue;
-				CRect corona (getViewSize ());
-				corona.inset (coronaInset, coronaInset);
-				double rangeDegree = rangeAngle / kPI * 180.;
-				if (drawStyle & kCoronaFromCenter)
-				{
-					double startDegree = 270.;
-					double dd = rangeDegree * (coronaValue - 0.5);
-					path->addArc (corona, startDegree, startDegree + dd, dd > 0.0);
-				}
-				else
-				{
-					if (drawStyle & kCoronaInverted)
-					{
-						double startDegree = (startAngle / kPI * 180.)  + rangeDegree;
-						rangeDegree *= coronaValue;
-						path->addArc (corona, startDegree, startDegree - rangeDegree, rangeDegree <= 0.0);
-					}
-					else
-					{
-						double startDegree = (startAngle / kPI * 180.);
-						rangeDegree *= coronaValue;
-						path->addArc (corona, startDegree, startDegree + rangeDegree, rangeDegree >= 0.0);
-					}
-				}
-				pContext->setFrameColor (coronaColor);
-				pContext->setLineStyle (drawStyle & kCoronaLineDashDot ? kLineOnOffDash : kLineSolid);
-				pContext->setLineWidth (handleLineWidth);
-				pContext->drawGraphicsPath (path, CDrawContext::kPathStroked);
-				path->forget ();
-			}
-		}
-		if (drawStyle & kHandleCircleDrawing)
-		{
-			where.offset (getViewSize ().left, getViewSize ().top);
-			CRect r (where.x - 0.5, where.y - 0.5, where.x + 0.5, where.y + 0.5);
-			r.inset (-handleLineWidth, -handleLineWidth);
-			pContext->setDrawMode (kAntiAliasing);
-			pContext->setFrameColor (colorShadowHandle);
-			pContext->setFillColor (colorHandle);
-			pContext->setLineWidth (0.5);
-			pContext->setLineStyle (kLineSolid);
-			pContext->drawEllipse (r, kDrawFilledAndStroked);
-		}
-		else  // Line handle drawing.
-		{
-			CPoint origin (getViewSize ().width () / 2, getViewSize ().height () / 2);
-			where.offset (getViewSize ().left - 1, getViewSize ().top);
-			origin.offset (getViewSize ().left - 1, getViewSize ().top);
-			pContext->setFrameColor (colorShadowHandle);
-			pContext->setLineWidth (handleLineWidth);
-			pContext->setLineStyle (kLineSolid);
-			pContext->moveTo (where);
-			pContext->lineTo (origin);
-
-			where.offset (1, -1);
-			origin.offset (1, -1);
-			pContext->setFrameColor (colorHandle);
-			pContext->moveTo (where);
-			pContext->lineTo (origin);
-		}
-	}
-}
-
-//------------------------------------------------------------------------
-CMouseEventResult CKnob::onMouseDown (CPoint& where, const CButtonState& buttons)
-{
-	if (!buttons.isLeftButton ())
-		return kMouseEventNotHandled;
-
-	beginEdit ();
-
-	if (checkDefaultValue (buttons))
-	{
-		endEdit ();
-		return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
-	}
-
-	firstPoint = where;
-	lastPoint (-1, -1);
-	startValue = getOldValue ();
-
-	modeLinear = false;
-	fEntryState = value;
-	range = 200.f;
-	coef = (getMax () - getMin ()) / range;
-	oldButton = buttons;
-
-	int32_t mode    = kLinearMode;
-	int32_t newMode = mode;//getFrame ()->getKnobMode ();
-	if (kLinearMode == newMode)
-	{
-		if (!(buttons & kAlt))
-			mode = newMode;
-	}
-	else if (buttons & kAlt)
-	{
-		mode = kLinearMode;
-	}
-
-	if (mode == kLinearMode)
-	{
-		if (buttons & kZoomModifier)
-			range *= zoomFactor;
-		lastPoint = where;
-		modeLinear = true;
-		coef = (getMax () - getMin ()) / range;
-	}
-	else
-	{
-		CPoint where2 (where);
-		where2.offset (-getViewSize ().left, -getViewSize ().top);
-		startValue = valueFromPoint (where2);
-		lastPoint = where;
-	}
-
-	return onMouseMoved (where, buttons);
-}
-
-//------------------------------------------------------------------------
-CMouseEventResult CKnob::onMouseUp (CPoint& where, const CButtonState& buttons)
-{
-	endEdit ();
-	return kMouseEventHandled;
-}
-
-//------------------------------------------------------------------------
-CMouseEventResult CKnob::onMouseMoved (CPoint& where, const CButtonState& buttons)
-{
-	if (buttons.isLeftButton ())
-	{
-		float middle = (getMax () - getMin ()) * 0.5f;
-
-		if (where != lastPoint)
-		{
-			lastPoint = where;
-			if (modeLinear)
-			{
-				CCoord diff = (firstPoint.v - where.v) + (where.h - firstPoint.h);
-				if(reverse)
-					diff = (where.v - firstPoint.v) + (firstPoint.h - where.h);
-
-				if (buttons != oldButton)
-				{
-					range = 200.f;
-					if (buttons & kZoomModifier)
-						range *= zoomFactor;
-
-					float coef2 = (getMax () - getMin ()) / range;
-					fEntryState += (float)(diff * (coef - coef2));
-					coef = coef2;
-					oldButton = buttons;
-				}
-				value = (float)(fEntryState + diff * coef);
-				bounceValue ();
-			}
-			else
-			{
-				where.offset (-getViewSize ().left, -getViewSize ().top);
-				value = valueFromPoint (where);
-				if (startValue - value > middle)
-					value = getMax ();
-				else if (value - startValue > middle)
-					value = getMin ();
-				else
-					startValue = value;
-			}
-			if (value != getOldValue ())
-				valueChanged ();
-			if (isDirty ())
-				invalid ();
-		}
-	}
-	return kMouseEventHandled;
-}
-
-//------------------------------------------------------------------------
-bool CKnob::onWheel (const CPoint& where, const float &distance, const CButtonState &buttons)
-{
-	if (!getMouseEnabled ())
-		return false;
-
-	float v = getValueNormalized ();
-	if (buttons & kZoomModifier)
-		v += 0.1f * distance * wheelInc;
-	else
-		v += distance * wheelInc;
-	setValueNormalized (v);
-
-	if (isDirty ())
-	{
-		invalid ();
-
-		// begin of edit parameter
-		beginEdit ();
-	
-		valueChanged ();
-	
-		// end of edit parameter
-		endEdit ();
-	}
-	return true;
-}
-
-//------------------------------------------------------------------------
-int32_t CKnob::onKeyDown (VstKeyCode& keyCode)
-{
-	switch (keyCode.virt)
-	{
-		case VKEY_UP :
-		case VKEY_RIGHT :
-		case VKEY_DOWN :
-		case VKEY_LEFT :
-		{
-			float distance = 1.f;
-			if (keyCode.virt == VKEY_DOWN || keyCode.virt == VKEY_LEFT)
-				distance = -distance;
-
-			float v = getValueNormalized ();
-			if (mapVstKeyModifier (keyCode.modifier) & kZoomModifier)
-				v += 0.1f * distance * wheelInc;
-			else
-				v += distance * wheelInc;
-			setValueNormalized (v);
-
-			if (isDirty ())
-			{
-				invalid ();
-
-				// begin of edit parameter
-				beginEdit ();
-				
-				valueChanged ();
-			
-				// end of edit parameter
-				endEdit ();
-			}
-		} return 1;
-	}
-	return -1;
-}
-
-//------------------------------------------------------------------------
-void CKnob::setStartAngle (float val)
-{
-	startAngle = val;
-	compute ();
-}
-
-//------------------------------------------------------------------------
-void CKnob::setRangeAngle (float val)
-{
-	rangeAngle = val;
-	compute ();
-}
-
-//------------------------------------------------------------------------
-void CKnob::compute ()
-{
-	setDirty ();
-}
-
-//------------------------------------------------------------------------
-void CKnob::valueToPoint (CPoint &point) const
-{
-	float alpha = (value - getMin()) / (getMax() - getMin());
-	alpha = startAngle + alpha*rangeAngle;
-
-	CPoint c(size.width()/2, size.height()/2);
-	double xradius = c.x - inset;
-	double yradius = c.y - inset;
-
-	point.h = (CCoord)(c.x + cosf(alpha) * xradius + 0.5f);
-	point.v = (CCoord)(c.y + sinf (alpha) * yradius + 0.5f);
-}
-
-//------------------------------------------------------------------------
-float CKnob::valueFromPoint (CPoint &point) const
-{
-	float v;
-	double d = rangeAngle * 0.5;
-	double a = startAngle + d;
-
-	CPoint c (size.width () / 2., size.height () / 2.);
-	double xradius = c.x - inset;
-	double yradius = c.y - inset;
-
-	double dx = (point.x - c.x) / xradius;
-	double dy = (point.y - c.y) / yradius;
-
-	double alpha = atan2 (dy, dx) - a;
-	while (alpha >= kPI)
-		alpha -= k2PI;
-	while (alpha < -kPI)
-		alpha += k2PI;
-
-	if (d < 0.0)
-		alpha = -alpha;
-
-	if (alpha > d)
-		v = getMax ();
-	else if (alpha < -d)
-		v = getMin ();
-	else
-		v = float (0.5 + alpha / rangeAngle);
-
-	v *= (getMax () - getMin ());
-
-	return v;
+	CRect handleSize (0, 0, width, height);
+	handleSize.offset (where.x, where.y);
+	pHandle->draw (pContext, handleSize);
 }
 
 //------------------------------------------------------------------------
@@ -561,6 +698,32 @@ void CKnob::setHandleLineWidth (CCoord width)
 }
 
 //------------------------------------------------------------------------
+void CKnob::setCoronaOutlineWidthAdd (CCoord width)
+{
+	if (width != coronaOutlineWidthAdd)
+	{
+		coronaOutlineWidthAdd = width;
+		setDirty ();
+	}
+}
+
+//------------------------------------------------------------------------
+const CLineStyle::CoordVector& CKnob::getCoronaDashDotLengths () const
+{
+	return coronaLineStyle.getDashLengths ();
+}
+
+//------------------------------------------------------------------------
+void CKnob::setCoronaDashDotLengths (const CLineStyle::CoordVector& lengths)
+{
+	if (coronaLineStyle.getDashLengths () != lengths)
+	{
+		coronaLineStyle.getDashLengths () = lengths;
+		setDirty ();
+	}
+}
+
+//------------------------------------------------------------------------
 void CKnob::setDrawStyle (int32_t style)
 {
 	if (style != drawStyle)
@@ -576,7 +739,7 @@ void CKnob::setHandleBitmap (CBitmap* bitmap)
 	if (pHandle)
 	{
 		pHandle->forget ();
-		pHandle = 0;
+		pHandle = nullptr;
 	}
 
 	if (bitmap)
@@ -586,24 +749,6 @@ void CKnob::setHandleBitmap (CBitmap* bitmap)
 		inset = (CCoord)((float)pHandle->getWidth () / 2.f + 2.5f);
 	}
 	setDirty ();
-}
-
-//------------------------------------------------------------------------
-void CKnob::setMin (float val)
-{
-	CControl::setMin (val);
-	if (getValue () < val)
-		setValue (val);
-	compute ();
-}
-
-//------------------------------------------------------------------------
-void CKnob::setMax (float val)
-{
-	CControl::setMax (val);
-	if (getValue () > val)
-		setValue (val);
-	compute ();
 }
 
 //------------------------------------------------------------------------
@@ -623,14 +768,13 @@ According to the value, a specific subbitmap is displayed. The different subbitm
  * @param offset unused
  */
 //------------------------------------------------------------------------
-CAnimKnob::CAnimKnob (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, const CPoint &offset)
-: CKnob (size, listener, tag, background, 0, offset)
+CAnimKnob::CAnimKnob (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, const CPoint &offset)
+: CKnobBase (size, listener, tag, background)
 , bInverseBitmap (false)
 {
-	heightOfOneImage = size.height ();
+	heightOfOneImage = size.getHeight ();
 	setNumSubPixmaps (background ? (int32_t)(background->getHeight () / heightOfOneImage) : 0);
 	inset = 0;
-	reverse = false;
 }
 
 //------------------------------------------------------------------------
@@ -645,39 +789,31 @@ CAnimKnob::CAnimKnob (const CRect& size, CControlListener* listener, int32_t tag
  * @param offset unused
  */
 //------------------------------------------------------------------------
-CAnimKnob::CAnimKnob (const CRect& size, CControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, const CPoint &offset)
-: CKnob (size, listener, tag, background, 0, offset)
+CAnimKnob::CAnimKnob (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, const CPoint &offset)
+: CKnobBase (size, listener, tag, background)
 , bInverseBitmap (false)
 {
 	setNumSubPixmaps (subPixmaps);
 	setHeightOfOneImage (heightOfOneImage);
 	inset = 0;
-	reverse = false;
 }
 
 //------------------------------------------------------------------------
 CAnimKnob::CAnimKnob (const CAnimKnob& v)
-: CKnob (v)
+: CKnobBase (v)
 , bInverseBitmap (v.bInverseBitmap)
 {
 	setNumSubPixmaps (v.subPixmaps);
 	setHeightOfOneImage (v.heightOfOneImage);
-	reverse = false;
-}
-
-//------------------------------------------------------------------------
-CAnimKnob::~CAnimKnob ()
-{
-	reverse = false;
 }
 
 //-----------------------------------------------------------------------------------------------
 bool CAnimKnob::sizeToFit ()
 {
-	if (pBackground)
+	if (getDrawBackground ())
 	{
 		CRect vs (getViewSize ());
-		vs.setWidth (pBackground->getWidth ());
+		vs.setWidth (getDrawBackground ()->getWidth ());
 		vs.setHeight (getHeightOfOneImage ());
 		setViewSize (vs);
 		setMouseableArea (vs);
@@ -690,39 +826,40 @@ bool CAnimKnob::sizeToFit ()
 void CAnimKnob::setHeightOfOneImage (const CCoord& height)
 {
 	IMultiBitmapControl::setHeightOfOneImage (height);
-	if (pBackground && heightOfOneImage)
-		setNumSubPixmaps ((int32_t)(pBackground->getHeight () / heightOfOneImage));
+	if (getDrawBackground () && heightOfOneImage > 0)
+		setNumSubPixmaps ((int32_t)(getDrawBackground ()->getHeight () / heightOfOneImage));
 }
 
 //-----------------------------------------------------------------------------------------------
 void CAnimKnob::setBackground (CBitmap *background)
 {
-	CKnob::setBackground (background);
+	CKnobBase::setBackground (background);
 	if (heightOfOneImage == 0)
-		heightOfOneImage = getViewSize ().height ();
-	if (background && heightOfOneImage)
+		heightOfOneImage = getViewSize ().getHeight ();
+	if (background && heightOfOneImage > 0)
 		setNumSubPixmaps ((int32_t)(background->getHeight () / heightOfOneImage));
 }
 
 //------------------------------------------------------------------------
 void CAnimKnob::draw (CDrawContext *pContext)
 {
-	if (pBackground)
+	if (getDrawBackground ())
 	{
 		CPoint where (0, 0);
-		if (value >= 0.f && heightOfOneImage > 0.) 
+		float val = getValueNormalized ();
+		if (val >= 0.f && heightOfOneImage > 0.)
 		{
 			CCoord tmp = heightOfOneImage * (getNumSubPixmaps () - 1);
 			if (bInverseBitmap)
-				where.v = floor ((1. - getValueNormalized()) * tmp);
+				where.y = floor ((1. - val) * tmp);
 			else
-				where.v = floor (getValueNormalized() * tmp);
-			where.v -= (int32_t)where.v % (int32_t)heightOfOneImage;
+				where.y = floor (val * tmp);
+			where.y -= (int32_t)where.y % (int32_t)heightOfOneImage;
 		}
 
-		pBackground->draw (pContext, getViewSize (), where);
+		getDrawBackground ()->draw (pContext, getViewSize (), where);
 	}
 	setDirty (false);
 }
 
-} // namespace
+} // VSTGUI

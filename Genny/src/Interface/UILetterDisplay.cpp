@@ -5,16 +5,15 @@
 #include "GennyVST.h"
 #include "UIImage.h"
 
-UILetterDisplay::UILetterDisplay(const CPoint& pos, CView* owner, int letters, bool offMode):
+UILetterDisplay::UILetterDisplay(const CPoint& pos, CView* owner, CFrame* frame, int letters, bool offMode):
 	CView(CRect()),
 	_owner(owner),
 	_offMode(offMode)
 {
-	CFrame* frame = owner->getFrame();
 	CRect displaySize = CRect(0, 0, 32, 48);
 	displaySize.offset(pos.x, pos.y);
 	for(int i = 0; i < letters; i++)
-	{
+	{ 
 		UIImage* letter = new UIImage(displaySize, PNG_LETTERS, true);
 		frame->addView(letter);
 		displaySize.offset(32,0);

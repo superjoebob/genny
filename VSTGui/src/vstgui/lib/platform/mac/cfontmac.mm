@@ -1,36 +1,6 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #import "cfontmac.h"
 #import "../../cdrawcontext.h"
@@ -38,324 +8,367 @@
 #if MAC
 #import "macstring.h"
 #import "cgdrawcontext.h"
+#import "macglobals.h"
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#else
 #import <Cocoa/Cocoa.h>
+#endif
+
+#ifndef MAC_OS_X_VERSION_10_14
+#define MAC_OS_X_VERSION_10_14      101400
+#endif
 
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
-IPlatformFont* IPlatformFont::create (UTF8StringPtr name, const CCoord& size, const int32_t& style)
+struct RegisterBundleFonts
 {
-	#if VSTGUI_USES_CORE_TEXT
-	CoreTextFont* font = new CoreTextFont (name, size, style);
-	if (font->getFontRef ())
-		return font;
-	font->forget ();
-	#else
-	ATSUFont* font = new ATSUFont (name, size, style);
-	if (font->getATSUStyle ())
-		return font;
-	font->forget ();
-	#endif
-	return 0;
+	static void init ()
+	{
+		static RegisterBundleFonts instance;
+	}
+private:
+	static void ErrorApplierFunction (const void *value, void *context)
+	{
+		auto error = CFErrorRef (value);
+		CFShow (error);
+	}
+
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_14
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+	RegisterBundleFonts ()
+	{
+		fontUrls = CFArrayCreateMutable (kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+		auto fontTypes = {CFSTR ("ttf"), CFSTR ("ttc"), CFSTR ("otf")};
+		for (auto& t : fontTypes)
+			getUrlsForType (t, fontUrls);
+		if (CFArrayGetCount (fontUrls) == 0)
+			return;
+#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_14
+		CTFontManagerRegisterFontURLs (
+			fontUrls, kCTFontManagerScopeProcess, true, [] (CFArrayRef errors, bool done) {
+				CFArrayApplyFunction (errors, CFRangeMake (0, CFArrayGetCount (errors)),
+									  ErrorApplierFunction, nullptr);
+				return true;
+			});
+#else
+		CFArrayRef errors;
+		if (!CTFontManagerRegisterFontsForURLs (fontUrls, kCTFontManagerScopeProcess, &errors))
+		{
+			CFArrayApplyFunction (errors, CFRangeMake (0, CFArrayGetCount (errors)),
+			                      ErrorApplierFunction, nullptr);
+			CFRelease (errors);
+		}
+#endif
+	}
+	~RegisterBundleFonts ()
+	{
+		if (CFArrayGetCount (fontUrls) == 0)
+			return;
+#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_14
+		CTFontManagerUnregisterFontURLs (
+			fontUrls, kCTFontManagerScopeProcess, [] (CFArrayRef errors, bool done) {
+				CFArrayApplyFunction (errors, CFRangeMake (0, CFArrayGetCount (errors)),
+									  ErrorApplierFunction, nullptr);
+				return true;
+			});
+#else
+		CFArrayRef errors;
+		if (!CTFontManagerUnregisterFontsForURLs (fontUrls, kCTFontManagerScopeProcess, &errors))
+		{
+			CFArrayApplyFunction (errors, CFRangeMake (0, CFArrayGetCount (errors)),
+			                      ErrorApplierFunction, nullptr);
+			CFRelease (errors);
+		}
+#endif
+	}
+
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_14
+#pragma clang diagnostic pop
+#endif
+
+	void getUrlsForType (CFStringRef fontType, CFMutableArrayRef& array)
+	{
+		if (auto a = CFBundleCopyResourceURLsOfType (getBundleRef (), fontType, CFSTR ("Fonts")))
+		{
+			CFArrayAppendArray (array, a, CFRangeMake (0, CFArrayGetCount (a)));
+			CFRelease (a);
+		}
+	}
+
+	CFMutableArrayRef fontUrls;
+};
+
+//-----------------------------------------------------------------------------
+struct CTVersionCheck
+{
+	CTVersionCheck ()
+	{
+		version = CTGetCoreTextVersion ();
+	}
+	uint32_t version;
+};
+
+//-----------------------------------------------------------------------------
+static uint32_t getCTVersion ()
+{
+	static CTVersionCheck gInstance;
+	return gInstance.version;
 }
 
 //-----------------------------------------------------------------------------
-bool IPlatformFont::getAllPlatformFontFamilies (std::list<std::string>& fontFamilyNames)
+bool CoreTextFont::getAllFontFamilies (const FontFamilyCallback& callback) noexcept
 {
-	NSArray* fonts = [[NSFontManager sharedFontManager] availableFontFamilies];
+	RegisterBundleFonts::init ();
+#if TARGET_OS_IPHONE
+	NSArray* fonts = [UIFont familyNames];
+#else
+	NSArray* fonts = [(NSArray*)CTFontManagerCopyAvailableFontFamilyNames () autorelease];
+#endif
+	fonts = [fonts sortedArrayUsingSelector:@selector (localizedCaseInsensitiveCompare:)];
 	for (uint32_t i = 0; i < [fonts count]; i++)
 	{
 		NSString* font = [fonts objectAtIndex:i];
-		fontFamilyNames.push_back (std::string ([font UTF8String]));
+		if (!callback ([font UTF8String]))
+			break;
 	}
 	return true;
 }
 
-#if VSTGUI_USES_CORE_TEXT
 //-----------------------------------------------------------------------------
 static CTFontRef CoreTextCreateTraitsVariant (CTFontRef fontRef, CTFontSymbolicTraits trait)
 {
-	CTFontRef traitsFontRef = CTFontCreateCopyWithSymbolicTraits (fontRef, CTFontGetSize (fontRef), NULL, trait, trait);
+	CTFontRef traitsFontRef = CTFontCreateCopyWithSymbolicTraits (fontRef, CTFontGetSize (fontRef), nullptr, trait, trait);
 	if (traitsFontRef)
 	{
 		CFRelease (fontRef);
 		return traitsFontRef;
 	}
+	else if (trait == kCTFontItalicTrait)
+	{
+		CGAffineTransform transform = { 1, 0, -0.5, 1, 0, 0 };
+		traitsFontRef = CTFontCreateCopyWithAttributes (fontRef, CTFontGetSize (fontRef), &transform, nullptr);
+		if (traitsFontRef)
+		{
+			CFRelease (fontRef);
+			return traitsFontRef;
+		}
+	}
 	return fontRef;
 }
 
 //-----------------------------------------------------------------------------
-CoreTextFont::CoreTextFont (UTF8StringPtr name, const CCoord& size, const int32_t& style)
-: fontRef (0)
+CoreTextFont::CoreTextFont (const UTF8String& name, const CCoord& size, const int32_t& style)
+: fontRef (nullptr)
 , style (style)
+, underlineStyle (false)
+, lastColor (MakeCColor (0,0,0,0))
+, stringAttributes (nullptr)
+, ascent (0.)
+, descent (0.)
+, leading (0.)
+, capHeight (0.)
 {
-	CFStringRef fontNameRef = CFStringCreateWithCString (0, name, kCFStringEncodingUTF8);
+	RegisterBundleFonts::init ();
+	CFStringRef fontNameRef = fromUTF8String<CFStringRef> (name);
 	if (fontNameRef)
 	{
-		fontRef = CTFontCreateWithName (fontNameRef, size, 0);
+		if (getCTVersion () >= 0x00060000)
+		{
+			CFMutableDictionaryRef attributes = CFDictionaryCreateMutable (kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+			CFDictionaryAddValue (attributes, kCTFontFamilyNameAttribute, fontNameRef);
+			CTFontDescriptorRef descriptor = CTFontDescriptorCreateWithAttributes (attributes);
+			fontRef = CTFontCreateWithFontDescriptor (descriptor, static_cast<CGFloat> (size), nullptr);
+			CFRelease (attributes);
+			CFRelease (descriptor);
+		}
+		else
+		{
+			fontRef = CTFontCreateWithName (fontNameRef, static_cast<CGFloat> (size), nullptr);
+		}
+
 		if (style & kBoldFace)
 			fontRef = CoreTextCreateTraitsVariant (fontRef, kCTFontBoldTrait);
 		if (style & kItalicFace)
 			fontRef = CoreTextCreateTraitsVariant (fontRef, kCTFontItalicTrait);
-		CFRelease (fontNameRef);
+		if (fontRef)
+		{
+			ascent = CTFontGetAscent (fontRef);
+			descent = CTFontGetDescent (fontRef);
+			leading = CTFontGetLeading (fontRef);
+			capHeight = CTFontGetCapHeight (fontRef);
+		}
 	}
 }
 
 //-----------------------------------------------------------------------------
-CoreTextFont::~CoreTextFont ()
+CoreTextFont::~CoreTextFont () noexcept
 {
-	CFRelease (fontRef);
+	if (stringAttributes)
+		CFRelease (stringAttributes);
+	if (fontRef)
+		CFRelease (fontRef);
 }
 
 //-----------------------------------------------------------------------------
 double CoreTextFont::getAscent () const
 {
-	return CTFontGetAscent (fontRef);
+	return ascent;
 }
 
 //-----------------------------------------------------------------------------
 double CoreTextFont::getDescent () const
 {
-	return CTFontGetDescent (fontRef);
+	return descent;
 }
 
 //-----------------------------------------------------------------------------
 double CoreTextFont::getLeading () const
 {
-	return CTFontGetLeading (fontRef);
+	return leading;
 }
 
 //-----------------------------------------------------------------------------
 double CoreTextFont::getCapHeight () const
 {
-	return CTFontGetCapHeight (fontRef);
+	return capHeight;
 }
 
 //-----------------------------------------------------------------------------
-void CoreTextFont::drawString (CDrawContext* context, const CString& string, const CPoint& point, bool antialias)
+CFDictionaryRef CoreTextFont::getStringAttributes (const CGColorRef color) const
 {
-	const MacString* macString = dynamic_cast<const MacString*> (string.getPlatformString ());
-	CFStringRef utf8Str = macString ? macString->getCFString () : 0;
-	if (utf8Str)
+	if (stringAttributes == nullptr)
 	{
-		CColor fontColor = context->getFontColor ();
-		CGColorRef cgColorRef = CGColorCreateGenericRGB (fontColor.red/255.f, fontColor.green/255.f, fontColor.blue/255.f, fontColor.alpha/255.f);
-		CFStringRef keys[] = { kCTFontAttributeName, kCTForegroundColorAttributeName };
-		CFTypeRef values[] = { fontRef, cgColorRef };
-		CFDictionaryRef attributes = CFDictionaryCreate (kCFAllocatorDefault, (const void**)&keys,(const void**)&values, sizeof(keys) / sizeof(keys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-		CFAttributedStringRef attrStr = CFAttributedStringCreate (0, utf8Str, attributes);
-		CFRelease (attributes);
-		if (attrStr)
-		{
-			CTLineRef line = CTLineCreateWithAttributedString (attrStr);
-			if (line)
-			{
-				CGDrawContext* cgDrawContext = dynamic_cast<CGDrawContext*> (context);
-				CGContextRef cgContext = cgDrawContext ? cgDrawContext->beginCGContext (true) : 0;
-				if (cgContext)
-				{
-					CGContextSetShouldAntialias (cgContext, antialias);
-					CGContextSetShouldSmoothFonts (cgContext, true);
-					CGContextSetTextPosition (cgContext, point.x, point.y);
-					CTLineDraw (line, cgContext);
-					if (style & kUnderlineFace)
-					{
-						CGFloat underlineOffset = CTFontGetUnderlinePosition (fontRef) - 1.;
-						CGFloat underlineThickness = CTFontGetUnderlineThickness (fontRef);
-						CGContextSetStrokeColorWithColor (cgContext, cgColorRef);
-						CGContextSetLineWidth (cgContext, underlineThickness);
-						CGPoint cgPoint = CGContextGetTextPosition (cgContext);
-						CGContextBeginPath (cgContext);
-						CGContextMoveToPoint (cgContext, point.x, point.y - underlineOffset);
-						CGContextAddLineToPoint (cgContext, cgPoint.x, point.y - underlineOffset);
-						CGContextDrawPath (cgContext, kCGPathStroke);
-					}
-					if (style & kStrikethroughFace)
-					{
-						CGFloat underlineThickness = CTFontGetUnderlineThickness (fontRef);
-						CGFloat offset = CTFontGetXHeight (fontRef) * 0.5;
-						CGContextSetStrokeColorWithColor (cgContext, cgColorRef);
-						CGContextSetLineWidth (cgContext, underlineThickness);
-						CGPoint cgPoint = CGContextGetTextPosition (cgContext);
-						CGContextBeginPath (cgContext);
-						CGContextMoveToPoint (cgContext, point.x, point.y - offset);
-						CGContextAddLineToPoint (cgContext, cgPoint.x, point.y - offset);
-						CGContextDrawPath (cgContext, kCGPathStroke);
-					}	
-					cgDrawContext->releaseCGContext (cgContext);
-				}
-				CFRelease (line);
-			}
-			CFRelease (attrStr);
-		}
-		CFRelease (cgColorRef);
+		stringAttributes = CFDictionaryCreateMutable (kCFAllocatorDefault, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+		CFDictionarySetValue (stringAttributes, kCTFontAttributeName, fontRef);
 	}
+	if (color)
+	{
+		CFDictionarySetValue (stringAttributes, kCTForegroundColorAttributeName, color);
+	}
+	return stringAttributes;
 }
 
 //-----------------------------------------------------------------------------
-CCoord CoreTextFont::getStringWidth (CDrawContext* context, const CString& string, bool antialias)
+CTLineRef CoreTextFont::createCTLine (CDrawContext* context, MacString* macString) const
 {
-	CCoord result = 0;
-	const MacString* macString = dynamic_cast<const MacString*> (string.getPlatformString ());
-	CFStringRef utf8Str = macString ? macString->getCFString () : 0;
-	if (utf8Str)
+	CColor fontColor = context ? context->getFontColor () : kBlackCColor;
+	if (context)
 	{
-		CFStringRef keys[] = { kCTFontAttributeName };
-		CFTypeRef values[] = { fontRef };
-		CFDictionaryRef attributes = CFDictionaryCreate(kCFAllocatorDefault, (const void**)&keys,(const void**)&values, sizeof(keys) / sizeof(keys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-		CFAttributedStringRef attrStr = CFAttributedStringCreate (0, utf8Str, attributes);
-		CFRelease (attributes);
-		if (attrStr)
+		if (macString->getCTLineFontRef () == this && macString->getCTLineColor () == fontColor)
 		{
-			CTLineRef line = CTLineCreateWithAttributedString (attrStr);
-			if (line)
-			{
-				result = CTLineGetTypographicBounds (line, NULL, NULL, NULL);
-				CFRelease (line);
-			}
-			CFRelease (attrStr);
+			CTLineRef line = macString->getCTLine ();
+			CFRetain (line);
+			return line;
 		}
 	}
-	return result;
-}
-
-#else // VSTGUI_USES_CORE_TEXT
-//-----------------------------------------------------------------------------
-ATSUFont::ATSUFont (UTF8StringPtr name, const CCoord& size, const int32_t& style)
-: atsuStyle (0)
-{
-	OSStatus status = ATSUCreateStyle (&atsuStyle);
-	if (status == noErr)
+	CFStringRef cfStr = macString->getCFString ();
+	if (cfStr == nullptr)
 	{
-		ATSUFontID atsuFontID;
-		status = ATSUFindFontFromName (name, strlen (name), kFontFullName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &atsuFontID);
-		if (status != noErr)
-			status = ATSUFindFontFromName (name, strlen (name), kFontFamilyName, kFontNoPlatformCode, kFontNoScriptCode, kFontNoLanguageCode, &atsuFontID);
-		if (status == noErr)
-		{
-			Fixed atsuSize = FloatToFixed ((float)size);
-			Boolean italic = style & kItalicFace;
-			Boolean underline = style & kUnderlineFace;
-			Boolean bold = style & kBoldFace;
-			ATSUAttributeTag  theTags[] =  { kATSUFontTag, kATSUSizeTag, kATSUQDItalicTag, kATSUQDUnderlineTag, kATSUQDBoldfaceTag};
-			ByteCount        theSizes[] = { sizeof(ATSUFontID), sizeof(Fixed), sizeof (Boolean), sizeof (Boolean), sizeof (Boolean) };
-			ATSUAttributeValuePtr theValues[] = {&atsuFontID, &atsuSize, &italic, &underline, &bold};
-			status = ATSUSetAttributes (atsuStyle, 5, theTags, theSizes, theValues);
-		}
-		if (status != noErr)
-		{
-			ATSUDisposeStyle (atsuStyle);
-			atsuStyle = 0;
-		}
+	#if DEBUG
+		DebugPrint ("Empty CFStringRef in MacString. This is unexpected !\n");
+	#endif
+		return nullptr;
 	}
+
+	CGColorRef cgColorRef = nullptr;
+	if (fontColor != lastColor)
+	{
+		cgColorRef = getCGColor (fontColor);
+		lastColor = fontColor;
+	}
+	CFAttributedStringRef attrStr = CFAttributedStringCreate (kCFAllocatorDefault, cfStr, getStringAttributes (cgColorRef));
+	if (attrStr)
+	{
+		CTLineRef line = CTLineCreateWithAttributedString (attrStr);
+		if (context && line)
+		{
+			macString->setCTLine (line, this, fontColor);
+		}
+		CFRelease (attrStr);
+		return line;
+	}
+
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
-ATSUFont::~ATSUFont ()
+void CoreTextFont::drawString (CDrawContext* context, IPlatformString* string, const CPoint& point, bool antialias) const
 {
-	if (atsuStyle)
-		ATSUDisposeStyle (atsuStyle);
-}
-
-//-----------------------------------------------------------------------------
-void ATSUFont::drawString (CDrawContext* context, const CString& string, const CPoint& point, bool antialias)
-{
-	if (atsuStyle == 0)
+	MacString* macString = dynamic_cast<MacString*> (string);
+	if (macString == nullptr)
 		return;
 
-	CColor fontColor = context->getFontColor ();
-
-	const MacString* macString = dynamic_cast<const MacString*> (string.getPlatformString ());
-	CFStringRef utf8Str = macString ? macString->getCFString () : 0;
-	if (utf8Str)
+	CTLineRef line = createCTLine (context, macString);
+	if (line)
 	{
+		bool integralMode = context->getDrawMode ().integralMode ();
 		CGDrawContext* cgDrawContext = dynamic_cast<CGDrawContext*> (context);
-		CGContextRef cgContext = cgDrawContext ? cgDrawContext->beginCGContext (false) : 0;
+		CGContextRef cgContext = cgDrawContext ? cgDrawContext->beginCGContext (true, integralMode) : nullptr;
 		if (cgContext)
 		{
-			OSStatus status;
-			ATSURGBAlphaColor color = {fontColor.red/255.f, fontColor.green/255.f, fontColor.blue/255.f, fontColor.alpha/255.f};
-			ATSUAttributeTag  colorTag[] =  { kATSURGBAlphaColorTag };
-			ByteCount        colorSize[] = { sizeof(ATSURGBAlphaColor) };
-			ATSUAttributeValuePtr colorValue [] = { &color };
-			status = ATSUSetAttributes (atsuStyle, 1, colorTag, colorSize, colorValue);
-
+			CGPoint cgPoint = CGPointFromCPoint (point);
+			if (integralMode)
+				cgPoint = cgDrawContext->pixelAlligned (cgPoint);
 			CGContextSetShouldAntialias (cgContext, antialias);
-
-			CFIndex stringLength = CFStringGetLength (utf8Str);
-			UniChar* textBuffer = (UniChar*)malloc (stringLength*sizeof (UniChar));
-			CFStringGetCharacters (utf8Str, CFRangeMake (0, stringLength), textBuffer);
-
-			ATSUTextLayout textLayout;
-			status = ATSUCreateTextLayout (&textLayout);
-			status = ATSUSetTextPointerLocation (textLayout, textBuffer, kATSUFromTextBeginning, kATSUToTextEnd, stringLength);
-			status = ATSUSetRunStyle (textLayout, atsuStyle, kATSUFromTextBeginning, kATSUToTextEnd);
-			status = ATSUSetTransientFontMatching (textLayout, true);
-			
-			ATSUAttributeTag		theTags[]	= { kATSUCGContextTag };
-			ByteCount				theSizes[]	= { sizeof (CGContextRef) };
-			ATSUAttributeValuePtr	theValues[]	= { &cgContext };
-			status = ATSUSetLayoutControls (textLayout, 1, theTags, theSizes, theValues);
-
-			status = ATSUDrawText (textLayout, kATSUFromTextBeginning, kATSUToTextEnd, X2Fix(point.h), X2Fix(point.v*-1.f));
-			
-			ATSUDisposeTextLayout (textLayout);
-			free (textBuffer);
-			
+			CGContextSetShouldSmoothFonts (cgContext, true);
+			CGContextSetShouldSubpixelPositionFonts (cgContext, true);
+			CGContextSetShouldSubpixelQuantizeFonts (cgContext, true);
+			CGContextSetTextPosition (cgContext, static_cast<CGFloat> (point.x), cgPoint.y);
+			CTLineDraw (line, cgContext);
+			if (style & kUnderlineFace)
+			{
+				CGColorRef cgColorRef = getCGColor (context->getFontColor ());
+				CGFloat underlineOffset = CTFontGetUnderlinePosition (fontRef) - 1.f;
+				CGFloat underlineThickness = CTFontGetUnderlineThickness (fontRef);
+				CGContextSetStrokeColorWithColor (cgContext, cgColorRef);
+				CGContextSetLineWidth (cgContext, underlineThickness);
+				cgPoint = CGContextGetTextPosition (cgContext);
+				CGContextBeginPath (cgContext);
+				CGContextMoveToPoint (cgContext, static_cast<CGFloat> (point.x), cgPoint.y - underlineOffset);
+				CGContextAddLineToPoint (cgContext, cgPoint.x, cgPoint.y - underlineOffset);
+				CGContextDrawPath (cgContext, kCGPathStroke);
+			}
+			if (style & kStrikethroughFace)
+			{
+				CGColorRef cgColorRef = getCGColor (context->getFontColor ());
+				CGFloat underlineThickness = CTFontGetUnderlineThickness (fontRef);
+				CGFloat offset = CTFontGetXHeight (fontRef) * 0.5f;
+				CGContextSetStrokeColorWithColor (cgContext, cgColorRef);
+				CGContextSetLineWidth (cgContext, underlineThickness);
+				cgPoint = CGContextGetTextPosition (cgContext);
+				CGContextBeginPath (cgContext);
+				CGContextMoveToPoint (cgContext, static_cast<CGFloat> (point.x), cgPoint.y - offset);
+				CGContextAddLineToPoint (cgContext, cgPoint.x, cgPoint.y - offset);
+				CGContextDrawPath (cgContext, kCGPathStroke);
+			}
 			cgDrawContext->releaseCGContext (cgContext);
 		}
+		CFRelease (line);
 	}
 }
 
 //-----------------------------------------------------------------------------
-CCoord ATSUFont::getStringWidth (CDrawContext* context, const CString& string, bool antialias)
+CCoord CoreTextFont::getStringWidth (CDrawContext* context, IPlatformString* string, bool antialias) const
 {
 	CCoord result = 0;
-	if (atsuStyle)
+	MacString* macString = dynamic_cast<MacString*> (string);
+	if (macString == nullptr)
+		return result;
+	
+	CTLineRef line = createCTLine (context, macString);
+	if (line)
 	{
-		const MacString* macString = dynamic_cast<const MacString*> (string.getPlatformString ());
-		CFStringRef utf8Str = macString ? macString->getCFString () : 0;
-		if (utf8Str)
-		{
-			OSStatus status;
-			CFIndex stringLength = CFStringGetLength (utf8Str);
-			UniChar* textBuffer = (UniChar*)malloc (stringLength*sizeof (UniChar));
-			CFStringGetCharacters (utf8Str, CFRangeMake (0, stringLength), textBuffer);
-
-			ATSUTextLayout textLayout;
-			status = ATSUCreateTextLayout (&textLayout);
-			status = ATSUSetTextPointerLocation (textLayout, textBuffer, kATSUFromTextBeginning, kATSUToTextEnd, stringLength);
-			status = ATSUSetRunStyle (textLayout, atsuStyle, kATSUFromTextBeginning, kATSUToTextEnd);
-			status = ATSUSetTransientFontMatching (textLayout, true);
-			
-			CGDrawContext* cgDrawContext = context ? dynamic_cast<CGDrawContext*> (context) : 0;
-			CGContextRef cgContext = cgDrawContext ? cgDrawContext->beginCGContext (true) : 0;
-			if (cgContext)
-			{
-				ATSUAttributeTag		theTags[]	= { kATSUCGContextTag };
-				ByteCount				theSizes[]	= { sizeof (CGContextRef) };
-				ATSUAttributeValuePtr	theValues[]	= { &cgContext };
-				status = ATSUSetLayoutControls (textLayout, 1, theTags, theSizes, theValues);
-			}
-
-			ATSUTextMeasurement iBefore, iAfter, ascent, descent; 
-			status = ATSUGetUnjustifiedBounds (textLayout, 0, kATSUToTextEnd, &iBefore, &iAfter, &ascent, &descent);
-			result = Fix2X (iAfter);
-			
-			ATSUDisposeTextLayout (textLayout);
-			free (textBuffer);
-
-			if (context)
-			{
-				cgDrawContext->releaseCGContext (cgContext);
-			}
-		}
+		result = CTLineGetTypographicBounds (line, nullptr, nullptr, nullptr);
+		CFRelease (line);
 	}
 	return result;
 }
 
-#endif
-
-} // namespace
+} // VSTGUI
 
 #endif // MAC

@@ -5,11 +5,21 @@
 #include "UIDigitDisplay.h"
 #include "YM2612Enum.h"
 #include "UISlider.h"
-class UIPESelectedInstrument;
-class UIPanSlider : public CControl, public CControlListener, public GennyInterfaceObject
+
+enum UIPanSliderType
+{
+	Pan,
+	Delay,
+	Glide,
+	DetuneHor,
+	DetuneVert,
+	SamplePitch
+};
+
+class UIPanSlider : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
-	UIPanSlider(const CPoint& vPosition, int vWidth, UIPESelectedInstrument* vOwner, bool vDelay = false);
+	UIPanSlider(const CPoint& vPosition, int vWidth, GennyInterfaceObject* vOwner, IControlListener* pListener, UIPanSliderType eType, int op = 0);
 	~UIPanSlider(void);
 	virtual bool attached (CView* parent);	
 
@@ -17,15 +27,16 @@ public:
 	float getValue() const;
 	virtual void valueChanged (CControl* control);
 	void draw (CDrawContext* pContext);
-
+	virtual void setVisible(bool visible);
+	void updateLabel();
+	 
 	void reconnect();
 
+	UISlider* _slider;
 	CLASS_METHODS(UIPanSlider, CControl)
 
 private:
-	UIPESelectedInstrument* _owner;
-	UISlider* _slider;
-	bool _delay;
+	UIPanSliderType _type;
 	CTextLabel* _delayLabel;
 
 	YM2612Param _param;

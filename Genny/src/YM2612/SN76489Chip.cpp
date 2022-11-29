@@ -4,6 +4,7 @@
 #include "VGMLogger.h"
 #include "GennyLoaders.h"
 #include "GennyVST.h"
+#include "sn76489_plusgx.h"
 
 //-------------------------------------------------------------------------------------------------------
 //SN76489Chip - Wrapper for a SN76489 implementation
@@ -18,6 +19,7 @@ SN76489Chip::SN76489Chip(GennyVST* pVST)
 	,_hardwareMode(false)
 	,_emulationMute(false)
 	,_vst(pVST)
+	,_hq(true)
 {
 	_channelVolumes[0] = 15;
 	_channelVolumes[1] = 15;
@@ -40,11 +42,16 @@ void SN76489Chip::Initialize( SN76489Clock clock, int soundRate )
 	_soundRate = soundRate;
 
 	//Initialize the resampler to resample at 44100hz
-	_impl = new I76489Impl();
-	
+	_impl = new I76489Impl();	
 	_impl->SN76489_Init( clock, soundRate );
-
 	_impl->SN76489_Reset();
+
+
+	_implHQ = new sn76489Plus_Impl();
+	_implHQ->psg_init(PSG_TYPE::PSG_DISCRETE, _soundRate, 53693175);
+	_implHQ->psg_reset();
+	//_implHQ->psg_config()
+
 
 	for( float noteSteps = 0; noteSteps < 12.0f; noteSteps+= 1.0f ) 
 	{
@@ -58,6 +65,19 @@ void SN76489Chip::Initialize( SN76489Clock clock, int soundRate )
 
 			_freqs[(int)noteSteps] = freqNum;
 		//}
+	}
+}
+
+void SN76489Chip::setSampleRate(double rate)
+{
+	_soundRate = rate;
+	if (_impl != nullptr)
+		_impl->SN76489_SetSampleRate(_clock, rate);
+
+	if(_implHQ != nullptr)
+	{
+		_implHQ->psg_init(PSG_TYPE::PSG_DISCRETE, _soundRate, 53693175);
+		_implHQ->psg_reset();
 	}
 }
 
@@ -94,7 +114,7 @@ void SN76489Chip::Terminate()
 //-------------------------------------------------------------------------
 
 //Simply writes a value into a register. 
-void SN76489Chip::Write( unsigned char data, int channel, int mmData)
+void SN76489Chip::Write( unsigned char data, int channel, int mmData, int noteState)
 {
 	if(_channels[channel].currentDelay > 0 && channel >= 0)
 	{
@@ -111,13 +131,18 @@ void SN76489Chip::Write( unsigned char data, int channel, int mmData)
 	{
 		if(data != _lastWrite)
 		{
-			if(!_emulationMute)
-				_impl->SN76489_Write(data);
+			if (!_emulationMute)
+			{
+				if (_hq)
+					_implHQ->psg_write(0, data);
+				else
+					_impl->SN76489_Write(data);
+			}
 
 			if (_hardwareMode)
-				_2612->SendMIDI(2, mmData >= 0 ? ((unsigned char)mmData) : data, mmData >= 0 ? ((unsigned char)mmData) : data);
+				_2612->SendMIDI(2, mmData >= 0 ? ((unsigned char)mmData) : data, noteState);
 
-			if(_logger != nullptr && _logger->isLogging())
+			if(_logger != nullptr)
 				_logger->logWriteSN76489(data);
 		}
 		_lastWrite = data;
@@ -129,6 +154,11 @@ void SN76489Chip::Write( unsigned char data, int channel, int mmData)
 //Writes a tone value to a channel
 void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env, int mmValue)
 {
+	if (channel > 3)
+	{
+		int qq = 1;
+	}
+
 	unsigned char chan = channel % 4;
 	unsigned char ld = 1;
 	unsigned char type = 0;
@@ -144,6 +174,7 @@ void SN76489Chip::WriteTone( int channel, int value, SimpleEnvelope env, int mmV
 		dat01MM = mmValue & 15;
 		dat02MM = (mmValue & 1008) >> 4;
 	}
+
 
 	if(channel == 3)
 	{
@@ -177,7 +208,7 @@ void SN76489Chip::WriteVolume( int channel, float value )
 	Write(write, channel);
 }
 
-void SN76489Chip::setVolume(int channel, float volume)
+void SN76489Chip::setVolume(int channel, float volume, bool noteOn)
 {
 	volume = 1.0f - volume;
 	//LATCH
@@ -190,24 +221,34 @@ void SN76489Chip::setVolume(int channel, float volume)
 	//----------------------------------
 	//  7   6   5   4   3   2   1   0
 	//	0	    |       DATA        |
-
-	if((unsigned char)(volume * 15) != _channelVolumes[channel])
+	if((unsigned char)(volume * 15) != (unsigned char)_channelVolumes[channel])
 	{
-		unsigned char latch = 1;
+		unsigned char latch = 1; 
 		unsigned char chan = channel;
 		unsigned char type = 1;
 		unsigned char data = volume * 15;
 		unsigned char write = (((((latch << 2) | chan) << 1) | type) << 4) | data; 
-		Write(write, channel);
+
+		if (noteOn)
+		{
+			if(channel == 3)
+				Write(write, channel, -1, volume == 1.0f ? 4 : 3);
+			else
+				Write(write, channel, -1, volume == 1.0f ? 2 : 1);
+		}
+		else
+			Write(write, channel, -1, 0);
 
 		_channelVolumes[channel] = volume * 15;
 	}
 }
 
-void SN76489Chip::noteOn(int note, int velocity, int channel, SimpleEnvelope env, double* frequencyTable)
+void SN76489Chip::noteOn(int note, int velocity, int channel, SimpleEnvelope env, double* frequencyTable, bool retrigger)
 {
-	_channels[channel] = env;
-	writeFrequencies(note, velocity, channel, env, true, 0.0f, frequencyTable);
+	if(!retrigger)
+		_channels[channel] = env;
+
+	writeFrequencies(note, velocity, channel, _channels[channel], true, 0.0f, frequencyTable);
 	setVolume( channel, 0.0 );
 }
 
@@ -243,16 +284,24 @@ void SN76489Chip::writeFrequencies(int note, int velocity, int channel, SimpleEn
 		amountToBend *= 100;
 		semitones = (baseNote * 100) + amountToBend;
 	}
+	  
 
-
-	double musicalFrequency = pow(2.0, (((semitones + 1200) / 100.0) / 12.0)) * baseFrequency;
+	double musicalFrequency = (pow(2.0, (((semitones + 1200) / 100.0) / 12.0)) * baseFrequency);
 	double freq = musicalFrequency;
 
-	unsigned short reg = (float)_clock / (2.0f * freq * 16.0f);
+
+	unsigned short reg = (_clock / (freq * 32.0));
 	int regMM = -1;
 	if (_hardwareMode)
 		regMM = (float)SN76489Clock::SN76489_MEGAMIDI / (2.0f * freq * 16.0f);
 
+
+	if (env.melodicMode)
+	{
+		WriteTone(2, reg, env, regMM);
+		//setVolume(2, 0); //Mute channel 3
+	}
+	
 	if(channel != 3 || noteOnEvent)
 		WriteTone(channel, reg, env, regMM);
 
@@ -270,7 +319,7 @@ void SN76489Chip::noteOff(int channel)
 
 
 
-void SN76489Chip::updateEnvelopes()
+void SN76489Chip::updateEnvelopes(int sampleRate)
 {
 	
 	/*if (_triangleUp)
@@ -294,6 +343,8 @@ void SN76489Chip::updateEnvelopes()
 	float triangleMul = (_triangleInc + 1.0f) / 2.0f;*/
 	//triangleMul = 1.0f;
 
+
+	float rateMult = 44100.0f / sampleRate;
 	for(int i = 0; i < 4; i++)
 	{
 		SimpleEnvelope& channel = _channels[i];
@@ -301,7 +352,8 @@ void SN76489Chip::updateEnvelopes()
 		if(channel.state == ES_Finished)
 			continue;
 
-		channel.pos += 0.00025f;
+		bool trigger = channel.pos == 0;
+		channel.pos += 0.00025f * rateMult;
 		float attack = (1.0f - channel.atk) * 2.0f;
 		float dr1 = channel.dr1 * 2.0f;
 
@@ -338,13 +390,13 @@ void SN76489Chip::updateEnvelopes()
 			if (channel.currentLevel > 99999.0f)
 				channel.currentLevel = channel.lev;
 
-			setVolume(i, (channel.currentLevel * channel.noteVelocity));
+			setVolume(i, (channel.currentLevel * channel.noteVelocity), trigger);
 		}
 		else
 		{
 			if(channel.pos > rr)
 			{
-				setVolume(i, 0);
+				setVolume(i, 0, true);
 				channel.state = ES_Finished;
 			}
 			else
@@ -356,9 +408,22 @@ void SN76489Chip::updateEnvelopes()
 		
 	}
 }
+void SN76489Chip::fullStop()
+{
+	clearCache();
+	for (int i = 0; i < 4; i++)
+	{
+		SimpleEnvelope& channel = _channels[i];
+		channel.state = ES_Finished;
+		_channelVolumes[i] = 20;
+		setVolume(i, 0);
+	}
+}
 
 void SN76489Chip::tick()
 {
+	_hq = _vst->accurateEmulationMode;
+
 	_mutex.lock();
 	int sz = _commands.size();
 	for(int i = 0; i < sz; i++)

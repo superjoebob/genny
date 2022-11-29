@@ -1,58 +1,31 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #ifndef __plugguieditor__
 #include "plugguieditor.h"
 #endif
-
-#ifndef BUILD_VST
 
 #define kIdleRate    100 // host idle rate in ms
 #define kIdleRate2    50
 #define kIdleRateMin   4 // minimum time between 2 idles in ms
 
 #if WINDOWS
-#include <Windows.h>
+#include <windows.h>
+#include <ole2.h>
 #endif
 
 #if MAC
 #include <Carbon/Carbon.h>
+#include "getpluginbundle.h"
+
+namespace VSTGUI {
 static void InitMachOLibrary ();
 static void ExitMachOLibrary ();
+} // VSTGUI
 #endif
+
+namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
 // PluginGUIEditor Implementation
@@ -62,13 +35,13 @@ This is the same as the AEffGUIEditor class except that this one allows
 the VSTGUI lib to build without VST dependencies.
 */
 PluginGUIEditor::PluginGUIEditor (void *pEffect) 
-	: effect (pEffect), inIdleStuff (false)
+	: effect (pEffect)
 {
-	systemWindow = 0;
+	systemWindow = nullptr;
 	lLastTicks   = getTicks ();
 
 	#if WINDOWS
-	OleInitialize (0);
+	OleInitialize (nullptr);
 	#endif
 	#if MAC
 	InitMachOLibrary ();
@@ -89,22 +62,6 @@ PluginGUIEditor::~PluginGUIEditor ()
 //-----------------------------------------------------------------------------
 void PluginGUIEditor::draw (ERect *ppErect)
 {
-#if VSTGUI_ENABLE_DEPRECATED_METHODS
-	if (frame)
-	{
-		CRect r;
-		if (ppErect)
-			r (ppErect->left, ppErect->top, ppErect->right, ppErect->bottom);
-		else
-			r = frame->getViewSize ();
-		CDrawContext* context = frame->createDrawContext ();
-		if (context)
-		{
-			frame->drawRect (context, r);
-			context->forget();
-		}
-	}
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -179,7 +136,7 @@ void PluginGUIEditor::doIdleStuff ()
 
 	#if WINDOWS
 	struct tagMSG windowsMessage;
-	if (PeekMessage (&windowsMessage, NULL, WM_PAINT, WM_PAINT, PM_REMOVE))
+	if (PeekMessage (&windowsMessage, nullptr, WM_PAINT, WM_PAINT, PM_REMOVE))
 		DispatchMessage (&windowsMessage);
 
 	#elif MAC && !__LP64__
@@ -206,11 +163,8 @@ bool PluginGUIEditor::getRect (ERect **ppErect)
 #if MAC
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-#include "getpluginbundle.h"
 
-namespace VSTGUI {
-	void* gBundleRef = 0;
-}
+void* gBundleRef = 0;
 
 // -----------------------------------------------------------------------------
 void InitMachOLibrary ()
@@ -226,4 +180,5 @@ void ExitMachOLibrary ()
 }
 
 #endif
-#endif
+
+} // VSTGUI

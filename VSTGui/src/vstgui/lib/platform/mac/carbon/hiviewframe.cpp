@@ -1,42 +1,16 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "hiviewframe.h"
 
 #if MAC_CARBON
 
 #include "../../iplatformtextedit.h"
+#include "../../iplatformbitmap.h"
+#include "../../iplatformopenglview.h"
+#include "../../iplatformviewlayer.h"
+#include "../../../cbitmap.h"
 #include "../../../cdrawcontext.h"
 #include "../../../cdropsource.h"
 #include "hiviewtextedit.h"
@@ -45,19 +19,12 @@
 #include "../cgbitmap.h"
 #include "../macglobals.h"
 #include "../quartzgraphicspath.h"
+#include "../macclipboard.h"
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // we know that we use deprecated functions from Carbon, so we don't want to be warned
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 namespace VSTGUI {
-
-#if !MAC_COCOA
-//-----------------------------------------------------------------------------
-IPlatformFrame* IPlatformFrame::createPlatformFrame (IPlatformFrameCallback* frame, const CRect& size, void* parent)
-{
-	return new HIViewFrame (frame, size, (WindowRef)parent);
-}
-
-#endif
 
 SInt32 pSystemVersion;
 
@@ -71,61 +38,15 @@ bool isWindowComposited (WindowRef window)
 	return false;
 }
 
-//-----------------------------------------------------------------------------
-void CRect2Rect (const CRect &_cr, Rect &rr)
-{
-	CRect cr (_cr);
-	cr.normalize ();
-	rr.left   = (short)cr.left;
-	rr.right  = (short)cr.right;
-	rr.top    = (short)cr.top;
-	rr.bottom = (short)cr.bottom;
-}
+static SharedPointer<IDataPackage> gDragContainer;
 
 //-----------------------------------------------------------------------------
-void Rect2CRect (Rect &rr, CRect &cr)
-{
-	cr.left   = rr.left;
-	cr.right  = rr.right;
-	cr.top    = rr.top;
-	cr.bottom = rr.bottom;
-}
-
-//-----------------------------------------------------------------------------
-// MacDragContainer Declaration
-//-----------------------------------------------------------------------------
-class MacDragContainer : public CDragContainer
-{
-public:
-	MacDragContainer (DragRef platformDrag);
-	~MacDragContainer ();
-
-	virtual void* first (int32_t& size, int32_t& type);		///< returns pointer on a char array if type is known
-	virtual void* next (int32_t& size, int32_t& type);		///< returns pointer on a char array if type is known
-	
-	virtual int32_t getType (int32_t idx) const;
-	virtual int32_t getCount () const { return nbItems; }
-
-	DragRef getPlatformDrag () const { return platformDrag; }
-
-protected:
-	DragRef platformDrag;
-	PasteboardRef pasteboard;
-	int32_t nbItems;
-	
-	int32_t iterator;
-	void* lastItem;
-};
-
-static MacDragContainer* gDragContainer = 0;
-
-//-----------------------------------------------------------------------------
-static CPoint GetMacDragMouse (HIViewFrame* frame)
+static CPoint GetMacDragMouse (HIViewFrame* frame, DragRef drag)
 {
 	HIViewRef view = frame->getPlatformControl ();
 	CPoint where;
 	Point r;
-	if (GetDragMouse ((DragRef)gDragContainer->getPlatformDrag (), NULL, &r) == noErr)
+	if (GetDragMouse (drag, NULL, &r) == noErr)
 	{
 		HIPoint location;
 		location = CGPointMake ((CGFloat)r.h, (CGFloat)r.v);
@@ -134,195 +55,6 @@ static CPoint GetMacDragMouse (HIViewFrame* frame)
 		where.y = (CCoord)location.y;
 	}
 	return where;
-}
-
-//-----------------------------------------------------------------------------
-// MacDragContainer Implementation
-//-----------------------------------------------------------------------------
-MacDragContainer::MacDragContainer (DragRef inPlatformDrag)
-: platformDrag (inPlatformDrag)
-, pasteboard (0)
-, nbItems (0)
-, iterator (0)
-, lastItem (0)
-{
-	if (GetDragPasteboard (inPlatformDrag, &pasteboard) == noErr)
-	{
-		ItemCount numItems;
-		if (PasteboardGetItemCount (pasteboard, &numItems) == noErr)
-			nbItems = numItems;
-	}
-}
-
-//-----------------------------------------------------------------------------
-MacDragContainer::~MacDragContainer ()
-{
-	if (lastItem)
-	{
-		free (lastItem);
-		lastItem = 0;
-	}
-}
-
-//-----------------------------------------------------------------------------
-int32_t MacDragContainer::getType (int32_t idx) const
-{
-	if (platformDrag == 0)
-		return CDragContainer::kError;
-
-	PasteboardItemID itemID;
-	if (PasteboardGetItemIdentifier (pasteboard, idx+1, &itemID) == noErr)
-	{
-		CFArrayRef flavors = 0;
-		if (PasteboardCopyItemFlavors (pasteboard, itemID, &flavors) == noErr)
-		{
-			int32_t result = CDragContainer::kUnknown;
-			for (CFIndex i = 0; i < CFArrayGetCount (flavors); i++)
-			{
-				CFStringRef flavorType = (CFStringRef)CFArrayGetValueAtIndex (flavors, i);
-				if (flavorType == 0)
-					continue;
-				CFStringRef osTypeFlavorType = UTTypeCopyPreferredTagWithClass (flavorType, kUTTagClassOSType);
-				if (osTypeFlavorType == 0)
-					continue;
-				if (CFStringCompare (osTypeFlavorType, CFSTR("utxt"), 0) == kCFCompareEqualTo)
-					result = CDragContainer::kUnicodeText;
-				else if (CFStringCompare (osTypeFlavorType, CFSTR("utf8"), 0) == kCFCompareEqualTo)
-					result = CDragContainer::kUnicodeText;
-				else if (CFStringCompare (osTypeFlavorType, CFSTR("furl"), 0) == kCFCompareEqualTo)
-					result = CDragContainer::kFile;
-				else if (CFStringCompare (osTypeFlavorType, CFSTR("TEXT"), 0) == kCFCompareEqualTo)
-					result = CDragContainer::kText;
-				else if (CFStringCompare (osTypeFlavorType, CFSTR("XML "), 0) == kCFCompareEqualTo)
-					result = CDragContainer::kText;
-				CFRelease (osTypeFlavorType);
-				if (result != CDragContainer::kUnknown)
-					break;
-			}
-			CFRelease (flavors);
-			return result;
-		}
-	}
-	return CDragContainer::kUnknown;
-}
-
-//-----------------------------------------------------------------------------
-void* MacDragContainer::first (int32_t& size, int32_t& type)
-{
-	iterator = 0;
-	return next (size, type);
-}
-
-//-----------------------------------------------------------------------------
-void* MacDragContainer::next (int32_t& size, int32_t& type)
-{
-	if (platformDrag == 0)
-	{
-		type = CDragContainer::kError;
-		return 0;
-	}
-	if (lastItem)
-	{
-		free (lastItem);
-		lastItem = 0;
-	}
-	size = 0;
-	type = CDragContainer::kUnknown;
-
-	PasteboardItemID itemID;
-	if (PasteboardGetItemIdentifier (pasteboard, ++iterator, &itemID) == noErr)
-	{
-		CFArrayRef flavors = 0;
-		if (PasteboardCopyItemFlavors (pasteboard, itemID, &flavors) == noErr)
-		{
-			for (CFIndex i = 0; i < CFArrayGetCount (flavors); i++)
-			{
-				CFStringRef flavorType = (CFStringRef)CFArrayGetValueAtIndex (flavors, i);
-				if (flavorType == 0)
-					continue;
-				CFStringRef osTypeFlavorType = UTTypeCopyPreferredTagWithClass (flavorType, kUTTagClassOSType);
-				PasteboardFlavorFlags flavorFlags;
-				PasteboardGetItemFlavorFlags (pasteboard, itemID, flavorType, &flavorFlags);
-				CFDataRef flavorData = 0;
-				if (PasteboardCopyItemFlavorData (pasteboard, itemID, flavorType, &flavorData) == noErr)
-				{
-					CFIndex flavorDataSize = CFDataGetLength (flavorData);
-					const UInt8* data = CFDataGetBytePtr (flavorData);
-					if (data)
-					{
-						if (osTypeFlavorType == 0)
-						{
-							type = CDragContainer::kUnknown;
-							size = flavorDataSize;
-							lastItem = malloc (size);
-							memcpy (lastItem, data, size);
-						}
-						else if (CFStringCompare (osTypeFlavorType, CFSTR("utxt"), 0) == kCFCompareEqualTo)
-						{
-							CFStringRef utf16String = CFStringCreateWithBytes(0, data, flavorDataSize, kCFStringEncodingUTF16, false);
-							if (utf16String)
-							{
-								CFIndex maxSize = CFStringGetMaximumSizeForEncoding (flavorDataSize/2, kCFStringEncodingUTF8);
-								lastItem = malloc (maxSize+1);
-								if (CFStringGetCString (utf16String, (char*)lastItem, maxSize, kCFStringEncodingUTF8))
-								{
-									type = CDragContainer::kUnicodeText;
-									size = strlen ((const char*)lastItem);
-								}
-								else
-								{
-									free (lastItem);
-									lastItem = 0;
-								}
-								CFRelease (utf16String);
-							}
-						}
-						else if (CFStringCompare (osTypeFlavorType, CFSTR("furl"), 0) == kCFCompareEqualTo)
-						{
-							type = CDragContainer::kFile;
-							CFURLRef url = CFURLCreateWithBytes (NULL, data, flavorDataSize, kCFStringEncodingUTF8, NULL);
-							lastItem = malloc (PATH_MAX);
-							CFURLGetFileSystemRepresentation (url, false, (UInt8*)lastItem, PATH_MAX);
-							CFRelease (url);
-							size = strlen ((const char*)lastItem);
-						}
-						else if (CFStringCompare (osTypeFlavorType, CFSTR("utf8"), 0) == kCFCompareEqualTo)
-						{
-							type = CDragContainer::kUnicodeText;
-							size = flavorDataSize;
-							lastItem = malloc (flavorDataSize + 1);
-							((char*)lastItem)[flavorDataSize] = 0;
-							memcpy (lastItem, data, flavorDataSize);
-						}
-						else if (CFStringCompare (osTypeFlavorType, CFSTR("TEXT"), 0) == kCFCompareEqualTo)
-						{
-							type = CDragContainer::kText;
-							size = flavorDataSize;
-							lastItem = malloc (flavorDataSize + 1);
-							((char*)lastItem)[flavorDataSize] = 0;
-							memcpy (lastItem, data, flavorDataSize);
-						}
-						else if (CFStringCompare (osTypeFlavorType, CFSTR("XML "), 0) == kCFCompareEqualTo)
-						{
-							type = CDragContainer::kText;
-							size = flavorDataSize;
-							lastItem = malloc (flavorDataSize + 1);
-							((char*)lastItem)[flavorDataSize] = 0;
-							memcpy (lastItem, data, flavorDataSize);
-						}
-					}
-					CFRelease (flavorData);
-				}
-				if (osTypeFlavorType)
-					CFRelease (osTypeFlavorType);
-				if (type != CDragContainer::kError)
-					break;
-			}
-			CFRelease (flavors);
-			return lastItem;
-		}
-	}
-	return NULL;
 }
 
 static bool addViewToContentView = true;
@@ -428,7 +160,7 @@ HIViewFrame::HIViewFrame (IPlatformFrameCallback* frame, const CRect& size, Wind
 }
 
 //-----------------------------------------------------------------------------
-HIViewFrame::~HIViewFrame ()
+HIViewFrame::~HIViewFrame () noexcept
 {
 	if (keyboardEventHandler)
 		RemoveEventHandler (keyboardEventHandler);
@@ -481,6 +213,8 @@ bool HIViewFrame::setSize (const CRect& newSize)
 {
 	HIRect frameRect;
 	HIViewGetFrame (controlRef, &frameRect);
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 	// keep old values
 	CCoord oldWidth  = frameRect.size.width;
 	CCoord oldHeight = frameRect.size.height;
@@ -495,14 +229,16 @@ bool HIViewFrame::setSize (const CRect& newSize)
 									(short)((bounds.bottom - bounds.top) - oldHeight + newSize.getHeight ()), true);
 		}
 	}
+#endif
+
 	if (controlRef)
 	{
 		HIRect frameRect;
 		HIViewGetFrame (controlRef, &frameRect);
-		frameRect.origin.x = newSize.left;
-		frameRect.origin.y = newSize.top;
-		frameRect.size.width = newSize.getWidth ();
-		frameRect.size.height = newSize.getHeight ();
+		frameRect.origin.x = static_cast<CGFloat> (newSize.left);
+		frameRect.origin.y = static_cast<CGFloat> (newSize.top);
+		frameRect.size.width = static_cast<CGFloat> (newSize.getWidth ());
+		frameRect.size.height = static_cast<CGFloat> (newSize.getHeight ());
 		HIViewSetFrame (controlRef, &frameRect);
 	}
 	return true;
@@ -520,6 +256,7 @@ bool HIViewFrame::getSize (CRect& size) const
 		size.setHeight ((CCoord)hiRect.size.height);
 		return true;
 	}
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 	Rect bounds;
 	GetPortBounds (GetWindowPort (window), &bounds);
 
@@ -528,11 +265,15 @@ bool HIViewFrame::getSize (CRect& size) const
 	size.right  = bounds.right;
 	size.bottom = bounds.bottom;
 	return true;
+#else
+	return false;
+#endif
 }
 
 //-----------------------------------------------------------------------------
 bool HIViewFrame::getCurrentMousePosition (CPoint& mousePosition) const
 {
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 	// no up-to-date API call available for this, so use old QuickDraw
 	Point p;
 	CGrafPtr savedPort;
@@ -541,11 +282,20 @@ bool HIViewFrame::getCurrentMousePosition (CPoint& mousePosition) const
 	if (portChanged)
 		QDSwapPort (savedPort, NULL);
 	mousePosition (p.h, p.v);
+#endif
 
 	HIPoint location;
 	HIViewRef fromView = NULL;
 	HIViewFindByID (HIViewGetRoot (window), kHIViewWindowContentID, &fromView);
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
+	HIGetMousePosition (kHICoordSpaceView, fromView, &location);
+	location.x = static_cast<CGFloat> (floor (location.x + 0.5));
+	location.y = static_cast<CGFloat> (floor (location.y + 0.5));
+#else
 	location = CGPointMake (mousePosition.x, mousePosition.y);
+#endif
+
 	HIPointConvert (&location, kHICoordSpaceView, fromView, kHICoordSpaceView, controlRef);
 	mousePosition.x = (CCoord)location.x;
 	mousePosition.y = (CCoord)location.y;
@@ -631,7 +381,7 @@ bool HIViewFrame::invalidRect (const CRect& rect)
 {
 	if (isWindowComposited (window))
 	{
-		HIRect r = { {rect.left, rect.top}, {rect.getWidth (), rect.getHeight ()} };
+		HIRect r = { {static_cast<CGFloat>(rect.left), static_cast<CGFloat>(rect.top)}, {static_cast<CGFloat>(rect.getWidth ()), static_cast<CGFloat>(rect.getHeight ())} };
 		HIViewSetNeedsDisplayInRect (controlRef, &r, true);
 	}
 	else
@@ -678,10 +428,10 @@ bool HIViewFrame::showTooltip (const CRect& _rect, const char* utf8Text)
 
 	HMHelpContentRec helpContent = {0};
 	helpContent.version = 0;
-	helpContent.absHotRect.left = rect.left;
-	helpContent.absHotRect.right = rect.right;
-	helpContent.absHotRect.top = rect.top;
-	helpContent.absHotRect.bottom = rect.bottom;
+	helpContent.absHotRect.left = static_cast<short> (rect.left);
+	helpContent.absHotRect.right = static_cast<short> (rect.right);
+	helpContent.absHotRect.top = static_cast<short> (rect.top);
+	helpContent.absHotRect.bottom = static_cast<short> (rect.bottom);
 	helpContent.tagSide = kHMDefaultSide;
 	helpContent.content[0].contentType = kHMCFStringContent;
 	helpContent.content[0].u.tagCFString = CFStringCreateWithCString (0, utf8Text, kCFStringEncodingUTF8);
@@ -699,56 +449,41 @@ bool HIViewFrame::hideTooltip ()
 }
 
 //-----------------------------------------------------------------------------
-IPlatformTextEdit* HIViewFrame::createPlatformTextEdit (IPlatformTextEditCallback* textEdit)
+SharedPointer<IPlatformTextEdit> HIViewFrame::createPlatformTextEdit (IPlatformTextEditCallback* textEdit)
 {
-	HIViewTextEdit* control = new HIViewTextEdit (controlRef, textEdit);
+	auto control = makeOwned<HIViewTextEdit> (controlRef, textEdit);
 	if (control->getPlatformControl ())
 		return control;
-	control->forget ();
-	return 0;
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
-IPlatformOptionMenu* HIViewFrame::createPlatformOptionMenu ()
+SharedPointer<IPlatformOptionMenu> HIViewFrame::createPlatformOptionMenu ()
 {
-	return new HIViewOptionMenu ();
+	return makeOwned<HIViewOptionMenu> ();
 }
 
-//-----------------------------------------------------------------------------
-COffscreenContext* HIViewFrame::createOffscreenContext (CCoord width, CCoord height)
-{
-	CGBitmap* bitmap = new CGBitmap (CPoint (width, height));
-	CGDrawContext* context = new CGDrawContext (bitmap);
-	bitmap->forget ();
-	return context;
-}
-
-//-----------------------------------------------------------------------------
-CGraphicsPath* HIViewFrame::createGraphicsPath ()
-{
-	return new QuartzGraphicsPath;
-}
-
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
 //------------------------------------------------------------------------------------
-CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset, CBitmap* dragBitmap)
+DragResult HIViewFrame::doDrag (IDataPackage* source, const CPoint& offset, CBitmap* dragBitmap)
 {
-	CView::DragResult result = CView::kDragError;
+	DragResult result = kDragError;
 	PasteboardRef pb;
 	if (PasteboardCreate (kPasteboardUniqueName, &pb) == noErr)
 	{
 		PasteboardClear (pb);
-		for (int32_t i = 0; i < source->getCount (); i++)
+		for (uint32_t i = 0; i < source->getCount (); i++)
 		{
 			const void* buffer = 0;
-			CDropSource::Type type;
-			int32_t bufferSize = source->getEntry (i, buffer, type);
+			IDataPackage::Type type;
+			uint32_t bufferSize = source->getData (i, buffer, type);
 			if (bufferSize > 0)
 			{
 				switch (type)
 				{
-					case CDropSource::kFilePath:
+					case IDataPackage::kFilePath:
 					{
-						CFURLRef cfUrl = CFURLCreateFromFileSystemRepresentation (0, (const UInt8*)buffer, bufferSize, false);
+						CFURLRef cfUrl = CFURLCreateFromFileSystemRepresentation (0, (const UInt8*)buffer, static_cast<CFIndex> (bufferSize), false);
 						if (cfUrl)
 						{
 							CFDataRef dataRef = CFURLCreateData (0, cfUrl, kCFStringEncodingUTF8, false);
@@ -761,7 +496,7 @@ CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset
 						}
 						break;
 					}
-					case CDropSource::kText:
+					case IDataPackage::kText:
 					{
 						CFStringRef stringRef = CFStringCreateWithCString (0, (const char*)buffer, kCFStringEncodingUTF8);
 						if (stringRef)
@@ -776,9 +511,9 @@ CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset
 						}
 						break;
 					}
-					case CDropSource::kBinary:
+					case IDataPackage::kBinary:
 					{
-						CFDataRef dataRef = CFDataCreate (0, (const UInt8*)buffer, bufferSize);
+						CFDataRef dataRef = CFDataCreate (0, (const UInt8*)buffer, static_cast<CFIndex> (bufferSize));
 						if (dataRef)
 						{
 							PasteboardPutItemFlavor (pb, (void*)buffer, kUTTypeData, dataRef, kPasteboardFlavorSenderOnly);
@@ -786,6 +521,8 @@ CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset
 						}
 						break;
 					}
+					case IDataPackage::kError:
+						break;
 				}
 			}
 		}
@@ -797,29 +534,27 @@ CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset
 			if (eventRef && ConvertEventRefToEventRecord (eventRef, &eventRecord))
 			{
 
-				CGBitmap* cgBitmap = dragBitmap ? dynamic_cast<CGBitmap*> (dragBitmap->getPlatformBitmap ()) : 0;
+				CGBitmap* cgBitmap = dragBitmap ? dragBitmap->getPlatformBitmap ().cast<CGBitmap> () : 0;
 				CGImageRef cgImage = cgBitmap ? cgBitmap->getCGImage () : 0;
 				if (cgImage)
 				{
-					HIPoint imageOffset = { offset.x, offset.y };
+					HIPoint imageOffset = { static_cast<CGFloat>(offset.x), static_cast<CGFloat>(offset.y) };
 					SetDragImageWithCGImage (drag, cgImage, &imageOffset, 0);
 				}
 
-				RgnHandle region = NewRgn ();
-				if (TrackDrag (drag, &eventRecord, region) == noErr)
+				if (TrackDrag (drag, &eventRecord, NULL) == noErr)
 				{
 					DragActions action;
 					if (GetDragDropAction (drag, &action) == noErr)
 					{
 						if (action == kDragActionNothing)
-							result = CView::kDragRefused;
+							result = kDragRefused;
 						else if (action & kDragActionMove)
-							result = CView::kDragMoved;
+							result = kDragMoved;
 						else
-							result = CView::kDragCopied;
+							result = kDragCopied;
 					}
 				}
-				DisposeRgn (region);
 			}
 			DisposeDrag (drag);
 		}
@@ -827,6 +562,14 @@ CView::DragResult HIViewFrame::doDrag (CDropSource* source, const CPoint& offset
 	}
 	return result;
 }
+#endif
+
+//-----------------------------------------------------------------------------
+bool HIViewFrame::doDrag (const DragDescription& dragDescription, const SharedPointer<IDragCallback>& callback)
+{
+	return false;
+}
+
 
 #define ENABLE_LOGGING 0
 
@@ -1001,6 +744,7 @@ static short keyTable[] = {
 };
 
 /// @cond ignore
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 class VSTGUIDrawRectsHelper
 {
 public:
@@ -1010,6 +754,15 @@ public:
 	CDrawContext* context;
 	bool isComposited;
 };
+
+//-----------------------------------------------------------------------------
+static void Rect2CRect (Rect &rr, CRect &cr)
+{
+	cr.left   = rr.left;
+	cr.right  = rr.right;
+	cr.top    = rr.top;
+	cr.bottom = rr.bottom;
+}
 
 static OSStatus VSTGUIDrawRectsProc (UInt16 message, RgnHandle rgn, const Rect* rect, void* refCon)
 {
@@ -1026,6 +779,30 @@ static OSStatus VSTGUIDrawRectsProc (UInt16 message, RgnHandle rgn, const Rect* 
 	}
 	return noErr;
 }
+#else
+struct CFrameAndCDrawContext {
+	CFrame* frame;
+	CDrawContext* context;
+	
+	CFrameAndCDrawContext (CFrame* f, CDrawContext* c) : frame (f), context (c) {}
+};
+
+static OSStatus HIShapeEnumerateProc (int inMessage, HIShapeRef inShape, const CGRect *inRect, void *inRefcon)
+{
+	if (inMessage == kHIShapeEnumerateRect)
+	{
+		CFrameAndCDrawContext* tmp = (CFrameAndCDrawContext*)inRefcon;
+		CRect r (inRect->origin.x, inRect->origin.y, 0, 0);
+		r.setWidth (inRect->size.width);
+		r.setHeight (inRect->size.height);
+		tmp->context->saveGlobalState ();
+		tmp->frame->drawRect (tmp->context, r);
+		tmp->context->restoreGlobalState ();
+	}
+	return noErr;
+}
+
+#endif
 /// @endcond
 
 #ifndef kHIViewFeatureGetsFocusOnClick
@@ -1105,20 +882,32 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 					OSStatus res = GetEventParameter (inEvent, kEventParamCGContextRef, typeCGContextRef, NULL, sizeof (cgcontext), NULL, &cgcontext);
 					if (res != noErr)
 						break;
-					CFrame* cframe = dynamic_cast<CFrame*> (frame);
 					context = new CGDrawContext (cgcontext, dirtyRect);
 					context->beginDraw ();
 
+				#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_6
 					RgnHandle dirtyRegion;
 					if (GetEventParameter (inEvent, kEventParamRgnHandle, typeQDRgnHandle, NULL, sizeof (RgnHandle), NULL, &dirtyRegion) == noErr)
 					{
+						CFrame* cframe = dynamic_cast<CFrame*> (frame);
 						VSTGUIDrawRectsHelper helper (cframe, context, isWindowComposited (window));
 						RegionToRectsUPP upp = NewRegionToRectsUPP (VSTGUIDrawRectsProc);
 						QDRegionToRects (dirtyRegion, kQDParseRegionFromTopLeft, upp, &helper);
 						DisposeRegionToRectsUPP (upp);
 					}
 					else
+				#else
+					HIShapeRef shapeRef;
+					if (GetEventParameter (inEvent, kEventParamShape, typeHIShapeRef, NULL, sizeof (HIShapeRef), NULL, &shapeRef) == noErr)
+					{
+						CFrame* cframe = dynamic_cast<CFrame*> (frame);
+						CFrameAndCDrawContext tmp (cframe, context);
+						HIShapeEnumerate (shapeRef, kHIShapeParseFromTopLeft, HIShapeEnumerateProc, &tmp);
+					}
+				#endif
+					{
 						frame->platformDrawRect (context, dirtyRect);
+					}
 					context->endDraw ();
 					context->forget ();
 					result = noErr;
@@ -1212,18 +1001,15 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 				}
 				case kEventControlDragEnter:
 				{
-					#if MAC_OLD_DRAG
-					gEventDragWorks = true;
-					#endif
-
 					DragRef dragRef;
 					if (GetEventParameter (inEvent, kEventParamDragRef, typeDragRef, NULL, sizeof (DragRef), NULL, &dragRef) == noErr)
 					{
-						gDragContainer = new MacDragContainer (dragRef);
+						gDragContainer = MacClipboard::createCarbonDragDataPackage (dragRef);
 						
-						CPoint where = GetMacDragMouse (hiviewframe);
+						CPoint where = GetMacDragMouse (hiviewframe, dragRef);
 						hiviewframe->setMouseCursor (kCursorNotAllowed);
-						frame->platformOnDragEnter (gDragContainer, where);
+						DragEventData data {gDragContainer, where, 0};
+						frame->platformOnDragEnter (data);
 
 						Boolean acceptDrop = true;
 						SetEventParameter (inEvent, kEventParamControlWouldAcceptDrop, typeBoolean, sizeof (Boolean), &acceptDrop);
@@ -1233,20 +1019,24 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 				}
 				case kEventControlDragWithin:
 				{
-					if (gDragContainer)
+					DragRef dragRef;
+					if (gDragContainer && GetEventParameter (inEvent, kEventParamDragRef, typeDragRef, NULL, sizeof (DragRef), NULL, &dragRef) == noErr)
 					{
-						CPoint where = GetMacDragMouse (hiviewframe);
-						frame->platformOnDragMove (gDragContainer, where);
+						CPoint where = GetMacDragMouse (hiviewframe, dragRef);
+						DragEventData data {gDragContainer, where, 0};
+						frame->platformOnDragMove (data);
 					}
 					result = noErr;
 					break;
 				}
 				case kEventControlDragLeave:
 				{
-					if (gDragContainer)
+					DragRef dragRef;
+					if (gDragContainer && GetEventParameter (inEvent, kEventParamDragRef, typeDragRef, NULL, sizeof (DragRef), NULL, &dragRef) == noErr)
 					{
-						CPoint where = GetMacDragMouse (hiviewframe);
-						frame->platformOnDragLeave (gDragContainer, where);
+						CPoint where = GetMacDragMouse (hiviewframe, dragRef);
+						DragEventData data {gDragContainer, where, 0};
+						frame->platformOnDragLeave (data);
 						hiviewframe->setMouseCursor (kCursorDefault);
 					}
 					result = noErr;
@@ -1254,13 +1044,14 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 				}
 				case kEventControlDragReceive:
 				{
-					if (gDragContainer)
+					DragRef dragRef;
+					if (gDragContainer && GetEventParameter (inEvent, kEventParamDragRef, typeDragRef, NULL, sizeof (DragRef), NULL, &dragRef) == noErr)
 					{
-						CPoint where = GetMacDragMouse (hiviewframe);
-						frame->platformOnDrop (gDragContainer, where);
+						CPoint where = GetMacDragMouse (hiviewframe, dragRef);
+						DragEventData data {gDragContainer, where, 0};
+						frame->platformOnDrop (data);
 						hiviewframe->setMouseCursor (kCursorDefault);
-						gDragContainer->forget ();
-						gDragContainer = 0;
+						gDragContainer = nullptr;
 					}
 					result = noErr;
 					break;
@@ -1391,7 +1182,7 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 						GetEventParameter (inEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof (char), NULL, &character);
 						GetEventParameter (inEvent, kEventParamKeyCode, typeUInt32, NULL, sizeof (UInt32), NULL, &keyCode);
 						GetEventParameter (inEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof (UInt32), NULL, &modifiers);
-						char scanCode = keyCode;
+						char scanCode = static_cast<char> (keyCode);
 						VstKeyCode vstKeyCode;
 						memset (&vstKeyCode, 0, sizeof (VstKeyCode));
 						KeyboardLayoutRef layout;
@@ -1402,7 +1193,7 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 							if (pKCHR)
 							{
 								static UInt32 keyTranslateState = 0;
-								vstKeyCode.character = KeyTranslate (pKCHR, keyCode, &keyTranslateState);
+								vstKeyCode.character = static_cast<int32_t> (KeyTranslate (pKCHR, static_cast<UInt16> (keyCode), &keyTranslateState));
 								if (modifiers & shiftKey)
 								{
 									vstKeyCode.character = toupper (vstKeyCode.character);
@@ -1414,7 +1205,7 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 						{
 							if (keyTable[i + 1] == scanCode)
 							{
-								vstKeyCode.virt = keyTable[i];
+								vstKeyCode.virt = static_cast<unsigned char> (keyTable[i]);
 								vstKeyCode.character = 0;
 								break;
 							}
@@ -1427,7 +1218,7 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 							vstKeyCode.modifier |= MODIFIER_ALTERNATE;
 						if (modifiers & controlKey)
 							vstKeyCode.modifier |= MODIFIER_COMMAND;
-						if (frame->platformOnKeyDown (vstKeyCode) != -1)
+						if (frame->platformOnKeyDown (vstKeyCode))
 							result = noErr;
 						
 						break;
@@ -1441,8 +1232,8 @@ pascal OSStatus HIViewFrame::carbonEventHandler (EventHandlerCallRef inHandlerCa
 }
 
 
-} // namespace
+} // VSTGUI
 
-#pragma GCC diagnostic warning "-Wdeprecated-declarations" // we know that we use deprecated functions from Carbon, so we don't want to be warned
+#pragma clang diagnostic pop
 
 #endif // MAC_CARBON

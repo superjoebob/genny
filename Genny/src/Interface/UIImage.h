@@ -7,8 +7,8 @@ public:
 	UIImage(const CRect& size, int image, bool lcd = false);
 	~UIImage(void);
 
-	void setFrame(int frame) { if(frame != _frame) {_frame = frame; setDirty(true);} }
-	int getNumFrames() { return (int)(_bitmap.getHeight() / CView::size.height()); }
+	void setFrame(int frame) { if (frame != _frame) { _frame = frame; setDirty(true); invalid(); } }
+	int getNumFrames() { return (int)(_bitmap.getHeight() / CView::getHeight()); }
 
 	virtual void setDirty(bool dirty);
 
@@ -16,10 +16,11 @@ public:
 
 	CLASS_METHODS(UIImage, CView)
 
+		int _frame;
+
 private:
 	float _width;
 	float _height;
-	int _frame;
 	int _prevFrame;
 	UIBitmap _bitmap;
 	UIBitmap _bitmap2;

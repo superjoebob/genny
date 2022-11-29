@@ -1399,18 +1399,19 @@ INLINE void refresh_fc_eg_slot(FM_SLOT *SLOT , unsigned int fc , unsigned int kc
   {
     SLOT->ksr = kc;
 
+    //GENNY EDIT commented stuff out here, as this code was screwing up if an instrument with one KS rate was played, followed by another with a different KS rate on the same channel
     /* recalculate envelope generator rates */
-    if ((SLOT->ar + kc) < (32+62))
+    //if ((SLOT->ar + kc) < (32+62))
     {
       SLOT->eg_sh_ar  = _eg_rate_shift [SLOT->ar  + kc ];
       SLOT->eg_sel_ar = _eg_rate_select[SLOT->ar  + kc ];
     }
-    else
-    {
-      /* verified by Nemesis on real hardware (Attack phase is blocked) */
-      SLOT->eg_sh_ar  = 0;
-      SLOT->eg_sel_ar = 18*RATE_STEPS;
-    }
+    //else
+    //{
+    //  /* verified by Nemesis on real hardware (Attack phase is blocked) */
+    //  SLOT->eg_sh_ar  = 0;
+    //  SLOT->eg_sel_ar = 18*RATE_STEPS;
+    //}
 
     SLOT->eg_sh_d1r = _eg_rate_shift [SLOT->d1r + kc];
     SLOT->eg_sel_d1r= _eg_rate_select[SLOT->d1r + kc];
@@ -1908,7 +1909,7 @@ void YM2612Init(void)
 
 	memset(&ym2612,0,sizeof(YM2612_data));
 	init_tables();
-	fm_enablePerNotePanning = true;
+	fm_enablePerNotePanning = false;
 	fm_perNoteVolumeL[0] = 0;
 	fm_perNoteVolumeL[1] = 0;
 	fm_perNoteVolumeL[2] = 0;

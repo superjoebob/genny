@@ -1483,18 +1483,19 @@ inline void refresh_fc_eg_slot(FM_SLOT *SLOT , int fc , int kc )
   {
     SLOT->ksr = kc;
 
-    /* recalculate envelope generator rates */
-    if ((SLOT->ar + kc) < (32+62))
+    //GENNY EDIT commented stuff out here, as this code was screwing up if an instrument with one KS rate was played, followed by another with a different KS rate on the same channel
+    /* recalculate envelope generator rates */ 
+    //if ((SLOT->ar + kc) < (32+62))
     {
       SLOT->eg_sh_ar  = eg_rate_shift [SLOT->ar  + kc ];
       SLOT->eg_sel_ar = eg_rate_select[SLOT->ar  + kc ];
     }
-    else
-    {
-      /* verified by Nemesis on real hardware (Attack phase is blocked) */
-      SLOT->eg_sh_ar  = 0;
-      SLOT->eg_sel_ar = 18*RATE_STEPS;
-    }
+    //else
+    //{
+    //  /* verified by Nemesis on real hardware (Attack phase is blocked) */
+    //  SLOT->eg_sh_ar  = 0;
+    //  SLOT->eg_sel_ar = 18*RATE_STEPS;
+    //}
 
     SLOT->eg_sh_d1r = eg_rate_shift [SLOT->d1r + kc];
     SLOT->eg_sel_d1r= eg_rate_select[SLOT->d1r + kc];
@@ -2048,6 +2049,10 @@ inline void OPNWriteReg(int r, int v)
 }
 
 
+void SetSampleRate(int rate)
+{
+    ym2612.OPN.ST.rate = rate;
+}
 
 /* initialize ym2612 emulator(s) */
 void YM2612Init(double clock, int rate)

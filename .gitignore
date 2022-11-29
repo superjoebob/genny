@@ -3,3 +3,9 @@ Genny.sdf
 Genny\obj\
 VSTGui\obj\
 VSTGui\bin\
+/VSTGui/bin
+/VSTGui/obj
+/Genny/obj
+/Genny/bin
+/.vs
+/Genny.VC.db

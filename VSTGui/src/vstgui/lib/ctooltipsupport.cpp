@@ -1,39 +1,12 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "ctooltipsupport.h"
+#include "cframe.h"
 #include "cvstguitimer.h"
+#include "malloc.h"
+#include "platform/iplatformframe.h"
 
 #if DEBUG
 #define DEBUGLOG 0
@@ -56,39 +29,36 @@ Adding CTooltipSupport is done via VSTGUI::CFrame::enableTooltips (true) */
  * @param frame CFrame object
  * @param delay tooltip delay time in milliseconds
  */
-CTooltipSupport::CTooltipSupport (CFrame* frame, int32_t delay)
-: timer (0)
+CTooltipSupport::CTooltipSupport (CFrame* frame, uint32_t delay)
+: timer (nullptr)
 , frame (frame)
-, currentView (0)
+, currentView (nullptr)
 , delay (delay)
 , state (kHidden)
 {
-	timer = new CVSTGUITimer (this, delay);
+	timer = makeOwned<CVSTGUITimer> (this, delay);
 }
 
 //------------------------------------------------------------------------
-CTooltipSupport::~CTooltipSupport ()
+CTooltipSupport::~CTooltipSupport () noexcept
 {
-	timer->forget ();
-
 	IPlatformFrame* platformFrame = frame->getPlatformFrame ();
 	if (platformFrame)
 		platformFrame->hideTooltip ();
 }
 
 //------------------------------------------------------------------------
-static UTF8StringBuffer getTooltipFromView (CView* view)
+static Buffer<char> getTooltipFromView (CView* view)
 {
-	UTF8StringBuffer tooltip = 0;
-	int32_t tooltipSize = 0;
+	Buffer<char> tooltip;
+	uint32_t tooltipSize = 0;
 	if (view->getAttributeSize (kCViewTooltipAttribute, tooltipSize))
 	{
-		tooltip = (UTF8StringBuffer)malloc (tooltipSize + 1);
-		memset (tooltip, 0, tooltipSize+1);
-		if (!view->getAttribute (kCViewTooltipAttribute, tooltipSize, tooltip, tooltipSize))
+		tooltip.allocate (tooltipSize + 1);
+		memset (tooltip.get (), 0, tooltipSize + 1);
+		if (!view->getAttribute (kCViewTooltipAttribute, tooltipSize, tooltip.get (), tooltipSize))
 		{
-			free (tooltip);
-			tooltip = 0;
+			tooltip.deallocate ();
 		}
 	}
 	return tooltip;
@@ -97,7 +67,7 @@ static UTF8StringBuffer getTooltipFromView (CView* view)
 //------------------------------------------------------------------------
 static bool viewHasTooltip (CView* view)
 {
-	int32_t tooltipSize = 0;
+	uint32_t tooltipSize = 0;
 	if (view->getAttributeSize (kCViewTooltipAttribute, tooltipSize))
 	{
 		if (tooltipSize > 0)
@@ -155,7 +125,7 @@ void CTooltipSupport::onMouseExited (CView* view)
 			timer->setFireTime (200);
 			timer->start ();
 		}
-		currentView = 0;
+		currentView = nullptr;
 		#if DEBUGLOG
 		DebugPrint ("CTooltipSupport::onMouseExited (%s)\n", view->getClassName ());
 		#endif
@@ -231,32 +201,34 @@ void CTooltipSupport::hideTooltip ()
 }
 
 //------------------------------------------------------------------------
-void CTooltipSupport::showTooltip ()
+bool CTooltipSupport::showTooltip ()
 {
 	if (currentView)
 	{
-		CRect r (currentView->getVisibleSize ());
-		CPoint p;
-		currentView->localToFrame (p);
-		r.offset (p.x, p.y);
+		if (currentView->isAttached () == false)
+		{
+			currentView = nullptr;
+			return false;
+		}
+		CRect r = currentView->translateToGlobal (currentView->getVisibleViewSize ());
 
-		UTF8StringBuffer tooltip = getTooltipFromView (currentView);
+		auto tooltip = getTooltipFromView (currentView);
 		
-		if (tooltip)
+		if (!tooltip.empty ())
 		{
 			state = kForceVisible;
 			
 			IPlatformFrame* platformFrame = frame->getPlatformFrame ();
 			if (platformFrame)
-				platformFrame->showTooltip (r, tooltip);
-
-			free (tooltip);
+				platformFrame->showTooltip (r, tooltip.get ());
 
 			#if DEBUGLOG
 			DebugPrint ("CTooltipSupport::showTooltip (%s)\n", currentView->getClassName ());
 			#endif
+			return true;
 		}
 	}
+	return false;
 }
 
 //------------------------------------------------------------------------
@@ -271,8 +243,15 @@ CMessageResult CTooltipSupport::notify (CBaseObject* sender, IdStringPtr msg)
 		}
 		else if (state == kShowing)
 		{
-			showTooltip ();
-			timer->setFireTime (100);
+			if (showTooltip ())
+			{
+				timer->setFireTime (100);
+			}
+			else
+			{
+				state = kHidden;
+				timer->stop ();
+			}
 		}
 		else if (state == kForceVisible)
 		{
@@ -285,4 +264,4 @@ CMessageResult CTooltipSupport::notify (CBaseObject* sender, IdStringPtr msg)
 	return kMessageUnknown;
 }
 
-} // namespace
+} // VSTGUI

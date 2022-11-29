@@ -1,112 +1,73 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __quartzgraphicspath__
-#define __quartzgraphicspath__
+#pragma once
 
 #include "../../cgraphicspath.h"
+#include "../../cgradient.h"
 
 #if MAC
 
-#include <ApplicationServices/ApplicationServices.h>
+#include "macglobals.h"
+#if TARGET_OS_IPHONE
+	#include <CoreGraphics/CoreGraphics.h>
+	#include <ImageIO/ImageIO.h>
+#else
+	#include <ApplicationServices/ApplicationServices.h>
+#endif
 
 namespace VSTGUI {
+class CoreTextFont;
+class CDrawContext;
 
 //------------------------------------------------------------------------------------
 class QuartzGraphicsPath : public CGraphicsPath
 {
 public:
 	QuartzGraphicsPath ();
-	~QuartzGraphicsPath ();
+	QuartzGraphicsPath (const CoreTextFont* font, UTF8StringPtr text);
+	~QuartzGraphicsPath () noexcept override;
 
+	void pixelAlign (CDrawContext* context);
 	CGPathRef getCGPathRef ();
-	void dirty ();
+	void dirty () override;
 
-	CPoint getCurrentPosition ();
-	CRect getBoundingBox ();
+	bool hitTest (const CPoint& p, bool evenOddFilled = false, CGraphicsTransform* transform = nullptr) override;
+	CPoint getCurrentPosition () override;
+	CRect getBoundingBox () override;
 
-	CGradient* createGradient (double color1Start, double color2Start, const CColor& color1, const CColor& color2);
+	CGradient* createGradient (double color1Start, double color2Start, const CColor& color1, const CColor& color2) override;
 
-	static CGAffineTransform createCGAfflineTransform (const CGraphicsTransform& t);
+	static CGAffineTransform createCGAffineTransform (const CGraphicsTransform& t);
 
 //------------------------------------------------------------------------------------
 protected:
 	CGMutablePathRef path;
+	CGMutablePathRef originalTextPath;
+	bool isPixelAlligned;
 };
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_4
 //-----------------------------------------------------------------------------
 class QuartzGradient : public CGradient
 {
 public:
-	QuartzGradient (double _color1Start, double _color2Start, const CColor& _color1, const CColor& _color2)
-	: CGradient (_color1Start, _color2Start, _color1, _color2)
-	, gradient (0)
-	{
-		CGColorRef cgColor1 = CGColorCreateGenericRGB (color1.red/255.f, color1.green/255.f, color1.blue/255.f, color1.alpha/255.f);
-		CGColorRef cgColor2 = CGColorCreateGenericRGB (color2.red/255.f, color2.green/255.f, color2.blue/255.f, color2.alpha/255.f);
-		const void* colors[] = { cgColor1, cgColor2 };
-		CFArrayRef colorArray = CFArrayCreate (0, colors, 2, &kCFTypeArrayCallBacks);
+	explicit QuartzGradient (const ColorStopMap& map);
+	QuartzGradient (double _color1Start, double _color2Start, const CColor& _color1, const CColor& _color2);
+	~QuartzGradient () noexcept override;
 
-		if (color1Start < 0) color1Start = 0;
-		else if (color1Start > 1) color1Start = 1;
-		if (color2Start < 0) color2Start = 0;
-		else if (color2Start > 1) color2Start = 1;
-		CGFloat locations[] = { color1Start, color2Start };
-		
-		gradient = CGGradientCreateWithColors (0, colorArray, locations);
+	operator CGGradientRef () const;
 
-		CFRelease (cgColor1);
-		CFRelease (cgColor2);
-		CFRelease (colorArray);
-	}
-	
-	~QuartzGradient ()
-	{
-		if (gradient)
-			CFRelease (gradient);
-	}
-
-	operator CGGradientRef () const { return gradient; }
+	void addColorStop (const std::pair<double, CColor>& colorStop) override;
+	void addColorStop (std::pair<double, CColor>&& colorStop) override;
 
 protected:
-	CGGradientRef gradient;
+	void createCGGradient () const;
+	void releaseCGGradient ();
+
+	mutable CGGradientRef gradient;
 };
+
+} // VSTGUI
+
 #endif
-
-} // namespace
-
-#endif
-
-#endif // __quartzgraphicspath__

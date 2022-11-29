@@ -7,7 +7,7 @@
 #include "UIOperator.h"
 #include "UIDigitDisplay.h"
 
-UIDigitKnob::UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param param, GennyInstrumentParam param2):
+UIDigitKnob::UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param param, GennyInstrumentParam param2, bool hzKnob):
 	CControl(CRect(), owner),
 	GennyInterfaceObject(owner),
 	_owner(owner),
@@ -17,11 +17,10 @@ UIDigitKnob::UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param par
 	_YMParam(true),
 	_insParam(param2),
 	_min(0),
-	_max(0)
+	_max(0),
+	_hzKnob(hzKnob)
 {
-	CFrame* frame = owner->getFrame();
-	frame->addView(this);
-
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
 	int index = 0;
@@ -41,10 +40,14 @@ UIDigitKnob::UIDigitKnob(const CPoint& pos, UIInstrument* owner, YM2612Param par
 
 	frame->addView(_knob);
 
-	_display = new UIDigitDisplay(CPoint(pos.x + 32, pos.y + 6), frame, 2);
+	if(_hzKnob)
+		_display = new UIDigitDisplay(CPoint(pos.x + 32, pos.y + 6), frame, 5);
+	else
+		_display = new UIDigitDisplay(CPoint(pos.x + 32, pos.y + 6), frame, 2);
 	frame->addView(_display);
 
-	setValue(getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(index)));
+	if(index >= 0)
+		setValue(getVst()->getCurrentPatch()->getFromBaron(baron->getIndex(index)));
 }
 
 UIDigitKnob::~UIDigitKnob(void)
@@ -63,6 +66,19 @@ void UIDigitKnob::setValue(float val)
 	{
 		realVal = realVal - 3;
 	}
+
+	if (getExtParam() != nullptr && getExtParam()->param == GEParam::DACSamplerate)
+	{
+		int rl = (int)(val + 0.5f);
+		if (rl < 0)
+			rl = 0;
+		if (rl > 3)
+			rl = 3;
+
+		realVal = kDACSamplerates[rl];
+	}
+
+
 	_display->setNumber(realVal);
 }
 

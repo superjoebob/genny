@@ -1,47 +1,9 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cvstguitimer.h"
-
-#if WINDOWS
-#include <windows.h>
-#include <list>
-namespace VSTGUI {
-static std::list<CVSTGUITimer*> gTimerList;
-} // namespace
-
-#endif
+#include "platform/platformfactory.h"
 
 #if DEBUG
 #define DEBUGLOG	0
@@ -53,42 +15,62 @@ namespace VSTGUI {
 IdStringPtr CVSTGUITimer::kMsgTimer = "timer fired";
 
 //-----------------------------------------------------------------------------
-CVSTGUITimer::CVSTGUITimer (CBaseObject* timerObject, int32_t fireTime)
+CVSTGUITimer::CVSTGUITimer (CBaseObject* timerObject, uint32_t fireTime, bool doStart)
 : fireTime (fireTime)
-, timerObject (timerObject)
-, platformTimer (0)
+, platformTimer (nullptr)
 {
+	callbackFunc = [timerObject](CVSTGUITimer* timer) {
+		timerObject->notify (timer, kMsgTimer);
+	};
+	if (doStart)
+		start ();
 }
 
 //-----------------------------------------------------------------------------
-CVSTGUITimer::~CVSTGUITimer ()
+CVSTGUITimer::CVSTGUITimer (const CallbackFunc& callback, uint32_t fireTime, bool doStart)
+: fireTime (fireTime)
+, callbackFunc (callback)
+, platformTimer (nullptr)
+{
+	if (doStart)
+		start ();
+}
+
+//-----------------------------------------------------------------------------
+CVSTGUITimer::CVSTGUITimer (CallbackFunc&& callback, uint32_t fireTime, bool doStart)
+: fireTime (fireTime)
+, callbackFunc (std::move (callback))
+, platformTimer (nullptr)
+{
+	if (doStart)
+		start ();
+}
+
+//-----------------------------------------------------------------------------
+CVSTGUITimer::~CVSTGUITimer () noexcept = default;
+
+//-----------------------------------------------------------------------------
+void CVSTGUITimer::beforeDelete ()
 {
 	stop ();
+	CBaseObject::beforeDelete ();
 }
 
 //-----------------------------------------------------------------------------
 bool CVSTGUITimer::start ()
 {
-	if (platformTimer == 0)
+	if (platformTimer == nullptr)
 	{
-		#if MAC
-		CFRunLoopTimerContext timerContext = {0};
-		timerContext.info = this;
-		platformTimer = CFRunLoopTimerCreate (kCFAllocatorDefault, CFAbsoluteTimeGetCurrent () + fireTime * 0.001f, fireTime * 0.001f, 0, 0, timerCallback, &timerContext);
+		platformTimer = getPlatformFactory ().createTimer (this);
 		if (platformTimer)
-			CFRunLoopAddTimer (CFRunLoopGetCurrent (), (CFRunLoopTimerRef)platformTimer, kCFRunLoopCommonModes);
-
-		#elif WINDOWS
-		platformTimer = (void*)SetTimer ((HWND)NULL, (UINT_PTR)this, fireTime, TimerProc);
-		if (platformTimer)
-			gTimerList.push_back (this);
-		#endif
-		
+		{
+			platformTimer->start (fireTime);
 		#if DEBUGLOG
-		DebugPrint ("Timer started (0x%x)\n", timerObject);
+			DebugPrint ("Timer started (0x%x)\n", timerObject);
 		#endif
+		}
 	}
-	return (platformTimer != 0);
+	return (platformTimer != nullptr);
 }
 
 //-----------------------------------------------------------------------------
@@ -96,24 +78,9 @@ bool CVSTGUITimer::stop ()
 {
 	if (platformTimer)
 	{
-		#if MAC
-		CFRunLoopTimerInvalidate ((CFRunLoopTimerRef)platformTimer);
-		CFRelease ((CFRunLoopTimerRef)platformTimer);
+		platformTimer->stop ();
+		platformTimer = nullptr;
 
-		#elif WINDOWS
-		KillTimer ((HWND)NULL, (UINT_PTR)platformTimer);
-		std::list<CVSTGUITimer*>::iterator it = gTimerList.begin ();
-		while (it != gTimerList.end ())
-		{
-			if ((*it) == this)
-			{
-				gTimerList.remove (*it);
-				break;
-			}
-			it++;
-		}
-		#endif
-		platformTimer = 0;
 		#if DEBUGLOG
 		DebugPrint ("Timer stopped (0x%x)\n", timerObject);
 		#endif
@@ -123,7 +90,7 @@ bool CVSTGUITimer::stop ()
 }
 
 //-----------------------------------------------------------------------------
-bool CVSTGUITimer::setFireTime (int32_t newFireTime)
+bool CVSTGUITimer::setFireTime (uint32_t newFireTime)
 {
 	if (fireTime != newFireTime)
 	{
@@ -136,31 +103,12 @@ bool CVSTGUITimer::setFireTime (int32_t newFireTime)
 	return false;
 }
 
-#if MAC
 //-----------------------------------------------------------------------------
-void CVSTGUITimer::timerCallback (CFRunLoopTimerRef t, void *info)
+void CVSTGUITimer::fire ()
 {
-	CVSTGUITimer* timer = (CVSTGUITimer*)info;
-	if (timer->timerObject)
-		timer->timerObject->notify (timer, kMsgTimer);
+	CBaseObjectGuard guard (this);
+	if (callbackFunc)
+		callbackFunc (this);
 }
 
-#elif WINDOWS
-//------------------------------------------------------------------------
-VOID CALLBACK CVSTGUITimer::TimerProc (HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
-{
-	std::list<CVSTGUITimer*>::iterator it = gTimerList.begin ();
-	while (it != gTimerList.end ())
-	{
-		if ((UINT_PTR)((*it)->platformTimer) == idEvent)
-		{
-			(*it)->timerObject->notify ((*it), kMsgTimer);
-			break;
-		}
-		it++;
-	}
-}
-#endif
-
-} // namespace
-
+} // VSTGUI

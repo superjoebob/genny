@@ -12,14 +12,58 @@ UIWaveForm::UIWaveForm(CPoint point, UIInstrument* owner):
 	_xpos(point.x),
 	_ypos(point.y)
 {
-	CFrame* frame = owner->getFrame();
-	frame->addView(this);
+	CFrame* frame = getInterface()->getFrame();
 	reconnect();
 }
 
 UIWaveForm::~UIWaveForm(void)
 {
 
+}
+
+CMouseEventResult UIWaveForm::onMouseDown(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isLeftButton())
+	{
+		WaveData* wave = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + ((GennyPatch*)getCurrentPatch())->InstrumentDef.SelectedDrum);
+		if (wave != nullptr)
+		{
+			getVst()->getCore()->_chip.setDrumSet(&((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset);
+			((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.setCurrentDrum(wave);		
+			getVst()->getCore()->_chip.panningChanged(5);
+			
+
+			 
+
+			/*if (wave->loop)
+				wave->audioPosition = 0;
+			else
+				wave->audioPosition = wave->startSample;
+
+			wave->release = false;
+			wave->fadeSamples = -1;
+			wave->waitTime = 1.0f;
+			wave->flash = true;
+
+			getVst()->triggerWave = wave;*/
+
+			return CMouseEventResult::kMouseEventHandled;
+		}
+	}
+
+	return CControl::onMouseDown(where, buttons);
+}
+
+CMouseEventResult UIWaveForm::onMouseUp(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isLeftButton())
+	{
+		WaveData* wave = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + ((GennyPatch*)getCurrentPatch())->InstrumentDef.SelectedDrum);
+		if(wave != nullptr)
+			wave->fadeSamples = 100;
+	}
+
+	return CControl::onMouseUp(where, buttons);
 }
 
 void UIWaveForm::setValue(float val)
@@ -45,18 +89,17 @@ void UIWaveForm::draw (CDrawContext* pContext)
 			pContext->setFrameColor(CColor(33, 53, 29, 255));
 			pContext->setLineStyle (kLineSolid);
 			pContext->setLineWidth(2);
-			pContext->moveTo(CPoint(_xpos, _ypos + 17));
-			pContext->lineTo(CPoint(_xpos + 154, _ypos + 17)); 
 
+			pContext->drawLine(CPoint(_xpos, _ypos + 17), CPoint(_xpos + 154, _ypos + 17));
 			for(int i  = 0; i < 77; i++)
 			{
-				int dataIndex = (wave->size / 77) * i;
-				if(dataIndex < wave->size - 128)
+				int dataIndex = (wave->originalDataSize / 77) * i;
+				if(dataIndex < wave->originalDataSize - 128)
 				{
 					char largest = 0;
 					for(int samp = 0; samp < 128; samp+= 2)
 					{
-						char val = abs(wave->audioData[dataIndex] - 127);
+						char val = abs(wave->originalAudioData[dataIndex] - 127);
 						if(val > largest)
 							largest = val;
 					}
@@ -64,19 +107,14 @@ void UIWaveForm::draw (CDrawContext* pContext)
 					float average = (largest / 127.0f);
 					average *= 12.0f;
 
-					pContext->moveTo(CPoint(_xpos + (i * 2), (_ypos + height) - ((height - 14) * average)));
-					pContext->lineTo(CPoint(_xpos + (i * 2), (_ypos + height) + ((height - 14) * average)));
+					pContext->drawLine(CPoint(_xpos + (i * 2), (_ypos + height) - ((height - 14) * average)), CPoint(_xpos + (i * 2), (_ypos + height) + ((height - 14) * average)));
 				}
 			}
 
 			pContext->setFrameColor(CColor(10, 17, 9, 255));
-			pContext->moveTo(CPoint(_xpos + ((wave->startSample / (float)wave->size) * (width - 2)) + 1, _ypos));
-			pContext->lineTo(CPoint(_xpos + ((wave->startSample / (float)wave->size) * (width - 2)) + 1, _ypos + 34));
-
-			pContext->setFrameColor(CColor(10, 17, 9, 255));
-			pContext->moveTo(CPoint(_xpos + ((wave->endSample / (float)wave->size) * (width - 2)) + 3, _ypos));
-			pContext->lineTo(CPoint(_xpos + ((wave->endSample / (float)wave->size) * (width - 2)) + 3, _ypos + 34));
-
+			pContext->drawLine(CPoint(_xpos + ((wave->_originalStartSample / (float)wave->originalDataSize) * (width - 2)) + 1, _ypos), CPoint(_xpos + ((wave->_originalStartSample / (float)wave->originalDataSize) * (width - 2)) + 1, _ypos + 34));
+			pContext->setFrameColor(CColor(10, 17, 9, 255));			
+			pContext->drawLine(CPoint(_xpos + ((wave->_originalEndSample / (float)wave->originalDataSize) * (width - 2)) + 3, _ypos), CPoint(_xpos + ((wave->_originalEndSample / (float)wave->originalDataSize) * (width - 2)) + 3, _ypos + 34));
 		}
 
 		UIWaveForm::setDirty(false);

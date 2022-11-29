@@ -108,7 +108,18 @@ struct GennyData
 		memcpy(&data[dataPos], b, bSize);
 		dataPos += bSize;
 	}	
-	
+
+	void writeShort(short b)
+	{
+		if (size - dataPos < 2)
+			resize(size + 2);
+
+		data[dataPos] = ((char*)&b)[0];
+		data[dataPos + 1] = ((char*)&b)[1];
+
+		dataPos += 2;
+	}
+
 	void writeInt(int b)
 	{
 		if(size - dataPos < 4)
@@ -171,19 +182,19 @@ struct GennyData
 
 	void writeString(std::string str)
 	{
-		if(size - dataPos < (str.length() + 1) + 4)
-			resize(size + (str.length() + 1) + 4);
+		if(size - dataPos < ((int)str.length() + 1) + 4)
+			resize(size + ((int)str.length() + 1) + 4);
 
 		writeInt(str.length() + 1);
 
 		
-		char * cstr = new char [str.length()+1];
+		char * cstr = new char [(int)str.length()+1];
 		std::strcpy (cstr, str.c_str());
 
-		memcpy(&data[dataPos], cstr, str.length() + 1);
+		memcpy(&data[dataPos], cstr, (int)str.length() + 1);
 		delete[] cstr;
 
-		dataPos += str.length() + 1;
+		dataPos += (int)str.length() + 1;
 	}
 
 	void resize(int s)
@@ -224,21 +235,21 @@ class GennyLoaders
 {
 public:
 	static GennyData loadResource(int name, const std::wstring& format);
-	static GennyPatch* loadTYI(const std::string& name, GennyData& data, bool del = true);
-	static GennyPatch* loadTFI(const std::string& name, GennyData& data);
-	static GennyPatch* loadVGI(const std::string& name, const std::string& prefix, GennyData& loadData, bool del = true);
+	static void loadTYI(GennyPatch* patch, GennyData& data);
+	static void loadTFI(GennyPatch* patch, GennyData& data);
+	static void loadVGI(GennyPatch* patch, GennyData& loadData);
 	static GennyData saveTYI(GennyPatch* patch);
 	static GennyData saveTFI(GennyPatch* patch);
 	static GennyData saveVGI(GennyPatch* patch);
 	
-	static GennyPatch* loadGEN(const std::string& name, const std::string& prefix, GennyPatch* patch, GennyData* loadData, bool del = true);
+	static void loadGEN(GennyPatch* patch, GennyData* loadData);
 	static GennyData saveGEN(GennyPatch* patch);
 
 	static unsigned char ssgGennyToReg(unsigned char genny);
 	static unsigned char ssgRegToGenny(unsigned char reg);
 
-	static GennyPatch* loadDPACK(const std::string& name, GennyData& data, int* streamPos);
+	static void loadDPACK(GennyPatch* patch, GennyData& data, int* streamPos);
 
-	static void loadGDAC(GennyPatch* patch, GennyData* data, bool del = true);
+	static void loadGDAC(GennyPatch* patch, GennyData* data);
 	static GennyData* saveGDAC(GennyPatch* patch, GennyData* data);
 };

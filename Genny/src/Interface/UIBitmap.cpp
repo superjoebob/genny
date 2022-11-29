@@ -1,7 +1,7 @@
 #include "UIBitmap.h"
 UIBitmap::UIBitmap(int bitmap)
 {
-	_base = new CBitmap(bitmap);
+	_base = new CBitmap((CResourceDescription)bitmap);
 }
 
 UIBitmap::~UIBitmap(void)

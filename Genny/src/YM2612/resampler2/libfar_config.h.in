@@ -1,0 +1,34 @@
+#pragma once
+
+// Platform
+#cmakedefine FAR_LINUX
+#cmakedefine FAR_MACOSX
+#cmakedefine FAR_WINDOWS
+
+// Enable dynamic runtime checks for SIMD support.
+// It is generally safe to enable support for all SIMD extensions, unless one
+// want to forcefully disable support for a particular extension that is known
+// never to be supported on the target host.
+#cmakedefine FAR_ENABLE_SSE
+#cmakedefine FAR_ENABLE_SSE2
+#cmakedefine FAR_ENABLE_SSE3
+#cmakedefine FAR_ENABLE_SSSE3
+#cmakedefine FAR_ENABLE_SSE41
+#cmakedefine FAR_ENABLE_SSE42
+#cmakedefine FAR_ENABLE_AVX
+#cmakedefine FAR_ENABLE_AVX2
+
+// Assume compile-time support for SIMD instruction set.
+// This will assume that the processor of the target host supports the extension
+// without doing any runtime check, and will emit the corresponding
+// instructions. If at runtime the target host does not support the extension,
+// the program will crash. correctly. Only use if the target host has a fixed
+// architecture with known fixed SIMD extensions.
+#cmakedefine FAR_ASSUME_SSE
+#cmakedefine FAR_ASSUME_SSE2
+#cmakedefine FAR_ASSUME_SSE3
+#cmakedefine FAR_ASSUME_SSSE3
+#cmakedefine FAR_ASSUME_SSE41
+#cmakedefine FAR_ASSUME_SSE42
+#cmakedefine FAR_ASSUME_AVX
+#cmakedefine FAR_ASSUME_AVX2

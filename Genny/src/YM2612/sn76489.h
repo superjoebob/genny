@@ -482,10 +482,15 @@ enum mute_values {
 
 public:
 
+void SN76489_SetSampleRate(int PSGClockValue, int SamplingRate)
+{
+    dClock = (float)PSGClockValue / 16 / SamplingRate;
+}
+
 /* Function prototypes */
 void SN76489_Init(int PSGClockValue, int SamplingRate)
 {
-    dClock=(float)PSGClockValue/16/SamplingRate;
+    SN76489_SetSampleRate(PSGClockValue, SamplingRate);
     SN76489_Config(MUTE_ALLON, BOOST_ON, VOL_FULL, FB_SEGAVDP);
     SN76489_Reset();
 

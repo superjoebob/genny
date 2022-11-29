@@ -10,7 +10,7 @@
 class UIInstrumentElementEnableBox : public CCheckBox
 {
 public:
-	UIInstrumentElementEnableBox::UIInstrumentElementEnableBox (const CRect& size, CControlListener* listener, int32_t tag, UTF8StringPtr title, UIInstrumentsPanel* owner)
+	UIInstrumentElementEnableBox::UIInstrumentElementEnableBox (const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr title, UIInstrumentsPanel* owner)
 		:CCheckBox(size, listener, tag, title, UIBitmap(IDB_PNG30), 0)
 		,_mouseDown(false)
 		,controlModifier(false)
@@ -24,10 +24,42 @@ public:
 
 	}
 
-	bool UIInstrumentElementEnableBox::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+	bool UIInstrumentElementEnableBox::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
 	{
-		_owner->onWheel(where, distance, buttons);
+		_owner->onWheel(where, axis, distance, buttons);
 		return true;
+	}
+
+
+	CMouseEventResult UIInstrumentElementEnableBox::onMouseUp(CPoint& where, const CButtonState& buttons)
+	{
+		if (buttons.isRightButton())
+		{
+			_owner->onMouseUpContext(tag);
+			return kMouseEventHandled;
+		}
+		return __super::onMouseUp(where, buttons);
+	}
+
+	CMouseEventResult UIInstrumentElementEnableBox::onMouseMoved(CPoint& where, const CButtonState& buttons)
+	{
+		if (buttons.isRightButton())
+			return kMouseEventHandled;
+
+		return __super::onMouseMoved(where, buttons);
+	}
+
+
+	CMouseEventResult UIInstrumentElementEnableBox::onMouseEntered(CPoint& where, const CButtonState& buttons)
+	{
+		_owner->getInterface()->hoverControl(this);
+		return __super::onMouseEntered(where, buttons);
+	}
+
+	CMouseEventResult UIInstrumentElementEnableBox::onMouseExited(CPoint& where, const CButtonState& buttons)
+	{
+		_owner->getInterface()->unhoverControl(this);
+		return __super::onMouseExited(where, buttons);
 	}
 
 	CMouseEventResult UIInstrumentElementEnableBox::onMouseDown (CPoint& where, const CButtonState& buttons)
@@ -37,8 +69,12 @@ public:
 		else
 			controlModifier = false;
 
-		return CCheckBox::onMouseDown(where, buttons);
+		if (buttons.isRightButton())
+			return kMouseEventHandled;
+		else
+			return __super::onMouseDown(where, buttons);
 	}
+
 	int UIInstrumentElementEnableBox::getInstrumentIndex()
 	{
 		return _element->getInstrumentIndex();
@@ -69,10 +105,11 @@ UIInstrumentElement::UIInstrumentElement(const CPoint& vPosition, UIInstrumentsP
 	GennyInterfaceObject(vOwner),
 	_owner(vOwner),
 	_selected(false),
-	_patch(vPatch),
+	_instrumentIndex(vIndex - 1),
 	_typeDisplay(nullptr),
 	_enabledCheckbox(nullptr),
-	_wide(false)
+	_wide(false),
+	_displayIndex(vIndex - 1)
 {
 
 }
@@ -84,20 +121,23 @@ UIInstrumentElement::~UIInstrumentElement(void)
 
 bool UIInstrumentElement::attached (CView* parent)
 {
+	CRect size = getViewSize();
+
 	bool returnValue = CCheckBox::attached(parent);
 
 	CFrame* frame = _owner->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
-	_enabledCheckbox = new UIInstrumentElementEnableBox(CRect(size.left + 2, size.top + 2, size.left + 2 + 8, size.top + 2 + 10), this, kEnabledCheckboxTag, "", _owner);
+	_enabledCheckbox = new UIInstrumentElementEnableBox(CRect(size.left + 2, size.top + 2, size.left + 2 + 10, size.top + 2 + 12), this, kEnabledCheckboxTag, "", _owner);
 	frame->addView(_enabledCheckbox);
 
-	_typeDisplay = new CMovieBitmap(CRect((size.left + 2) + 10, size.top + 0, (size.left + 15) + 10, size.top + 12), this, -1, UIBitmap(IDB_PNG15));
+	_typeDisplay = new UIImage(CRect((size.left + 4) + 10, size.top + 2, (size.left + 17) + 10, size.top + 14), IDB_PNG15);
 	_typeDisplay->setMouseableArea(CRect(0, 0, 0, 0));
+	_typeDisplay->setMouseEnabled(false);
 	frame->addView(_typeDisplay);
 
 
-	_label = new CTextLabel(CRect(size.left + 4 + 12, size.top - 2, size.left + 142, size.top + 15), "");
+	_label = new CTextLabel(CRect(size.left + 4 + 12, size.top, size.left + 142, size.top + 15), "");
 	_label->setFont(kNormalFont);
 	_label->setHoriAlign(kLeftText);
 	_label->getFont()->setStyle(kBoldFace);
@@ -130,8 +170,7 @@ bool UIInstrumentElement::attached (CView* parent)
 		frame->addView(light);
 	}
 
-	setPatchLink(_patch);
-
+	setInstrumentIndex(_instrumentIndex);
 	return returnValue;
 }
 //======================================================================================
@@ -149,7 +188,7 @@ CMouseEventResult UIInstrumentElement::onMouseMoved (CPoint& where, const CButto
 		{
 			if(_owner->dragBegin(this))
 			{
-				_owner->getFrame()->clearMouseDown();
+				//_owner->getFrame()->clearMouseDown();
 
 				CMouseEventResult res = CCheckBox::onMouseMoved(where, buttons);
 				onMouseUp(CPoint(-999, -999), buttons);
@@ -178,9 +217,9 @@ CMouseEventResult UIInstrumentElement::onMouseDown (CPoint& where, const CButton
 			memset(result, 0, 255);
 			if(b->PlugHost->PromptEdit(-1, -1, "Rename Preset", result, col)) 
 			{
-				int idx = _owner->getInstrumentIndex(getTag());
-				GennyPatch* patch = _owner->getPatch(_owner->getPatch(0)->Instruments[idx]);
-				patch->Name = result;
+				GennyPatch* patch = getPresetLink();
+				if(patch != nullptr)
+					patch->Name = result;
 
 				_owner->getOwner()->reconnect();
 			}
@@ -198,9 +237,9 @@ CMouseEventResult UIInstrumentElement::onMouseDown (CPoint& where, const CButton
 		return CCheckBox::onMouseDown(where, buttons);	
 }
 
-bool UIInstrumentElement::onWheel (const CPoint& where, const float& distance, const CButtonState& buttons)	
+bool UIInstrumentElement::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)
 {
-	_owner->onWheel(where, distance, buttons);
+	_owner->onWheel(where, axis, distance, buttons);
 	return true;
 }
 //======================================================================================
@@ -232,35 +271,39 @@ void UIInstrumentElement::update()
 
 void UIInstrumentElement::makeChannelsDirty()
 {
+	GennyPatch* instrumentPatch = getInstrumentLink();
 	for(int i = 0; i < _lights.size(); i++)
 	{
 		GennyPatch* channelPatch = getInterface()->getVst()->getCore()->getInstrumentPatch(i);
-		GennyPatch* patchzero = getPatch(0);
-		GennyPatch* mePatch = getPatch(getInstrumentIndex());
-		if(mePatch == channelPatch && getInterface()->getChannelState(i))
+		if(instrumentPatch == channelPatch && getInterface()->getChannelState(i))
 			_active[i] = true;
 		else
 			_active[i] = false;
 	}
 
-	setPatchLink(_patch);
+	setInstrumentIndex(_instrumentIndex);
 }
 
 
 void UIInstrumentElement::valueChanged(CControl* control)
 {
-	if(control->getTag() == kEnabledCheckboxTag)
+	if(control == _enabledCheckbox)
 	{
-		if(((UIInstrumentElementEnableBox*)control)->controlModifier)
+		if (getInstrumentLink() != nullptr)
 		{
-			_owner->setSolo(getInstrumentIndex());
-		}
-		else
-		{
-			if(control->getValue() > 0.5f)
-				getPatch(2)->Instruments[getInstrumentIndex()] = -1;
+			if (((UIInstrumentElementEnableBox*)control)->controlModifier)
+			{
+				_owner->setSolo(_instrumentIndex);
+			}
 			else
-				getPatch(2)->Instruments[getInstrumentIndex()] = 1;
+			{
+				_owner->valueChanged(control);
+
+				/*if (control->getValue() > 0.5f)
+					getPatch(2)->Instruments[_instrumentIndex] = -1;
+				else
+					getPatch(2)->Instruments[_instrumentIndex] = 1;*/
+			}
 		}
 	}
 
@@ -297,12 +340,33 @@ void UIInstrumentElement::unselect()
 	}
 }
 
-void UIInstrumentElement::setPatchLink(GennyPatch* patch)
-{	
-	_patch = patch;
+GennyPatch* UIInstrumentElement::getPresetLink()
+{
+	GennyPatch* presetLink = nullptr;
+	if (_instrumentIndex >= 0 && _instrumentIndex < 16 && getPatch(0)->Instruments[_instrumentIndex] >= 0)
+		presetLink = getPatch(getPatch(0)->Instruments[_instrumentIndex]);
 
-	_enabledCheckbox->setVisible(_patch != nullptr);
-	if(_patch == nullptr)
+	return presetLink;
+}
+
+GennyPatch* UIInstrumentElement::getInstrumentLink()
+{
+	GennyPatch* instrumentLink = nullptr;
+	if (_instrumentIndex >= 0 && _instrumentIndex < 16 && getPatch(0)->Instruments[_instrumentIndex] >= 0)
+		instrumentLink = getPatch(_instrumentIndex);
+
+	return instrumentLink;
+}
+
+void UIInstrumentElement::setInstrumentIndex(int pIdx)
+{
+	_instrumentIndex = pIdx;
+	setTag(_instrumentIndex);
+
+	GennyPatch* presetLink = getPresetLink();
+	GennyPatch* instrumentLink = getInstrumentLink();
+	_enabledCheckbox->setVisible(presetLink != nullptr);
+	if(presetLink == nullptr)
 	{
 		setVisible(true);
 		setVisible(false);
@@ -311,39 +375,45 @@ void UIInstrumentElement::setPatchLink(GennyPatch* patch)
 	else
 	{
 		setVisible(false);
-		_label->setText(patch->Name.c_str());
+		_label->setText(presetLink->Name.c_str());
 		setVisible(true);
 		invalid();
 	}
 
-	GennyPatch* patchzero = getPatch(0);
-	GennyPatch* mePatch = getPatch(getInstrumentIndex());
 	for(int i = 0; i < _lights.size(); i++)
 	{
 		GennyPatch* channelPatch = getInterface()->getVst()->getCore()->getInstrumentPatch(i);
-		if(mePatch == channelPatch && getInterface()->getChannelState(i))
+		if(instrumentLink == channelPatch && getInterface()->getChannelState(i))
 			_active[i] = true;
 		else
 			_active[i] = false;
 
-		if(mePatch != nullptr)
+		if(instrumentLink != nullptr)
 		{
-			if(!mePatch->InstrumentDef.Channels[i])
+			if(!instrumentLink->InstrumentDef.Channels[i])
 				_lightVals[i] = -1;
 			else if(_lightVals[i] < 0)
 				_lightVals[i] = 0;
 		}
 	}
+
 	updateEnabledStatus();
 	update();
 }
 
+int UIInstrumentElement::getInstrumentIndex()
+{
+	return _instrumentIndex;
+}
+
 void UIInstrumentElement::setWide(bool vWide)
 {
+	CRect size = getViewSize();
 	if(vWide)
 		size.right = size.left + kWideElementSize;
 	else	
 		size.right = size.left + kThinElementSize;
+	setViewSize(size);
 
 	//if(_wide != vWide)
 	{
@@ -369,15 +439,6 @@ void UIInstrumentElement::setWide(bool vWide)
 	_wide = vWide;
 }
 
-int UIInstrumentElement::getInstrumentIndex()
-{		
-	int tag = getTag();
-	if(getPatch(1)->Instruments[tag] >= 0)
-		return getPatch(1)->Instruments[tag];
-
-	return tag;
-}
-
 void UIInstrumentElement::setVisible(bool visible)
 {
 	if(visible == isVisible())
@@ -400,17 +461,17 @@ void UIInstrumentElement::setVisible(bool visible)
 
 void UIInstrumentElement::updateEnabledStatus()
 {
-	if(getPatch(2)->Instruments[getInstrumentIndex()] < 0)
-		_enabledCheckbox->setValue(1.0f);
-	else
-		_enabledCheckbox->setValue(0.0f);
+	GennyPatch* instrumentLink = getInstrumentLink();
+	if (instrumentLink != nullptr)
+		_enabledCheckbox->setExtParam(instrumentLink->getExt(GEParam::InsEnable));
 }
 
 void UIInstrumentElement::invalid()
 {
-	if(_patch != nullptr)
+	GennyPatch* presetLink = getPresetLink();
+	if(presetLink != nullptr)
 	{
-		if(_patch->InstrumentDef.Type == GIType::FM)
+		if(presetLink->InstrumentDef.Type == GIType::FM && !presetLink->InstrumentDef.Ch3Special)
 		{
 			_label->setTextInset(CPoint(0, 0));
 			_typeDisplay->setVisible(false);
@@ -419,10 +480,12 @@ void UIInstrumentElement::invalid()
 		{		
 			_label->setTextInset(CPoint(12, 0));
 			_typeDisplay->setVisible(true);
-			if(_patch->InstrumentDef.Type != GIType::DAC)
-				_typeDisplay->setValue(0.0f);
+			if (presetLink->InstrumentDef.Type == GIType::DAC)
+				_typeDisplay->setFrame(1);
+			else if (presetLink->InstrumentDef.Ch3Special)
+				_typeDisplay->setFrame(2);
 			else
-				_typeDisplay->setValue(1.0);
+				_typeDisplay->setFrame(0);
 		}
 	}
 

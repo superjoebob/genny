@@ -8,6 +8,7 @@
 #include "UIPresetElement.h"
 #include "UIPresetsPanel.h"
 #include "UIMegaMidiPortSpinner.h"
+#include "UIBendRangeSpinner.h"
 
 const int kImporkjtBankButton = 9990;
 UIMegaMidiPanel::UIMegaMidiPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner):
@@ -15,7 +16,11 @@ UIMegaMidiPanel::UIMegaMidiPanel(const CRect& size, UIPresetsAndInstrumentsPanel
 	GennyInterfaceObject(owner),
 	_owner(owner),
 	_muteCheck(nullptr),
-	_emuCheck(nullptr)
+	_emuCheck(nullptr),
+	_bendSelector(nullptr)
+#ifndef BUILD_VST
+	,_portSelector(nullptr)
+#endif
 {
 
 }
@@ -30,9 +35,9 @@ bool UIMegaMidiPanel::attached (CView* parent)
 	bool returnValue = CControl::attached(parent);
 
 	CFrame* frame = _owner->getFrame();
-	frame->addView(this);
+	//frame->addView(this);
 	setTag(kPresetControlIndex);
-	setMax(10000.0f);
+	setMax(1000.0f);
 
 	IndexBaron* baron = getIndexBaron();
 	int index = baron->getPatchParamIndex(GPP_SelectedInstrument);
@@ -49,9 +54,15 @@ bool UIMegaMidiPanel::attached (CView* parent)
 	frame->addView(_enableCheck);
 	_views.push_back(_enableCheck);
 #else
-	_portSelector = new UIMegaMidiPortSpinner(CPoint(768 + 8, 256 + 2), this);
+	_portSelector = new UIMegaMidiPortSpinner(CPoint(776, 258), this);
 	frame->addView(_portSelector);
 	_views.push_back(_portSelector);
+#endif
+
+#ifdef BUILD_VST
+	_bendSelector = new UIBendRangeSpinner(CPoint(882, 122), this);
+	frame->addView(_bendSelector);
+	_views.push_back(_bendSelector);
 #endif
 
 
@@ -66,13 +77,21 @@ bool UIMegaMidiPanel::attached (CView* parent)
 
 
 
+#ifdef BUILD_VST
+	UIBitmap emuButton(IDB_PNG43);
+	CRect emuSize = CRect(0, 0, 98, 22);
+	emuSize.offset(722, 120);
+#else
 	UIBitmap emuButton(IDB_PNG38);
 	CRect emuSize = CRect(0, 0, 152, 18);
 	emuSize.offset(722 + 46, 120);
+#endif
+
 	_emuCheck = new CCheckBox(emuSize, this, 0, "", emuButton);
 	_emuCheck->setValue(_vst->accurateEmulationMode ? 1.0f : 0.0f);
 	frame->addView(_emuCheck);
 	_views.push_back(_emuCheck);
+
 
 
 
@@ -115,6 +134,7 @@ void UIMegaMidiPanel::reconnect()
 
 #ifdef BUILD_VST
 	_enableCheck->setValue(_vst->megaMidiPort > 0 ? 1.0f : 0.0f);
+	_bendSelector->reconnect();
 #else
 	_portSelector->reconnect();
 #endif

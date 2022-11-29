@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <string>
 enum YM2612Clock
 {
 	YM2612_NTSC = 7670453,
@@ -23,7 +24,7 @@ enum YM2612Param
 	YM_AR = 5,
 	YM_DR = 6, //D1R
 	YM_SR = 7, //D2R
-	YM_AM = 8,
+	YM_AM = 8, //Individual operator LFO enable
 	YM_SL = 9, //T1L, Sustain Level
 	YM_RR = 10,
 	YM_F1 = 11,
@@ -49,6 +50,8 @@ enum YM2612Param
 	YM_NOTEON = 29,
 	YM_DACEN = 30,
 	YM_DAC = 31,
+
+	YM_PAN = 32,
 	YM_NONE
 }; 
 
@@ -95,6 +98,20 @@ enum YM2612REG
 	YMR_FB_ALG = 0xB0,
 	YMR_AMS_FMS = 0xB4,
 };
+
+static bool YM2612Param_getIsReverseParam(YM2612Param param)
+{
+	switch (param)
+	{
+	case YM_TL:			return true;
+	case YM_AR:			return true;
+	case YM_DR:			return true;
+	case YM_SL:			return true;
+	case YM_RR:			return true;
+	}
+
+	return false;
+}
 
 static unsigned char YM2612Param_getRange(YM2612Param param)
 {
@@ -143,7 +160,7 @@ static std::string YM2612Param_getName(YM2612Param param)
 	case YM_AR:			return "Attack";
 	case YM_DR:			return "Decay";
 	case YM_SR:			return "Decay 2";
-	case YM_AM:			return "LFO Enable";
+	case YM_AM:			return "LFO Amplitude Enable";
 	case YM_SL:			return "Sustain Level";
 	case YM_RR:			return "Release";
 	case YM_F1:			return "F1";
@@ -152,14 +169,14 @@ static std::string YM2612Param_getName(YM2612Param param)
 	case YM_FB:			return "Feedback";
 	case YM_L_EN:       return "L Enable";
 	case YM_R_EN:       return "R Enable";
-	case YM_AMS:		return "LFO AMS";
-	case YM_FMS:		return "LFO FMS";
+	case YM_AMS:		return "LFO Amplitude Sensitivity";
+	case YM_FMS:		return "LFO Frequency Sensitivity";
 	case YM_FRQ:		return "Frequency";
 	case SN_SR:			return "Shift Rate";
 	case SN_PERIODIC:	return "Periodic Noise";
 	case SN_DT:			return "Detune";
 	case YM_ALG:		return "Algorithm";
-	case YM_LFO:		return "LFO";
+	case YM_LFO:		return "Global LFO Speed";
 	case YM_LFO_EN:		return "Global LFO Enable";
 	case YM_SPECIAL:	return "Special Mode";
 	}

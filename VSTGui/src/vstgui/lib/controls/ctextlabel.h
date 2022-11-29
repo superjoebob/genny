@@ -1,41 +1,13 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __ctextlabel__
-#define __ctextlabel__
+#pragma once
 
 #include "cparamdisplay.h"
+#include "itextlabellistener.h"
+#include "../dispatchlist.h"
+#include "../cstring.h"
 
 namespace VSTGUI {
 
@@ -47,27 +19,123 @@ namespace VSTGUI {
 class CTextLabel : public CParamDisplay
 {
 public:
-	CTextLabel (const CRect& size, UTF8StringPtr txt = 0, CBitmap* background = 0, const int32_t style = 0);
+	CTextLabel (const CRect& size, UTF8StringPtr txt = nullptr, CBitmap* background = nullptr, const int32_t style = 0);
 	CTextLabel (const CTextLabel& textLabel);
 	
 	//-----------------------------------------------------------------------------
 	/// @name CTextLabel Methods
 	//-----------------------------------------------------------------------------
 	//@{
-	virtual void setText (UTF8StringPtr txt);	///< set text
-	virtual UTF8StringPtr getText () const;		///< read only access to text
-	//@}
+	/** set text */
+	virtual void setText (const UTF8String& txt);
+	/** read only access to text */
+	virtual const UTF8String& getText () const;
+
+	enum TextTruncateMode {
+		/** no characters will be removed */
+		kTruncateNone = 0,
+		/** characters will be removed from the beginning of the text */
+		kTruncateHead,
+		/** characters will be removed from the end of the text */
+		kTruncateTail
+	};
 	
-	virtual	void draw (CDrawContext* pContext);
-	virtual bool sizeToFit ();
+	/** set text truncate mode */
+	virtual void setTextTruncateMode (TextTruncateMode mode);
+	/** get text truncate mode */
+	TextTruncateMode getTextTruncateMode () const { return textTruncateMode; }
+	/** get the truncated text */
+	const UTF8String& getTruncatedText () const { return truncatedText; }
+
+	/** register a text label listener */
+	void registerTextLabelListener (ITextLabelListener* listener);
+	/** unregister a text label listener */
+	void unregisterTextLabelListener (ITextLabelListener* listener);
+	//@}
+
+	void draw (CDrawContext* pContext) override;
+	bool sizeToFit () override;
+	void setViewSize (const CRect& rect, bool invalid = true) override;
+	void drawStyleChanged () override;
+	void valueChanged () override;
 
 	CLASS_METHODS(CTextLabel, CParamDisplay)
 protected:
-	~CTextLabel ();
+	~CTextLabel () noexcept override = default;
 	void freeText ();
-	UTF8StringBuffer text;
+	void calculateTruncatedText ();
+
+	bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons) override { return false; }
+
+	TextTruncateMode textTruncateMode;
+	UTF8String text;
+	UTF8String truncatedText;
+	using TextLabelListenerList = DispatchList<ITextLabelListener*>;
+	std::unique_ptr<TextLabelListenerList> listeners;
 };
 
-} // namespace
+//-----------------------------------------------------------------------------
+/** Multi line text label
+ *	@ingroup new_in_4_5
+ */
+class CMultiLineTextLabel : public CTextLabel
+{
+public:
+	CMultiLineTextLabel (const CRect& size);
+	CMultiLineTextLabel (const CMultiLineTextLabel&) = default;
 
-#endif
+	enum class LineLayout {
+		/** clip lines overflowing the view size width */
+		clip,
+		/** truncate lines overflowing the view size width */
+		truncate,
+		/** wrap overflowing words to next line */
+		wrap
+	};
+	void setLineLayout (LineLayout layout);
+	LineLayout getLineLayout () const { return lineLayout; }
+
+	/** automatically resize the view according to the contents (only the height)
+	 *	@param state on or off
+	 */
+	void setAutoHeight (bool state);
+	/** returns true if this view resizes itself according to the contents */
+	bool getAutoHeight () const { return autoHeight; }
+
+	/** draw the lines vertical centered
+	 *	@param state on or off
+	 */
+	void setVerticalCentered (bool state);
+	/** returns true if the view draws the lines vertically centered */
+	bool getVerticalCentered () const { return verticalCentered; }
+
+	/** return the maximum line width of all lines */
+	CCoord getMaxLineWidth ();
+
+	void drawRect (CDrawContext* pContext, const CRect& updateRect) override;
+	bool sizeToFit () override;
+	void setText (const UTF8String& txt) override;
+	void setViewSize (const CRect& rect, bool invalid = true) override;
+	void setTextTruncateMode (TextTruncateMode mode) override;
+	void setValue (float val) override;
+private:
+	void drawStyleChanged () override;
+	void calculateWrapLine  (CDrawContext *context, std::pair<UTF8String, double> &element, const IFontPainter *const &fontPainter, double lineHeight, double lineWidth, double maxWidth, const CPoint &textInset, CCoord &y);
+	
+	void recalculateLines (CDrawContext* context);
+	void recalculateHeight ();
+	
+	bool autoHeight {false};
+	bool verticalCentered {false};
+	LineLayout lineLayout {LineLayout::clip};
+
+	struct Line
+	{
+		CRect r;
+		UTF8String str;
+	};
+	using Lines = std::vector<Line>;
+	Lines lines;
+};
+
+} // VSTGUI

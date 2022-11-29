@@ -1,44 +1,18 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework not only for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __idependency__
-#define __idependency__
+#pragma once
 
 #include "vstguibase.h"
+
+#if VSTGUI_ENABLE_DEPRECATED_METHODS
+
 #include "vstguidebug.h"
 #include <list>
 #include <set>
+#include <algorithm>
+#include <cassert>
 
 namespace VSTGUI {
 
@@ -67,26 +41,32 @@ public:
 	class DeferChanges
 	{
 	public:
-		DeferChanges (IDependency* dep) : dep (dep) { dep->deferChanges (true); }
-		~DeferChanges () { dep->deferChanges (false); }
+		explicit DeferChanges (IDependency* dep) : dep (dep) { dep->deferChanges (true); }
+		~DeferChanges () noexcept { dep->deferChanges (false); }
 	protected:
 		IDependency* dep;
 	};
 
 //----------------------------------------------------------------------------------------------------
 protected:
-	IDependency ();
-	virtual ~IDependency ();
+	IDependency () = default;
+	virtual ~IDependency () noexcept;
 
-	int32_t deferChangeCount;
-	std::set<IdStringPtr> deferedChanges;
-	std::list<CBaseObject*> dependents;
-};
+	static void rememberObject (CBaseObject* obj) { obj->remember (); }
+	static void forgetObject (CBaseObject* obj) { obj->forget (); }
+
+	using DeferedChangesSet = std::set<IdStringPtr>;
+	using DependentList = std::list<CBaseObject*>;
+
+	int32_t deferChangeCount {0};
+	DeferedChangesSet deferedChanges;
+	DependentList dependents;
+} VSTGUI_DEPRECATED_ATTRIBUTE;
 
 //----------------------------------------------------------------------------------------------------
 inline void IDependency::addDependency (CBaseObject* obj)
 {
-	dependents.push_back (obj);
+	dependents.emplace_back (obj);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -100,17 +80,16 @@ inline void IDependency::changed (IdStringPtr message)
 {
 	if (deferChangeCount)
 	{
-		deferedChanges.insert (message);
+		deferedChanges.emplace (message);
 	}
 	else if (dependents.empty () == false)
 	{
-		CBaseObject* This = dynamic_cast<CBaseObject*> (this);
-		for (std::list<CBaseObject*>::const_iterator it = dependents.begin (); it != dependents.end ();)
-		{
-			CBaseObject* obj = (*it);
-			it++;
+		auto* This = dynamic_cast<CBaseObject*> (this);
+		DependentList localList (dependents);
+		std::for_each (localList.begin (), localList.end (), rememberObject);
+		for (auto& obj : localList)
 			obj->notify (This, message);
-		}
+		std::for_each (localList.begin (), localList.end (), forgetObject);
 	}
 }
 
@@ -123,29 +102,18 @@ inline void IDependency::deferChanges (bool state)
 	}
 	else if (--deferChangeCount == 0)
 	{
-		for (std::set<IdStringPtr>::const_iterator it = deferedChanges.begin (); it != deferedChanges.end (); it++)
-			changed (*it);
+		for (auto& msg : deferedChanges)
+			changed (msg);
 		deferedChanges.clear ();
 	}
 }
 
 //----------------------------------------------------------------------------------------------------
-inline IDependency::IDependency ()
-: deferChangeCount (0)
+inline IDependency::~IDependency () noexcept
 {
+	vstgui_assert (dependents.empty ());
 }
 
-//----------------------------------------------------------------------------------------------------
-inline IDependency::~IDependency ()
-{
-#if DEBUG
-	if (dependents.size () != 0)
-	{
-		DebugPrint ("IDependency has depentent objects on destruction.\n");
-	}
-#endif
-}
+} // VSTGUI
 
-} // namespace
-
-#endif
+#endif // VSTGUI_ENABLE_DEPRECATED_METHODS

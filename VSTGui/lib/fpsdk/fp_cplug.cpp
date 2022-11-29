@@ -391,11 +391,11 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
         return;
 
     // delete the old entries
-    int count = GetMenuItemCount(Item);
+    /*int count = GetMenuItemCount(Item);
     while (count > FirstItemIndex)  {
         DeleteMenu(Item, count-1, MF_BYPOSITION);
         count--;
-    }
+    }*/
 
     // add (append) new ones
     int n = 0;
@@ -407,6 +407,8 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
         // get menu entry
         MenuEntry = (PParamMenuEntry)(PlugHost->Dispatcher(HostTag, FHD_GetParamMenuEntry, ParamNum, n));
         if (MenuEntry) {
+
+            bool skip = false;
             // create, fill & add item
             flags = MF_STRING;
             if (MenuEntry->Flags & FHP_Disabled)
@@ -417,11 +419,17 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
                 flags = flags | MF_CHECKED;
             else
                 flags = flags | MF_UNCHECKED;
+
+
             if (strcmp(MenuEntry->Name, "-") == 0)
                 flags = flags | MF_SEPARATOR;
+            else if (MenuEntry->Name[0] == '-')
+                skip = true;
 
             id = FirstID + n;
-            AppendMenuA(Item, flags, id, MenuEntry->Name);
+            if(!skip)
+                AppendMenuA(Item, flags, id, MenuEntry->Name);
+
             n++;
         }
     }

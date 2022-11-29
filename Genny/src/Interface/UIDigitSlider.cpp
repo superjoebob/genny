@@ -10,16 +10,14 @@
 int dtFunTable[8]={0,1,2,3,0,-1,-2,-3};
 int dtReverseTable[8]={7, 6, 5, 0, 1, 2, 3};
 
-UIDigitSlider::UIDigitSlider(const CPoint& pos, int width, UIOperator* owner, YM2612Param param, int op):
+UIDigitSlider::UIDigitSlider(const CPoint& pos, int width, UIOperator* owner, YM2612Param param, int op, int offset):
 	CControl(CRect(), owner),
 	GennyInterfaceObject(owner),
 	_owner(owner),
 	_param(param),
 	_op(op)
 {
-	int offset = op * 232;
-
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = owner->getIndexBaron();
 	int index = baron->getYMParamIndex(param, op);
 	tag = index;
@@ -52,8 +50,12 @@ void UIDigitSlider::setValue(float val)
 	float realVal = val;
 	if(_param == YM_DT)
 	{
-		int real = dtFunTable[(int)(val + 0.5f)] + 3;
-		realVal = real;
+		int funNum = (int)(value + 0.5f);
+		if (funNum >= 0 && funNum < 8)
+		{
+			int real = dtFunTable[funNum] + 3;
+			realVal = real;
+		}
 	}
 
 

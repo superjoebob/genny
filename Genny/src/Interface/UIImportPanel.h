@@ -3,7 +3,7 @@
 #include "UICheckBoxNum.h"
 #include "UIPresetsAndInstrumentsPanel.h"
 class UIPresetElement;
-class UIImportPanel : public CControl, public CControlListener, public GennyInterfaceObject
+class UIImportPanel : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIImportPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner);

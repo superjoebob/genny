@@ -1,54 +1,30 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "hiviewoptionmenu.h"
 
 #if MAC_CARBON
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #include "../../../controls/coptionmenu.h"
 #include "../../../cframe.h"
+#include "../../../cbitmap.h"
 #include "../cgbitmap.h"
 
 namespace VSTGUI {
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4
-typedef UInt32 URefCon;
+using URefCon = UInt32;
 #endif
 
 //-----------------------------------------------------------------------------
-PlatformOptionMenuResult HIViewOptionMenu::popup (COptionMenu* optionMenu)
+void HIViewOptionMenu::popup (COptionMenu* optionMenu, const Callback& callback)
 {
+	vstgui_assert (optionMenu && callback, "arguments are required");
+
 	PlatformOptionMenuResult popupResult = {0};
 	
 	//---Transform local coordinates to global coordinates
@@ -59,7 +35,7 @@ PlatformOptionMenuResult HIViewOptionMenu::popup (COptionMenu* optionMenu)
 
 	int32_t offset;
 
-	if (optionMenu->getStyle () & kPopupStyle)
+	if (optionMenu->isPopupStyle ())
 		offset = 0;
 	else
 		offset = (int32_t)optionMenu->getViewSize ().getHeight ();
@@ -75,9 +51,9 @@ PlatformOptionMenuResult HIViewOptionMenu::popup (COptionMenu* optionMenu)
 		CalcMenuSize (menuRef);
 		SInt16 menuWidth = GetMenuWidth (menuRef);
 		if (menuWidth < optionMenu->getViewSize ().getWidth ())
-			SetMenuWidth (menuRef, optionMenu->getViewSize ().getWidth ());
-		int32_t popUpItem = optionMenu->getStyle () & kPopupStyle ? (optionMenu->getValue () + 1) : 1;
-		int32_t PopUpMenuItem = PopUpMenuItem = PopUpMenuSelect (menuRef, gy, gx, popUpItem);
+			SetMenuWidth (menuRef, static_cast<SInt16> (optionMenu->getViewSize ().getWidth ()));
+		int32_t popUpItem = optionMenu->isPopupStyle () ? (static_cast<int32_t> (optionMenu->getValue ()) + 1) : 1;
+		int32_t PopUpMenuItem = PopUpMenuItem = PopUpMenuSelect (menuRef, static_cast<short> (gy), static_cast<short> (gx), static_cast<MenuItemIndex> (popUpItem));
 		
 		short result = LoWord (PopUpMenuItem) - 1;	
 		short menuIDResult = HiWord (PopUpMenuItem);
@@ -97,7 +73,7 @@ PlatformOptionMenuResult HIViewOptionMenu::popup (COptionMenu* optionMenu)
 		CFRelease (menuRef);
 	}
 
-	return popupResult;
+	callback (optionMenu, popupResult);
 }
 
 //-----------------------------------------------------------------------------
@@ -108,9 +84,9 @@ MenuRef HIViewOptionMenu::createMenu (COptionMenu* menu)
 	CMenuItemList* menuItems = menu->getItems ();
 	if (menuItems && CreateNewMenu (menuID, kMenuAttrCondenseSeparators, &menuRef) == noErr)
 	{
-		bool multipleCheck = menu->getStyle () & (kMultipleCheckStyle & ~kCheckStyle);
+		bool multipleCheck = menu->isMultipleCheckStyle () && !menu->isCheckStyle ();
 		CConstMenuItemIterator it = menuItems->begin ();
-		int32_t i = 0;
+		MenuItemIndex i = 0;
 		while (it != menuItems->end ())
 		{
 			i++;
@@ -170,9 +146,9 @@ MenuRef HIViewOptionMenu::createMenu (COptionMenu* menu)
 						SetMenuItemIconHandle (menuRef, i, kMenuCGImageRefType, (Handle)image);
 					}
 				}
-				if (item->getKeycode ())
+				if (item->getKeycode ().empty () == false)
 				{
-					SetItemCmd (menuRef, i, item->getKeycode ()[0]);
+					SetItemCmd (menuRef, i, static_cast<CharParameter> (toupper (item->getKeycode ()[0])));
 					UInt8 keyModifiers = 0;
 					int32_t itemModifiers = item->getKeyModifiers ();
 					if (itemModifiers & kShift)
@@ -190,14 +166,16 @@ MenuRef HIViewOptionMenu::createMenu (COptionMenu* menu)
 			}
 			it++;
 		}
-		if (menu->getStyle () & kCheckStyle && !multipleCheck)
-			CheckMenuItem (menuRef, menu->getCurrentIndex (true) + 1, true);
-		SetMenuItemRefCon (menuRef, 0, (int32_t)menu);
+		if (menu->isCheckStyle () && !multipleCheck)
+			CheckMenuItem (menuRef, static_cast<MenuItemIndex> (menu->getCurrentIndex (true) + 1), true);
+		SetMenuItemRefCon (menuRef, 0, (URefCon)menu);
 		InsertMenu (menuRef, kInsertHierarchicalMenu);
 	}
 	return menuRef;
 }
 
-} // namespace
+} // VSTGUI
+
+#pragma clang diagnostic pop
 
 #endif // MAC_CARBON

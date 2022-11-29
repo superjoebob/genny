@@ -1,91 +1,58 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "cfileselector.h"
+#include "cframe.h"
+#include "cstring.h"
+#include <algorithm>
 
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
-CFileExtension::CFileExtension (UTF8StringPtr inDescription, UTF8StringPtr inExtension, UTF8StringPtr inMimeType, int32_t inMacType)
-: description (0)
-, extension (0)
-, mimeType (0)
-, macType (inMacType)
+CFileExtension::CFileExtension (const UTF8String& inDescription, const UTF8String& inExtension, const UTF8String& inMimeType, int32_t inMacType, const UTF8String& inUti)
+: macType (inMacType)
 {
-	init (inDescription, inExtension, inMimeType);
+	init (inDescription, inExtension, inMimeType, inUti);
 }
 
 //-----------------------------------------------------------------------------
 CFileExtension::CFileExtension (const CFileExtension& ext)
-: description (0)
-, extension (0)
-, mimeType (0)
-, macType (ext.macType)
+: macType (ext.macType)
 {
-	init (ext.description, ext.extension, ext.mimeType);
+	init (ext.description, ext.extension, ext.mimeType, ext.uti);
 }
 
 //-----------------------------------------------------------------------------
-CFileExtension::~CFileExtension ()
+CFileExtension::~CFileExtension () noexcept = default;
+
+//-----------------------------------------------------------------------------
+CFileExtension::CFileExtension (CFileExtension&& ext) noexcept
 {
-	if (description)
-		free (description);
-	if (extension)
-		free (extension);
-	if (mimeType)
-		free (mimeType);
+	*this = std::move (ext);
 }
 
 //-----------------------------------------------------------------------------
-void CFileExtension::init (UTF8StringPtr inDescription, UTF8StringPtr inExtension, UTF8StringPtr inMimeType)
+CFileExtension& CFileExtension::operator=(CFileExtension&& ext) noexcept
 {
-	if (inDescription)
-	{
-		description = (UTF8StringBuffer)malloc (strlen (inDescription) + 1);
-		strcpy (description, inDescription);
-	}
-	if (inExtension)
-	{
-		extension = (UTF8StringBuffer)malloc (strlen (inExtension) + 1);
-		strcpy (extension, inExtension);
-	}
-	if (inMimeType)
-	{
-		mimeType = (UTF8StringBuffer)malloc (strlen (inMimeType) + 1);
-		strcpy (mimeType, inMimeType);
-	}
-	if (description == 0 && extension)
+	description = std::move (ext.description);
+	extension = std::move (ext.extension);
+	mimeType = std::move (ext.mimeType);
+	uti = std::move (ext.uti);
+	macType = ext.macType;
+	ext.macType = 0;
+	return *this;
+}
+
+//-----------------------------------------------------------------------------
+void CFileExtension::init (const UTF8String& inDescription, const UTF8String& inExtension, const UTF8String& inMimeType, const UTF8String& inUti)
+{
+	description = inDescription;
+	extension = inExtension;
+	mimeType = inMimeType;
+	uti = inUti;
+
+	if (description == nullptr && !extension.empty ())
 	{
 		// TODO: query system for file type description
 		// Win32: AssocGetPerceivedType
@@ -97,12 +64,13 @@ void CFileExtension::init (UTF8StringPtr inDescription, UTF8StringPtr inExtensio
 bool CFileExtension::operator== (const CFileExtension& ext) const
 {
 	bool result = false;
-	if (extension && ext.extension)
-		result = (strcmp (extension, ext.extension) == 0);
-	if (!result && mimeType && ext.mimeType)
-		result = (strcmp (mimeType, ext.mimeType) == 0);
-	if (!result && macType != 0 && ext.macType != 0)
-		result = (macType == ext.macType);
+	result = extension == ext.extension;
+	//if (!result)
+	//	result = mimeType == ext.mimeType;
+	//if (!result)
+	//	result = uti == ext.uti;
+	//if (!result && macType != 0 && ext.macType != 0)
+	//	result = (macType == ext.macType);
 	return result;
 }
 
@@ -119,36 +87,32 @@ IdStringPtr CNewFileSelector::kSelectEndMessage = "CNewFileSelector Select End M
 //-----------------------------------------------------------------------------
 // CNewFileSelector Implementation
 //-----------------------------------------------------------------------------
-CNewFileSelector::CNewFileSelector (CFrame* frame)
-: frame (frame)
-, defaultExtension (0)
-, title (0)
-, initialPath (0)
-, defaultSaveName (0)
-, allowMultiFileSelection (false)
+CNewFileSelector::CNewFileSelector(CFrame* frame)
+	: frame(frame)
+	, title(nullptr)
+	, initialPath(nullptr)
+	, defaultSaveName(nullptr)
+	, defaultExtension(nullptr)
+	, allowMultiFileSelection(false)
+	, resultBool(false)
 {
 }
 
 //-----------------------------------------------------------------------------
-CNewFileSelector::~CNewFileSelector ()
-{
-	setTitle (0);
-	setInitialDirectory (0);
-	setDefaultSaveName (0);
-	for (size_t i = 0; i < result.size (); i++)
-		free (result[i]);
-}
+CNewFileSelector::~CNewFileSelector () noexcept = default;
 
 //-----------------------------------------------------------------------------
 bool CNewFileSelector::run (CBaseObject* delegate)
 {
-	if (delegate == 0)
+	if (delegate == nullptr)
 	{
 		#if DEBUG
 		DebugPrint ("You need to specify a delegate in CNewFileSelector::run (CBaseObject* delegate, void* parentWindow)\n");
 		#endif
 		return false;
 	}
+	if (frame)
+		frame->onStartLocalEventLoop ();
 	return runInternal (delegate);
 }
 
@@ -161,46 +125,58 @@ void CNewFileSelector::cancel ()
 //-----------------------------------------------------------------------------
 bool CNewFileSelector::runModal ()
 {
+	if (frame)
+		frame->onStartLocalEventLoop ();
 	return runModalInternal ();
 }
 
 //-----------------------------------------------------------------------------
-void CNewFileSelector::setTitle (UTF8StringPtr inTitle)
+class CNewFileSelectorCallback : public CBaseObject
 {
-	if (title)
-		free (title);
-	title = 0;
-	if (inTitle)
+public:
+	CNewFileSelectorCallback (CNewFileSelector::CallbackFunc&& callback) : callbackFunc (std::move (callback)) {}
+	~CNewFileSelectorCallback () noexcept override = default;
+private:
+	CMessageResult notify (CBaseObject* sender, IdStringPtr message) override
 	{
-		title = (UTF8StringBuffer)malloc (strlen (inTitle) + 1);
-		strcpy (title, inTitle);
+		if (message == CNewFileSelector::kSelectEndMessage)
+		{
+			callbackFunc (dynamic_cast<CNewFileSelector*> (sender));
+			return kMessageNotified;
+		}
+		return kMessageUnknown;
 	}
+	
+	CNewFileSelector::CallbackFunc callbackFunc;
+};
+
+//-----------------------------------------------------------------------------
+bool CNewFileSelector::run (CallbackFunc&& callback)
+{
+	resultBool = false;
+	if (frame)
+		frame->onStartLocalEventLoop ();
+	auto fsCallback = makeOwned<CNewFileSelectorCallback> (std::move (callback));
+	resultBool = runInternal(fsCallback);
+	return resultBool;
 }
 
 //-----------------------------------------------------------------------------
-void CNewFileSelector::setInitialDirectory (UTF8StringPtr path)
+void CNewFileSelector::setTitle (const UTF8String& inTitle)
 {
-	if (initialPath)
-		free (initialPath);
-	initialPath = 0;
-	if (path)
-	{
-		initialPath = (UTF8StringBuffer)malloc (strlen (path) + 1);
-		strcpy (initialPath, path);
-	}
+	title = inTitle;
 }
 
 //-----------------------------------------------------------------------------
-void CNewFileSelector::setDefaultSaveName (UTF8StringPtr name)
+void CNewFileSelector::setInitialDirectory (const UTF8String& path)
 {
-	if (defaultSaveName)
-		free (defaultSaveName);
-	defaultSaveName = 0;
-	if (name)
-	{
-		defaultSaveName = (UTF8StringBuffer)malloc (strlen (name) + 1);
-		strcpy (defaultSaveName, name);
-	}
+	initialPath = path;
+}
+
+//-----------------------------------------------------------------------------
+void CNewFileSelector::setDefaultSaveName (const UTF8String& name)
+{
+	defaultSaveName = name;
 }
 
 //-----------------------------------------------------------------------------
@@ -221,7 +197,7 @@ void CNewFileSelector::setDefaultExtension (const CFileExtension& extension)
 	}
 
 	bool found = false;
-	std::list<CFileExtension>::const_iterator it = extensions.begin ();
+	FileExtensionList::const_iterator it = extensions.begin ();
 	while (it != extensions.end ())
 	{
 		if ((*it) == extension)
@@ -230,7 +206,7 @@ void CNewFileSelector::setDefaultExtension (const CFileExtension& extension)
 			found = true;
 			break;
 		}
-		it++;
+		++it;
 	}
 	if (!found)
 	{
@@ -242,13 +218,19 @@ void CNewFileSelector::setDefaultExtension (const CFileExtension& extension)
 //-----------------------------------------------------------------------------
 void CNewFileSelector::addFileExtension (const CFileExtension& extension)
 {
-	extensions.push_back (extension);
+	extensions.emplace_back (extension);
 }
 
 //-----------------------------------------------------------------------------
-int32_t CNewFileSelector::getNumSelectedFiles () const
+void CNewFileSelector::addFileExtension (CFileExtension&& extension)
 {
-	return (int32_t)result.size ();
+	extensions.emplace_back (std::move (extension));
+}
+
+//-----------------------------------------------------------------------------
+uint32_t CNewFileSelector::getNumSelectedFiles () const
+{
+	return static_cast<uint32_t> (result.size ());
 }
 
 //-----------------------------------------------------------------------------
@@ -256,8 +238,8 @@ UTF8StringPtr CNewFileSelector::getSelectedFile (uint32_t index) const
 {
 	if (index < result.size ())
 		return result[index];
-	return 0;
+	return nullptr;
 }
 
-} // namespace
+} // VSTGUI
 

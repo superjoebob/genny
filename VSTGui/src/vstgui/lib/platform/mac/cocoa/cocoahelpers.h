@@ -1,45 +1,14 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cocoahelpers__
-#define __cocoahelpers__
+#pragma once
 
 #import "../../../crect.h"
 #import "../../../cpoint.h"
 #import "../../../ccolor.h"
 
-#if MAC_COCOA
+#if MAC_COCOA && defined (__OBJC__)
 
 #import <objc/runtime.h>
 #import <objc/message.h>
@@ -47,6 +16,12 @@
 struct VstKeyCode;
 
 #define HIDDEN __attribute__((__visibility__("hidden")))
+
+#if DEBUG
+#define VSTGUI_CHECK_YES(x) { BOOL res = x; vstgui_assert (res == YES); }
+#else
+#define VSTGUI_CHECK_YES(x) x;
+#endif
 
 //------------------------------------------------------------------------------------
 inline HIDDEN id get_Objc_Value (id obj, const char* name)
@@ -71,13 +46,28 @@ inline HIDDEN void set_Objc_Value (id obj, const char* name, id value)
 }
 
 #define __OBJC_SUPER(x) objc_super __os; __os.receiver = x; __os.super_class = class_getSuperclass ([x class]);
-#define SUPER	&__os
+#define SUPER	static_cast<id> (&__os)
 #define OBJC_GET_VALUE(x,y) get_Objc_Value (x, #y)
 #define OBJC_SET_VALUE(x,y,z) set_Objc_Value (x, #y, (id)z)
 
+//------------------------------------------------------------------------------------
+static id (*SuperInit) (id, SEL) = (id (*) (id, SEL))objc_msgSendSuper;
+static id (*SuperInitWithFrame) (id, SEL, NSRect) = (id (*) (id, SEL, NSRect))objc_msgSendSuper;
+static void (*SuperDealloc) (id, SEL) = (void (*) (id, SEL))objc_msgSendSuper;
+static void (*SuperRemoveFromSuperview) (id, SEL) = SuperDealloc;
+static void (*SuperEventMsg) (id, SEL, NSEvent*) = (void (*) (id, SEL, NSEvent*))objc_msgSendSuper;
+static void (*SuperUpdateTrackingAreas) (id, SEL) = (void (*) (id, SEL))objc_msgSendSuper;
+static void (*SuperTextDidChange) (id, SEL, NSNotification*) = (void (*) (id, SEL, NSNotification*))objc_msgSendSuper;
+static void (*SuperSetNeedsDisplayInRect) (id, SEL,
+										   NSRect) = (void (*) (id, SEL, NSRect))objc_msgSendSuper;
+static void (*SuperViewWillRedraw) (id, SEL) = SuperDealloc;
+
+//------------------------------------------------------------------------------------
 extern HIDDEN Class generateUniqueClass (NSMutableString* className, Class baseClass);
 extern HIDDEN VstKeyCode CreateVstKeyCodeFromNSEvent (NSEvent* theEvent);
+extern HIDDEN NSString* GetVirtualKeyCodeString (int32_t virtualKeyCode);
 extern HIDDEN int32_t eventButton (NSEvent* theEvent);
+extern HIDDEN void convertPointToGlobal (NSView* view, NSPoint& p);
 
 //------------------------------------------------------------------------------------
 // Helpers
@@ -85,17 +75,17 @@ extern HIDDEN int32_t eventButton (NSEvent* theEvent);
 HIDDEN inline NSRect nsRectFromCRect (const VSTGUI::CRect& rect)
 {
 	NSRect r;
-	r.origin.x = rect.left;
-	r.origin.y = rect.top;
-	r.size.width = rect.getWidth ();
-	r.size.height = rect.getHeight ();
+	r.origin.x = static_cast<CGFloat> (rect.left);
+	r.origin.y = static_cast<CGFloat> (rect.top);
+	r.size.width = static_cast<CGFloat> (rect.getWidth ());
+	r.size.height = static_cast<CGFloat> (rect.getHeight ());
 	return r;
 }
 
 //------------------------------------------------------------------------------------
 HIDDEN inline NSPoint nsPointFromCPoint (const VSTGUI::CPoint& point)
 {
-	NSPoint p = { point.x, point.y };
+	NSPoint p = { static_cast<CGFloat>(point.x), static_cast<CGFloat>(point.y) };
 	return p;
 }
 
@@ -118,36 +108,77 @@ HIDDEN inline VSTGUI::CPoint pointFromNSPoint (const NSPoint& point)
 //------------------------------------------------------------------------------------
 HIDDEN inline NSColor* nsColorFromCColor (const VSTGUI::CColor& color)
 {
-	return [NSColor colorWithDeviceRed:color.red/255. green:color.green/255. blue:color.blue/255. alpha:color.alpha/255.];
+	return [NSColor colorWithDeviceRed:color.normRed<CGFloat> ()
+	                             green:color.normGreen<CGFloat> ()
+	                              blue:color.normBlue<CGFloat> ()
+	                             alpha:color.normAlpha<CGFloat> ()];
 }
 
 //------------------------------------------------------------------------------------
-HIDDEN inline NSImage* imageFromCGImageRef (CGImageRef image)
+HIDDEN inline NSImage* imageFromCGImageRef (CGImageRef image, double scaleFactor = 1.)
 {
-	#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_5
-	return [[NSImage alloc] initWithCGImage:image size:NSZeroSize];
+	auto width = CGImageGetWidth (image) / scaleFactor;
+	auto height = CGImageGetHeight (image) / scaleFactor;
+	return [[NSImage alloc] initWithCGImage:image size:NSMakeSize (width, height)];
+}
 
-	#else
-    NSRect imageRect = NSMakeRect (0.0, 0.0, 0.0, 0.0);
-    CGContextRef imageContext = nil;
-    NSImage* newImage = nil;
- 
-    // Get the image dimensions.
-    imageRect.size.height = CGImageGetHeight (image);
-    imageRect.size.width = CGImageGetWidth (image);
- 
-    // Create a new image to receive the Quartz image data.
-    newImage = [[NSImage alloc] initWithSize:imageRect.size];
-    [newImage lockFocus];
- 
-    // Get the Quartz context and draw.
-    imageContext = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    CGContextDrawImage(imageContext, NSRectToCGRect (imageRect), image);
-    [newImage unlockFocus];
- 
-    return newImage;
-	#endif
+//------------------------------------------------------------------------------------
+struct MacEventModifier
+{
+	enum mask
+	{
+#ifdef MAC_OS_X_VERSION_10_12
+		ShiftKeyMask = NSEventModifierFlagShift,
+		CommandKeyMask = NSEventModifierFlagCommand,
+		AlternateKeyMask = NSEventModifierFlagOption,
+		ControlKeyMask = NSEventModifierFlagControl
+#else
+		ShiftKeyMask = NSShiftKeyMask,
+		CommandKeyMask = NSCommandKeyMask,
+		AlternateKeyMask = NSAlternateKeyMask,
+		ControlKeyMask = NSControlKeyMask
+#endif
+	};
+};
+
+//------------------------------------------------------------------------------------
+namespace MacEventType
+{
+#ifdef MAC_OS_X_VERSION_10_12
+	static constexpr auto LeftMouseDown = ::NSEventTypeLeftMouseDown;
+	static constexpr auto LeftMouseDragged = ::NSEventTypeLeftMouseDragged;
+	static constexpr auto MouseMoved = ::NSEventTypeMouseMoved;
+	static constexpr auto KeyDown = ::NSEventTypeKeyDown;
+	static constexpr auto KeyUp = ::NSEventTypeKeyUp;
+#else
+	static constexpr auto LeftMouseDown = ::NSLeftMouseDown;
+	static constexpr auto LeftMouseDragged = ::NSLeftMouseDragged;
+	static constexpr auto MouseMoved = ::NSMouseMoved;
+	static constexpr auto KeyDown = ::NSKeyDown;
+	static constexpr auto KeyUp = ::NSKeyUp;
+#endif
+}
+
+//------------------------------------------------------------------------------------
+namespace MacWindowStyleMask
+{
+#ifdef MAC_OS_X_VERSION_10_12
+	static constexpr auto Borderless = ::NSWindowStyleMaskBorderless;
+	static constexpr auto Titled = ::NSWindowStyleMaskTitled;
+	static constexpr auto Resizable = ::NSWindowStyleMaskResizable;
+	static constexpr auto Miniaturizable = ::NSWindowStyleMaskMiniaturizable;
+	static constexpr auto Closable = ::NSWindowStyleMaskClosable;
+	static constexpr auto Utility = ::NSWindowStyleMaskUtilityWindow;
+	static constexpr auto FullSizeContentView = ::NSWindowStyleMaskFullSizeContentView;
+#else
+	static constexpr auto Borderless = ::NSBorderlessWindowMask;
+	static constexpr auto Titled = ::NSTitledWindowMask;
+	static constexpr auto Resizable = ::NSResizableWindowMask;
+	static constexpr auto Miniaturizable = ::NSMiniaturizableWindowMask;
+	static constexpr auto Closable = ::NSClosableWindowMask;
+	static constexpr auto Utility = ::NSUtilityWindowMask;
+	static constexpr auto FullSizeContentView = ::NSFullSizeContentViewWindowMask;
+#endif
 }
 
 #endif // MAC_COCOA
-#endif // __cocoahelpers__

@@ -4,14 +4,14 @@
 #include "GennyInterfaceObject.h"
 class UIPresetsPanel;
 struct GennyPatch;
-class UIPresetElement : public CCheckBox, public CControlListener, public GennyInterfaceObject
+class UIPresetElement : public CCheckBox, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIPresetElement(const CPoint& vPosition, UIPresetsPanel* vOwner, GennyPatch* vPatch, int vIndex);
 	~UIPresetElement(void);
 	virtual bool attached (CView* parent);	
 
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);		
+	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);		
 	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
 
 	virtual void valueChanged (CControl* control);
@@ -38,6 +38,6 @@ private:
 	CKickButton* _pasteButton;
 	std::string _category;
 
-	CMovieBitmap* _typeDisplay;
+	UIImage* _typeDisplay;
 };
 

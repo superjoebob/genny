@@ -1,75 +1,90 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cswitch__
-#define __cswitch__
+#pragma once
 
 #include "ccontrol.h"
+#include <algorithm>
 
 namespace VSTGUI {
-class CVSTGUITimer;
+
+//-----------------------------------------------------------------------------
+class CSwitchBase : public CControl, public IMultiBitmapControl
+{
+public:
+	void setInverseBitmap (bool state);
+	bool getInverseBitmap () const { return inverseBitmap; }
+
+protected:
+	CSwitchBase (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background,
+	             const CPoint& offset = CPoint (0, 0));
+	CSwitchBase (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps,
+	             CCoord heightOfOneImage, int32_t iMaxPositions, CBitmap* background,
+	             const CPoint& offset = CPoint (0, 0));
+	CSwitchBase (const CSwitchBase& other);
+	~CSwitchBase () noexcept override = default;
+
+	void draw (CDrawContext*) override;
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	bool sizeToFit () override;
+
+	void setNumSubPixmaps (int32_t numSubPixmaps) override
+	{
+		IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps);
+		invalid ();
+	}
+	const CPoint& getOffset () const { return offset; }
+
+	double getCoef () const { return coef; }
+	int32_t normalizedToIndex (float norm) const
+	{
+		if (useLegacyIndexCalculation)
+			return static_cast<int32_t> (norm * (getNumSubPixmaps () - 1) + 0.5f);
+		return std::min<int32_t> (getNumSubPixmaps () - 1,
+		                          static_cast<int32_t> (norm * getNumSubPixmaps ()));
+	}
+
+	float indexToNormalized (int32_t index) const
+	{
+		return static_cast<float> (index) / static_cast<float> (getNumSubPixmaps () - 1);
+	}
+
+	virtual double calculateCoef () const = 0;
+	virtual float calcNormFromPoint (const CPoint& where) const = 0;
+
+	static bool useLegacyIndexCalculation;
+
+private:
+	CPoint offset;
+	double coef;
+	float mouseStartValue;
+	bool inverseBitmap{false};
+};
 
 //-----------------------------------------------------------------------------
 // CVerticalSwitch Declaration
 //! @brief a vertical switch control
 /// @ingroup controls
 //-----------------------------------------------------------------------------
-class CVerticalSwitch : public CControl, public IMultiBitmapControl
+class CVerticalSwitch : public CSwitchBase
 {
 public:
-	CVerticalSwitch (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
-	CVerticalSwitch (const CRect& size, CControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, int32_t iMaxPositions, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CVerticalSwitch (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CVerticalSwitch (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, int32_t iMaxPositions, CBitmap* background, const CPoint& offset = CPoint (0, 0));
 	CVerticalSwitch (const CVerticalSwitch& vswitch);
 
-	virtual void draw (CDrawContext*);
-
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-
-	virtual bool sizeToFit ();
-
-	void setNumSubPixmaps (int32_t numSubPixmaps) { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
 
 	CLASS_METHODS(CVerticalSwitch, CControl)
 protected:
-	~CVerticalSwitch ();
-	CPoint	offset;
+	~CVerticalSwitch () noexcept override = default;
 
-private:
-	double coef;
+	double calculateCoef () const override;
+	float calcNormFromPoint (const CPoint& where) const override;
 };
 
 
@@ -78,31 +93,21 @@ private:
 //! @brief a horizontal switch control
 /// @ingroup controls
 //-----------------------------------------------------------------------------
-class CHorizontalSwitch : public CControl, public IMultiBitmapControl
+class CHorizontalSwitch : public CSwitchBase
 {
 public:
-	CHorizontalSwitch (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
-	CHorizontalSwitch (const CRect& size, CControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, int32_t iMaxPositions, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CHorizontalSwitch (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0));
+	CHorizontalSwitch (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, int32_t iMaxPositions, CBitmap* background, const CPoint& offset = CPoint (0, 0));
 	CHorizontalSwitch (const CHorizontalSwitch& hswitch);
 
-	virtual void draw (CDrawContext*);
-
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-
-	virtual bool sizeToFit ();
-
-	void setNumSubPixmaps (int32_t numSubPixmaps) { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
 
 	CLASS_METHODS(CHorizontalSwitch, CControl)
 protected:
-	~CHorizontalSwitch ();
-	CPoint	offset;
+	~CHorizontalSwitch () noexcept override = default;
 
-private:
-	double coef;
+	double calculateCoef () const override;
+	float calcNormFromPoint (const CPoint& where) const override;
 };
 
 
@@ -113,38 +118,49 @@ private:
 //-----------------------------------------------------------------------------
 class CRockerSwitch : public CControl, public IMultiBitmapControl
 {
+private:
+	enum StyleEnum
+	{
+		StyleHorizontal = 0,
+		StyleVertical,
+	};
 public:
-	CRockerSwitch (const CRect& size, CControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0), const int32_t style = kHorizontal);
-	CRockerSwitch (const CRect& size, CControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, const CPoint& offset = CPoint (0, 0), const int32_t style = kHorizontal);
+	enum Style
+	{
+		kHorizontal = 1 << StyleHorizontal,
+		kVertical = 1 << StyleVertical,
+	};
+
+	CRockerSwitch (const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background, const CPoint& offset = CPoint (0, 0), const int32_t style = kHorizontal);
+	CRockerSwitch (const CRect& size, IControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, const CPoint& offset = CPoint (0, 0), const int32_t style = kHorizontal);
 	CRockerSwitch (const CRockerSwitch& rswitch);
 
-	virtual void draw (CDrawContext*);
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);
+	void draw (CDrawContext*) override;
+	bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons) override;
 
-	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
-	virtual CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons);
-	virtual int32_t onKeyDown (VstKeyCode& keyCode);
-	virtual int32_t onKeyUp (VstKeyCode& keyCode);
+	CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+	CMouseEventResult onMouseCancel () override;
+	int32_t onKeyDown (VstKeyCode& keyCode) override;
+	int32_t onKeyUp (VstKeyCode& keyCode) override;
 
-	virtual bool sizeToFit ();
+	bool sizeToFit () override;
 
-	void setNumSubPixmaps (int32_t numSubPixmaps) { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
+	void setNumSubPixmaps (int32_t numSubPixmaps) override { IMultiBitmapControl::setNumSubPixmaps (numSubPixmaps); invalid (); }
 
 	CLASS_METHODS(CRockerSwitch, CControl)
 protected:
-	~CRockerSwitch ();
+	~CRockerSwitch () noexcept override;
 
-	CMessageResult notify (CBaseObject* sender, IdStringPtr message);
+	CMessageResult notify (CBaseObject* sender, IdStringPtr message) override;
 
 	CPoint	offset;
 	int32_t	style;
 
 	CVSTGUITimer* resetValueTimer;
 private:
-	float fEntryState;
+	float mouseStartValue;
 };
 
-} // namespace
-
-#endif
+} // VSTGUI

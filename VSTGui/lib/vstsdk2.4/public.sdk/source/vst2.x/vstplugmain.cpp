@@ -1,3 +1,5 @@
+#if BUILD_VST
+
 //-------------------------------------------------------------------------------------------------------
 // VST Plug-Ins SDK
 // Version 2.4       $Date: 2006/08/29 12:08:50 $
@@ -11,6 +13,8 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "audioeffect.h"
+#include "plugin-bindings/aeffguieditor.h"
+#include "lib/vstguiinit.h"
 
 //------------------------------------------------------------------------
 /** Must be implemented externally. */
@@ -61,8 +65,22 @@ void* hInstance;
 extern "C" {
 BOOL WINAPI DllMain (HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserved)
 {
-	hInstance = hInst;
+	if (hInstance == nullptr && dwReason != 0)
+	{
+		hInstance = hInst;
+		VSTGUI::init(hInst);
+	}
+	if (hInstance != nullptr && dwReason == 0)
+	{
+		hInstance = nullptr;
+		VSTGUI::exit();
+	}
+	//hInstance = hInst;
 	return 1;
 }
+
+
 } // extern "C"
+#endif
+
 #endif

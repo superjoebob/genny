@@ -1,50 +1,19 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
-#ifndef __cparamdisplay__
-#define __cparamdisplay__
+#pragma once
 
 #include "ccontrol.h"
 #include "../cfont.h"
 #include "../ccolor.h"
-#include "../cdrawcontext.h"
+#include "../cdrawdefs.h"
+#include <functional>
 
 namespace VSTGUI {
-class CParamDisplay;
 
 //-----------------------------------------------------------------------------
-typedef bool (*CParamDisplayValueToStringProc) (float value, char utf8String[256], void* userData);
+using CParamDisplayValueToStringProc = bool (*) (float value, char utf8String[256], void* userData);
 
 //-----------------------------------------------------------------------------
 // CParamDisplay Declaration
@@ -53,8 +22,22 @@ typedef bool (*CParamDisplayValueToStringProc) (float value, char utf8String[256
 //-----------------------------------------------------------------------------
 class CParamDisplay : public CControl
 {
+protected:
+	enum StyleEnum
+	{
+		StyleShadowText = 0,
+		Style3DIn,
+		Style3DOut,
+		StyleNoText,
+		StyleNoDraw,
+		StyleRoundRect,
+		StyleNoFrame,
+		StyleAntialias,
+		LastStyle
+	};
+
 public:
-	CParamDisplay (const CRect& size, CBitmap* background = 0, const int32_t style = 0);
+	CParamDisplay (const CRect& size, CBitmap* background = nullptr, int32_t style = 0);
 	CParamDisplay (const CParamDisplay& paramDisplay);
 	
 	//-----------------------------------------------------------------------------
@@ -76,37 +59,83 @@ public:
 	virtual void setShadowColor (CColor color);
 	CColor getShadowColor () const { return shadowColor; }
 
-	virtual void setAntialias (bool state) { bAntialias = state; }
-	bool getAntialias () const { return bAntialias; }
+	virtual void setShadowTextOffset (const CPoint& offset);
+	CPoint getShadowTextOffset () const { return shadowTextOffset; }
+
+	virtual void setAntialias (bool state) { setBit (style, kAntialias, state); }
+	bool getAntialias () const { return hasBit (style, kAntialias); }
 
 	virtual void setHoriAlign (CHoriTxtAlign hAlign);
 	CHoriTxtAlign getHoriAlign () const { return horiTxtAlign; }
 
-	virtual void setTextInset (const CPoint& p) { textInset = p; }
+	virtual void setTextInset (const CPoint& p);
 	CPoint getTextInset () const { return textInset; }
 
-	virtual void setValueToStringProc (CParamDisplayValueToStringProc proc, void* userData = 0);
+	virtual void setTextRotation (double angle);
+	double getTextRotation () const { return textRotation; }
 
+	virtual void setRoundRectRadius (const CCoord& radius);
+	CCoord getRoundRectRadius () const { return roundRectRadius; }
+
+	virtual void setFrameWidth (const CCoord& width);
+	CCoord getFrameWidth () const { return frameWidth; }
+
+	using ValueToStringUserData = CParamDisplay;
+	using ValueToStringFunction = std::function<bool (float value, char utf8String[256], CParamDisplay* display)>;
+	
+	void setValueToStringFunction (const ValueToStringFunction& valueToStringFunc);
+	void setValueToStringFunction (ValueToStringFunction&& valueToStringFunc);
+
+	using ValueToStringFunction2 = std::function<bool (float value, std::string& result, CParamDisplay* display)>;
+
+	void setValueToStringFunction2 (const ValueToStringFunction2& valueToStringFunc);
+	void setValueToStringFunction2 (ValueToStringFunction2&& valueToStringFunc);
+	
+	enum Style
+	{
+		kShadowText		= 1 << StyleShadowText,
+		k3DIn			= 1 << Style3DIn,
+		k3DOut			= 1 << Style3DOut,
+		kNoTextStyle	= 1 << StyleNoText,
+		kNoDrawStyle	= 1 << StyleNoDraw,
+		kRoundRectStyle = 1 << StyleRoundRect,
+		kNoFrame		= 1 << StyleNoFrame,
+	};
 	virtual void setStyle (int32_t val);
-	int32_t getStyle () const { return style; }
+	int32_t getStyle () const;
 
-	virtual void setTextTransparency (bool val) { bTextTransparencyEnabled = val; }
-	bool getTextTransparency () const { return bTextTransparencyEnabled; }
+	virtual void setPrecision (uint8_t precision);
+	uint8_t getPrecision () const { return valuePrecision; }
+
+	virtual void setBackOffset (const CPoint& offset);
+	const CPoint& getBackOffset () const { return backOffset; }
+	void copyBackOffset ();
+
 	//@}
 
-	virtual void draw (CDrawContext* pContext);
+	void draw (CDrawContext* pContext) override;
+	bool getFocusPath (CGraphicsPath& outPath) override;
+	bool removed (CView* parent) override;
 
 	CLASS_METHODS(CParamDisplay, CControl)
 protected:
-	~CParamDisplay ();
-	virtual void drawBack (CDrawContext* pContext, CBitmap* newBack = 0);
-	virtual void drawText (CDrawContext* pContext, UTF8StringPtr string);
+	~CParamDisplay () noexcept override;
+	virtual void drawBack (CDrawContext* pContext, CBitmap* newBack = nullptr);
 
-	CParamDisplayValueToStringProc valueToString;
-	void* valueToStringUserData;
-	
+	virtual void drawPlatformText (CDrawContext* pContext, IPlatformString* string);
+	virtual void drawPlatformText (CDrawContext* pContext, IPlatformString* string, const CRect& size);
+
+	virtual void drawStyleChanged ();
+
+	ValueToStringFunction2 valueToStringFunction;
+
+	enum StylePrivate {
+		kAntialias		= 1 << StyleAntialias,
+	};
+
 	CHoriTxtAlign horiTxtAlign;
 	int32_t		style;
+	uint8_t		valuePrecision;
 
 	CFontRef	fontID;
 	CColor		fontColor;
@@ -114,10 +143,11 @@ protected:
 	CColor		frameColor;
 	CColor		shadowColor;
 	CPoint		textInset;
-	bool		bTextTransparencyEnabled;
-	bool		bAntialias;
+	CPoint		shadowTextOffset {1., 1.};
+	CPoint		backOffset;
+	CCoord		roundRectRadius;
+	CCoord		frameWidth;
+	double		textRotation;
 };
 
-} // namespace
-
-#endif
+} // VSTGUI

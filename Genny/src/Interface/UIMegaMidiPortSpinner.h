@@ -4,7 +4,7 @@
 #include "UICheckBoxNum.h"
 #include "Genny2612.h"
 class UIInstrumentsPanel;
-class UIMegaMidiPortSpinner : public CControl, public CControlListener, public GennyInterfaceObject
+class UIMegaMidiPortSpinner : public CControl, public IControlListener, public GennyInterfaceObject
 {
 public:
 	UIMegaMidiPortSpinner(CPoint point, GennyInterfaceObject* owner);
@@ -17,7 +17,7 @@ public:
 	void reconnect();
 	void setVisible(bool visible);
 
-	virtual bool onWheel (const CPoint& where, const float& distance, const CButtonState& buttons);
+	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
 
 	CLASS_METHODS(UIMegaMidiPortSpinner, CControl)
 

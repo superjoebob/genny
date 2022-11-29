@@ -4,7 +4,7 @@
 class UILetterDisplay : public CView
 {
 public:
-	UILetterDisplay(const CPoint& pos, CView* owner, int letters, bool offMode = false);
+	UILetterDisplay(const CPoint& pos, CView* owner, CFrame* frame, int letters, bool offMode = false);
 	~UILetterDisplay(void);
 	virtual void setText (const std::string& text);
 

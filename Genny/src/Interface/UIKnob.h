@@ -9,13 +9,18 @@ class UIOperator;
 class UIKnob : public CAnimKnob, public GennyInterfaceObject
 {
 public:
-	UIKnob (const CRect& size, CControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
+	UIKnob (const CRect& size, IControlListener* listener, int32_t tag, int32_t subPixmaps, CCoord heightOfOneImage, CBitmap* background, GennyInterface* iface, const CPoint& offset = CPoint (0, 0));
 	~UIKnob();
 	virtual CMouseEventResult onMouseUp (CPoint& where, const CButtonState& buttons);
 	virtual CMouseEventResult onMouseDown (CPoint& where, const CButtonState& buttons);
+	virtual CMouseEventResult onMouseMoved(CPoint& where, const CButtonState& buttons);
+
+	virtual CMouseEventResult onMouseEntered(CPoint& where, const CButtonState& buttons);
+	virtual CMouseEventResult onMouseExited(CPoint& where, const CButtonState& buttons);
 
 	virtual void setValue(float val);
 	CLASS_METHODS(UIKnob, CAnimKnob)
+
 
 private:
 	GennyInterface* _interface;

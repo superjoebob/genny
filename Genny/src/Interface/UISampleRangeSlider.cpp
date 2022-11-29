@@ -15,7 +15,7 @@ UISampleRangeSlider::UISampleRangeSlider(const CPoint& pos, int width, UIInstrum
 	_low(low)
 {
 	_pos = pos;
-	CFrame* frame = owner->getFrame();
+	CFrame* frame = getInterface()->getFrame();
 	IndexBaron* baron = getIndexBaron();
 
 	UIBitmap sliderKnob(low ? IDB_PNG21 : IDB_PNG22);
@@ -24,7 +24,6 @@ UISampleRangeSlider::UISampleRangeSlider(const CPoint& pos, int width, UIInstrum
 
 
 	_wide = width;
-	frame->addView(this);
 
 	//setMax(100);
 
@@ -82,19 +81,18 @@ void UISampleRangeSlider::valueChanged (CControl* control)
 	if(wave != nullptr)
 	{
 		if(_low)
-			wave->startSample = (int)control->getValue();
+			wave->setStartSample((int)control->getValue());
 		else
-			wave->endSample = (int)control->getValue();
+			wave->setEndSample((int)control->getValue());
 	}
 
 	float centerPos = (_pos.x + ((_slider->getValue() / (float)_slider->getMax())* _wide)) ;
 	_slider->setMouseableArea(CRect(centerPos - 8, _pos.y, centerPos + 8, _pos.y + 10));
-
 }
 
 void UISampleRangeSlider::draw (CDrawContext* pContext)
 {
-	CControl::setDirty(false);
+	CControl::setDirty(false);	
 }
 
 void UISampleRangeSlider::reconnect()
@@ -102,13 +100,13 @@ void UISampleRangeSlider::reconnect()
 	WaveData* wave = ((GennyPatch*)getCurrentPatch())->InstrumentDef.Drumset.getDrum(36 + ((GennyPatch*)getCurrentPatch())->InstrumentDef.SelectedDrum);
 	if(wave != nullptr)
 	{
-		_slider->setMax((float)wave->size);
+		_slider->setMax((float)wave->originalDataSize);
 		_slider->setWheelInc(0.001f);
 
 		if(_low)
-			_slider->setValue((float)wave->startSample);
+			_slider->setValue((float)wave->_originalStartSample);
 		else			
-			_slider->setValue((float)wave->endSample);
+			_slider->setValue((float)wave->_originalEndSample);
 	}
 
 	float centerPos = (_pos.x + ((_slider->getValue() / (float)_slider->getMax())* _wide)) ;

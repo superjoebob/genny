@@ -1,53 +1,34 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "win32textedit.h"
 
 #if WINDOWS
 
 #include "win32support.h"
+#include "direct2d/d2dfont.h"
 #include "../../vstkeycode.h"
 
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
+HWND CreateEditControl (DWORD wxStyle, const WCHAR* string, DWORD wstyle, const CRect& rect,
+                        HWND parent)
+{
+	return CreateWindowEx (wxStyle, TEXT ("EDIT"), string, wstyle, static_cast<int> (rect.left),
+	                       static_cast<int> (rect.top), static_cast<int> (rect.getWidth ()),
+	                       static_cast<int> (rect.getHeight ()), parent, nullptr, GetInstance (),
+	                       nullptr);
+}
+
+//-----------------------------------------------------------------------------
 Win32TextEdit::Win32TextEdit (HWND parent, IPlatformTextEditCallback* textEdit)
 : IPlatformTextEdit (textEdit)
-, platformControl (0)
-, platformFont (0)
-, platformBackColor (0)
-, oldWndProcEdit (0)
+, platformControl (nullptr)
+, platformFont (nullptr)
+, platformBackColor (nullptr)
+, oldWndProcEdit (nullptr)
 {
 	CRect rect = textEdit->platformGetSize ();
 	CFontRef fontID = textEdit->platformGetFont ();
@@ -66,41 +47,60 @@ Win32TextEdit::Win32TextEdit (HWND parent, IPlatformTextEditCallback* textEdit)
 	rect.right -= textInset.x*2;
 	rect.bottom -= textInset.y*2;
 
-	// get/set the current font
-	LOGFONT logfont = {0};
-
 	CCoord fontH = fontID->getSize ();
-	if (fontH > rect.height ())
-		fontH = rect.height () - 3;
-	if (fontH < rect.height ())
+	if (fontH > rect.getHeight ())
+		fontH = rect.getHeight () - 3;
+	if (fontH < rect.getHeight ())
 	{
-		CCoord adjust = (rect.height () - (fontH + 3)) / (CCoord)2;
+		CCoord adjust = (rect.getHeight () - (fontH + 3)) / (CCoord)2;
 		rect.top += adjust;
 		rect.bottom -= adjust;
 	}
-	UTF8StringHelper stringHelper (textEdit->platformGetText ());
+	UTF8StringHelper stringHelper (textEdit->platformGetText ().data ());
 	text = stringHelper;
 
-	DWORD wxStyle = 0;
-	if (getD2DFactory () == 0 && getSystemVersion ().dwMajorVersion >= 6) // Vista and above
-		wxStyle = WS_EX_COMPOSITED;
-	wstyle |= WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL;
-	platformControl = CreateWindowEx (wxStyle,
-		TEXT("EDIT"), stringHelper, wstyle,
-		(int)rect.left, (int)rect.top, (int)rect.width (), (int)rect.height (),
-		parent, NULL, GetInstance (), 0);
+	CColor backColor = textEdit->platformGetBackColor ();
+	DWORD wxStyle = WS_EX_LAYERED;
+	wxStyle = WS_EX_COMPOSITED;
+	wstyle |= WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+	if (textEdit->platformIsSecureTextEdit ())
+		wstyle |= ES_PASSWORD;
+	platformControl = CreateEditControl (wxStyle, stringHelper.getWideString (), wstyle, rect, parent);
+	if (!platformControl)
+	{
+		wxStyle &= ~WS_EX_LAYERED;
+		platformControl = CreateEditControl (wxStyle, stringHelper.getWideString (), wstyle, rect, parent);
+		if (!platformControl)
+		{
+			wxStyle &= ~WS_EX_COMPOSITED;
+			platformControl = CreateEditControl (wxStyle, stringHelper.getWideString (), wstyle, rect, parent);
+		}
+	}
+	else
+	{
+		SetLayeredWindowAttributes (platformControl, RGB (backColor.red, backColor.green, backColor.blue), 0, LWA_COLORKEY);
+	}
+	platformBackColor = CreateSolidBrush (RGB (backColor.red, backColor.green, backColor.blue));
 
-	logfont.lfWeight = FW_NORMAL;
-	logfont.lfHeight = (LONG)-fontH;
-	logfont.lfPitchAndFamily = VARIABLE_PITCH | FF_SWISS;
-	UTF8StringHelper fontNameHelper (fontID->getName ());
-	VSTGUI_STRCPY (logfont.lfFaceName, fontNameHelper);
+	// get/set the current font
+	LOGFONT logfont = {};
+	if (auto d2dFont = fontID->getPlatformFont ().cast<D2DFont> ())
+	{
+		d2dFont->asLogFont (logfont);
+	}
+	if (logfont.lfHeight == 0)
+	{
+		logfont.lfWeight = FW_NORMAL;
+		logfont.lfHeight = (LONG)-fontH;
+		logfont.lfPitchAndFamily = VARIABLE_PITCH | FF_DONTCARE;
+		UTF8StringHelper fontNameHelper (fontID->getName ().data ());
+		VSTGUI_STRCPY (logfont.lfFaceName, fontNameHelper);
 
-	logfont.lfClipPrecision	 = CLIP_STROKE_PRECIS;
-	logfont.lfOutPrecision	 = OUT_STRING_PRECIS;
-	logfont.lfQuality 	     = DEFAULT_QUALITY;
-	logfont.lfCharSet        = ANSI_CHARSET;
-  
+		logfont.lfClipPrecision	 = CLIP_STROKE_PRECIS;
+		logfont.lfOutPrecision	 = OUT_STRING_PRECIS;
+		logfont.lfQuality 	     = DEFAULT_QUALITY;
+		logfont.lfCharSet        = ANSI_CHARSET;
+	}
 	platformFont = CreateFontIndirect (&logfont);
 
 	SetWindowLongPtr (platformControl, GWLP_USERDATA, (__int3264)(LONG_PTR)this);
@@ -112,12 +112,10 @@ Win32TextEdit::Win32TextEdit (HWND parent, IPlatformTextEditCallback* textEdit)
 
 	oldWndProcEdit = (WINDOWSPROC)(LONG_PTR)SetWindowLongPtr (platformControl, GWLP_WNDPROC, (__int3264)(LONG_PTR)procEdit);
 
-	CColor backColor = textEdit->platformGetBackColor ();
-	platformBackColor = CreateSolidBrush (RGB (backColor.red, backColor.green, backColor.blue));
 }
 
 //-----------------------------------------------------------------------------
-Win32TextEdit::~Win32TextEdit ()
+Win32TextEdit::~Win32TextEdit () noexcept
 {
 	if (platformControl)
 	{
@@ -131,7 +129,7 @@ Win32TextEdit::~Win32TextEdit ()
 }
 
 //-----------------------------------------------------------------------------
-UTF8StringPtr Win32TextEdit::getText ()
+UTF8String Win32TextEdit::getText ()
 {
 #if 1
 	return text.c_str ();
@@ -151,11 +149,11 @@ UTF8StringPtr Win32TextEdit::getText ()
 }
 
 //-----------------------------------------------------------------------------
-bool Win32TextEdit::setText (UTF8StringPtr _text)
+bool Win32TextEdit::setText (const UTF8String& _text)
 {
 	if (platformControl && text != _text)
 	{
-		UTF8StringHelper windowText (_text);
+		UTF8StringHelper windowText (_text.data ());
 		return SetWindowText (platformControl, windowText) ? true : false;
 	}
 	return false;
@@ -186,7 +184,7 @@ void Win32TextEdit::textChanged ()
 //-----------------------------------------------------------------------------
 LONG_PTR WINAPI Win32TextEdit::procEdit (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {	
-	Win32TextEdit* win32TextEdit = (Win32TextEdit*)(LONG_PTR) GetWindowLongPtr (hwnd, GWLP_USERDATA);
+	auto* win32TextEdit = (Win32TextEdit*)(LONG_PTR) GetWindowLongPtr (hwnd, GWLP_USERDATA);
 	if (win32TextEdit)
 	{
 		WINDOWSPROC oldProc = win32TextEdit->oldWndProcEdit;
@@ -202,23 +200,11 @@ LONG_PTR WINAPI Win32TextEdit::procEdit (HWND hwnd, UINT message, WPARAM wParam,
 			{
 				if (win32TextEdit->textEdit)
 				{
-					if (wParam == VK_RETURN)
+					if (auto keyCode = keyMessageToKeyCode (wParam, lParam))
 					{
-						win32TextEdit->textEdit->platformLooseFocus (true);
-						return 0;
-					}
-					else if (wParam == VK_TAB)
-					{
-						VstKeyCode keyCode = {0};
-						keyCode.virt = VKEY_TAB;
-						keyCode.modifier = GetKeyState (VK_SHIFT) < 0 ? MODIFIER_SHIFT : 0;
-						if (win32TextEdit->textEdit->platformOnKeyDown (keyCode))
+						// for now only dispatch virtual keys
+						if (keyCode->character == 0 && win32TextEdit->textEdit->platformOnKeyDown (*keyCode))
 							return 0;
-					}
-					else if (wParam == VK_ESCAPE)
-					{
-						win32TextEdit->textEdit->platformLooseFocus (false);
-						return 0;
 					}
 				}
 				break;
@@ -247,6 +233,6 @@ LONG_PTR WINAPI Win32TextEdit::procEdit (HWND hwnd, UINT message, WPARAM wParam,
 	return DefWindowProc (hwnd, message, wParam, lParam);
 }
 
-} // namespace
+} // VSTGUI
 
 #endif // WINDOWS

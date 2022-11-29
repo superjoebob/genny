@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DebugFL|Win32">
       <Configuration>DebugFL</Configuration>
@@ -37,6 +37,9 @@
   <ItemGroup>
     <ClCompile Include="..\VSTGui\lib\fpsdk\fp_cplug.cpp" />
     <ClCompile Include="..\VSTGui\lib\fpsdk\fp_plugclass.cpp" />
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.cpp" />
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.cpp" />
+    <ClCompile Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\vstplugmain.cpp" />
     <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -44,6 +47,7 @@
     <ClCompile Include="..\VSTGui\src\vstgui\vstgui_win32.cpp" />
     <ClCompile Include="src\base\VSTBase.cpp" />
     <ClCompile Include="src\Genny2612.cpp" />
+    <ClCompile Include="src\GennyExtParam.cpp" />
     <ClCompile Include="src\GennyLoaders.cpp" />
     <ClCompile Include="src\GennyVST.cpp" />
     <ClCompile Include="src\gzip\adler32.c" />
@@ -65,6 +69,7 @@
     <ClCompile Include="src\Interface\GennyInterface.cpp" />
     <ClCompile Include="src\Interface\GennyInterfaceObject.cpp" />
     <ClCompile Include="src\Interface\UIAlgorithmSelector.cpp" />
+    <ClCompile Include="src\Interface\UIBendRangeSpinner.cpp" />
     <ClCompile Include="src\Interface\UIBitmap.cpp" />
     <ClCompile Include="src\Interface\UIChannelStatus.cpp" />
     <ClCompile Include="src\Interface\UICheckbox.cpp" />
@@ -99,6 +104,7 @@
     <ClCompile Include="src\Interface\UISpinner.cpp" />
     <ClCompile Include="src\Interface\UIWaveForm.cpp" />
     <ClCompile Include="src\VST\VirtualInstrument.cpp" />
+    <ClCompile Include="src\YM2612\blip_buf.cpp" />
     <ClCompile Include="src\YM2612\DrumSet.cpp" />
     <ClCompile Include="src\YM2612\filters\source\Bessel.cpp" />
     <ClCompile Include="src\YM2612\filters\source\Biquad.cpp" />
@@ -123,15 +129,22 @@
     <ClCompile Include="src\YM2612\resampler\resamplesubs.c" />
     <ClCompile Include="src\YM2612\sn76489.cpp" />
     <ClCompile Include="src\YM2612\SN76489Chip.cpp" />
+    <ClCompile Include="src\YM2612\sn76489_plusgx.cpp" />
     <ClCompile Include="src\YM2612\VGMLogger.cpp" />
     <ClCompile Include="src\YM2612\WaveData.cpp" />
     <ClCompile Include="src\YM2612\YM2612.cpp" />
     <ClCompile Include="src\YM2612\YM2612Processor.cpp" />
     <ClCompile Include="src\YM2612\ym2612_new.cpp" />
+    <ClCompile Include="src\YM2612\ym3438.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h" />
     <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h" />
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffect.h" />
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffectx.h" />
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\aeffeditor.h" />
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.h" />
+    <ClInclude Include="..\VSTGui\lib\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.h" />
     <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\aeffguieditor.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">true</ExcludedFromBuild>
     </ClInclude>
@@ -139,6 +152,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\base\VSTBase.h" />
     <ClInclude Include="src\Genny2612.h" />
+    <ClInclude Include="src\GennyExtParam.h" />
     <ClInclude Include="src\GennyLoaders.h" />
     <ClInclude Include="src\GennyVST.h" />
     <ClInclude Include="src\gmnames.h" />
@@ -162,6 +176,7 @@
     <ClInclude Include="src\Interface\GennyInterface.h" />
     <ClInclude Include="src\Interface\GennyInterfaceObject.h" />
     <ClInclude Include="src\Interface\UIAlgorithmSelector.h" />
+    <ClInclude Include="src\Interface\UIBendRangeSpinner.h" />
     <ClInclude Include="src\Interface\UIBitmap.h" />
     <ClInclude Include="src\Interface\UIChannelStatus.h" />
     <ClInclude Include="src\Interface\UICheckbox.h" />
@@ -207,6 +222,8 @@
     <ClInclude Include="src\vgm2pre\vgm2pre\sub.ym2612.hpp" />
     <ClInclude Include="src\vgm2pre\vgm2pre\vgm2pre.hpp" />
     <ClInclude Include="src\VST\VirtualInstrument.h" />
+    <ClInclude Include="src\YM2612\atomicops.h" />
+    <ClInclude Include="src\YM2612\blip_buf.h" />
     <ClInclude Include="src\YM2612\DrumSet.h" />
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Bessel.h" />
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Biquad.h" />
@@ -231,6 +248,7 @@
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\State.h" />
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Types.h" />
     <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Utilities.h" />
+    <ClInclude Include="src\YM2612\readerwriterqueue.h" />
     <ClInclude Include="src\YM2612\resampler\configtemplate.h" />
     <ClInclude Include="src\YM2612\resampler\filterkit.h" />
     <ClInclude Include="src\YM2612\resampler\Fir_Resampler.h" />
@@ -238,6 +256,7 @@
     <ClInclude Include="src\YM2612\resampler\resample_defs.h" />
     <ClInclude Include="src\YM2612\sn76489.h" />
     <ClInclude Include="src\YM2612\SN76489Chip.h" />
+    <ClInclude Include="src\YM2612\sn76489_plusgx.h" />
     <ClInclude Include="src\YM2612\VGMLogger.h" />
     <ClInclude Include="src\YM2612\WaveData.h" />
     <ClInclude Include="src\YM2612\YM2612.h" />
@@ -245,6 +264,7 @@
     <ClInclude Include="src\YM2612\YM2612Processor.h" />
     <ClInclude Include="src\YM2612\ym2612_new.h" />
     <ClInclude Include="src\YM2612\ym2612_plusgx.h" />
+    <ClInclude Include="src\YM2612\ym3438.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="bitmap1.bmp" />
@@ -337,20 +357,50 @@
     <ResourceCompile Include="resource.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\bigLightInverse.png" />
+    <Image Include="res\bitmap5.bmp" />
+    <Image Include="res\bitmap6.bmp" />
+    <Image Include="res\bitmap7.bmp" />
+    <Image Include="res\channel36.png" />
+    <Image Include="res\drumSettingsCover.png" />
     <Image Include="res\emu_switch.png" />
+    <Image Include="res\emu_switch_vst.png" />
     <Image Include="res\halfButton.png" />
+    <Image Include="res\infoButton.png" />
+    <Image Include="res\infoTab.png" />
+    <Image Include="res\knob_red.png" />
+    <Image Include="res\lcdSlider2.png" />
+    <Image Include="res\lcdSliderSmall.png" />
+    <Image Include="res\lcdSliderTall.png" />
+    <Image Include="res\lChannelButton.png" />
+    <Image Include="res\legatoButton.png" />
+    <Image Include="res\littleVertArrowLeft.png" />
+    <Image Include="res\littleVertArrowRight.png" />
     <Image Include="res\megamidicheck.png" />
+    <Image Include="res\noiseLink.png" />
     <Image Include="res\op1.png" />
     <Image Include="res\op2.png" />
     <Image Include="res\op3.png" />
     <Image Include="res\op4.png" />
+    <Image Include="res\opSpSettings.png" />
     <Image Include="res\presetsTab_VST.png" />
+    <Image Include="res\rChannelButton.png" />
+    <Image Include="res\sampleSliderKnob.png" />
+    <Image Include="res\sampleVolumeBar.png" />
+    <Image Include="res\sliderKnobRightFlip.png" />
+    <Image Include="res\sliderWide.png" />
+    <Image Include="res\soloButton.png" />
+    <Image Include="res\ssgDisplay.png" />
+    <Image Include="res\transTabs.png" />
     <Image Include="res\velocity_map.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="changelog.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7BF8BDD9-0B61-4267-B419-130BFDA38709}</ProjectGuid>
     <RootNamespace>Genny</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -358,52 +408,57 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -518,7 +573,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\resampler2</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -526,14 +581,15 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\VSTGui\bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>VSTGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>echo robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\Gennydev.dll" "C:\Program Files\Common Files\VST2" /y</Command>
+      <Command>robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2" /XX
+if %errorlevel% leq 8 exit 0 else exit %errorlevel%</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
@@ -567,7 +623,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;C:\Program Files (x86)\Visual Leak Detector\include\</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -575,15 +631,15 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\VSTGui\bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>VSTGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 20\Plugins\Fruity\Generators\GennyFL"
+if %errorlevel% leq 1 exit 0 else exit %errorlevel%</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -594,6 +650,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -642,8 +699,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)\VSTGui\bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>VSTGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
+      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\vst" "Genny_x64.dll"</Command>
@@ -664,7 +722,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)VSTGui\bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>VSTGui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>

@@ -10,7 +10,9 @@ VGMLogger::VGMLogger() :
 	_snChip(nullptr),
 	_sampleCounter(0),
 	_logging(false),
-	_totalSamples(0)
+	_totalSamples(0),
+	_drumStreamPosition(0),
+	_vst(nullptr)
 {
 
 }
@@ -23,10 +25,16 @@ void VGMLogger::initialize(YM2612* ymChip, SN76489Chip* snChip)
 
 void VGMLogger::startLogging(GennyVST* vst, std::string file)
 {
+	_vst = vst;
+
+	_dacStream = std::ostringstream();
+	_commandStream = std::ostringstream();
+
 	_loopPosition = 0;
 	_loopStartSample = 0;
 	_sampleCounter = 0;
 	_totalSamples = 0;
+	_drumStreamPosition = 0;
 	_dataStream.open(file.c_str(),std::ios::out | std::ios::binary | std::ios::trunc);
 
 	_dataStream.write("Vgm ", 4);
@@ -84,10 +92,73 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 	_dataStream.write((const char*)&zero, 4);
 	_dataStream.write((const char*)&zero, 4);
 
-	//Write drum sample data
-	bool hasDrums = false;
-	int drumSizePos = 0;
-	int drumSamplePosition = 0;
+	////Write drum sample data
+	//bool hasDrums = false;
+	//int drumSizePos = 0;
+	//int drumSamplePosition = 0;
+	//GennyPatch* patch0 = static_cast<GennyPatch*>(vst->getPatch(0));
+	//for(int i = 0; i < 16; i++)
+	//{
+	//	if(patch0->Instruments[i] != -1)
+	//	{
+	//		GennyPatch* patch = static_cast<GennyPatch*>(vst->getPatch(patch0->Instruments[i]));
+	//		if(patch->InstrumentDef.Type == GIType::DAC)
+	//		{
+	//			if(hasDrums == false)
+	//			{
+	//				_dataStream << (unsigned char)0x67;
+	//				_dataStream << (unsigned char)0x66;
+	//				_dataStream << (unsigned char)0x00;
+
+	//				//Fill in drum size later, when we know it.
+	//				drumSizePos = _dataStream.tellg();
+	//				_dataStream.write((const char*)&zero, 4);
+
+	//				hasDrums = true;
+	//			}
+
+	//			DrumSet* drums = &patch->InstrumentDef.Drumset;
+
+
+	//			for (int i = 36; i < 55; i++)
+	//			{
+	//				char has = 0;
+	//				WaveData* wave = drums->getDrum(i);
+	//				if (wave != nullptr)
+	//				{
+	//					wave->streamStartPos = -1;
+	//					//float vol = _ymChip->_sampleVolume;
+	//					//vol *= (wave->_amp / 100.0f) * 2.0f;
+
+	//					//unsigned char* newdat = new unsigned char[wave->size];
+
+	//					////For logging, sample volume levels need to be baked
+	//					//for (int samp = 0; samp < wave->size; samp++)
+	//					//{
+	//					//	newdat[samp] = min(255, max(0, (int)((((float)wave->audioData[samp] - 128.0f) * vol) + 0.5f) + 128));
+	//					//}
+
+	//					//wave->streamStartPos = drumSamplePosition;
+	//					//_dataStream.write((const char*)newdat, wave->size);
+
+	//					//delete[] newdat;
+	//					//drumSamplePosition += wave->size;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	////Write drums size
+	//if(hasDrums)
+	//{
+	//	int pos = _dataStream.tellg();
+	//	_dataStream.seekg(drumSizePos, std::ios::beg);
+	//	_dataStream.write((const char*)&drumSamplePosition, 4);
+	//	_dataStream.seekg(pos, std::ios::beg);
+	//}
+
+	//Reset all DAC stream positions
 	GennyPatch* patch0 = static_cast<GennyPatch*>(vst->getPatch(0));
 	for(int i = 0; i < 16; i++)
 	{
@@ -96,52 +167,68 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 			GennyPatch* patch = static_cast<GennyPatch*>(vst->getPatch(patch0->Instruments[i]));
 			if(patch->InstrumentDef.Type == GIType::DAC)
 			{
-				if(hasDrums == false)
-				{
-					_dataStream << (unsigned char)0x67;
-					_dataStream << (unsigned char)0x66;
-					_dataStream << (unsigned char)0x00;
-
-					//Fill in drum size later, when we know it.
-					drumSizePos = _dataStream.tellg();
-					_dataStream.write((const char*)&zero, 4);
-
-					hasDrums = true;
-				}
-
 				DrumSet* drums = &patch->InstrumentDef.Drumset;
-
-
 				for (int i = 36; i < 55; i++)
 				{
 					char has = 0;
 					WaveData* wave = drums->getDrum(i);
 					if (wave != nullptr)
 					{
-						wave->streamStartPos = drumSamplePosition;
-						_dataStream.write((const char*)wave->audioData, wave->size);
-						drumSamplePosition += wave->size;
+						wave->streamStartPos = -1;
+						memset(wave->streamStarts, -1, kNumDACVelos * sizeof(int));
 					}
 				}
 			}
 		}
 	}
-	
-	//Write drums size
-	if(hasDrums)
-	{
-		int pos = _dataStream.tellg();
-		_dataStream.seekg(drumSizePos, std::ios::beg);
-		_dataStream.write((const char*)&drumSamplePosition, 4);
-		_dataStream.seekg(pos, std::ios::beg);
-	}
 
 	_logging = true;
 }
 
+void VGMLogger::prepareDrum(WaveData* drum, float velocity)
+{
+	int streamStartIndex = drum->getStreamStartIndex(velocity);
+	if (drum->streamStarts[streamStartIndex] < 0)
+	{
+		float vol = velocity;
+		vol *= (drum->_amp / 100.0f) * 2.0f;
+
+		unsigned char* newdat = new unsigned char[drum->size];
+
+		//For logging, sample volume levels need to be baked
+		for (int samp = 0; samp < drum->size; samp++)
+		{
+			newdat[samp] = min(255, max(0, (int)((((float)drum->audioData[samp] - 128.0f) * vol) + 0.5f) + 128));
+		}
+
+		drum->streamStarts[streamStartIndex] = _drumStreamPosition;
+		_dacStream.write((const char*)newdat, drum->size);
+
+		delete[] newdat;
+		_drumStreamPosition += drum->size;
+	}
+}
+
 void VGMLogger::finishLogging()
 {
+	//Write drumstream
+	if (_drumStreamPosition > 0)
+	{
+		_dataStream << (unsigned char)0x67;
+		_dataStream << (unsigned char)0x66;
+		_dataStream << (unsigned char)0x00;
+		_dataStream.write((const char*)&_drumStreamPosition, 4); //Write drum size
+
+
+		std::string str = _dacStream.str();
+		_dataStream << _dacStream.str();
+	}
+	
+
+	//Write command stream
+	_dataStream << _commandStream.str();
 	_dataStream << (unsigned char)0x66;
+
 	long end;
 	_dataStream.seekg (0, std::ios::end);
 	end = _dataStream.tellg();
@@ -159,7 +246,6 @@ void VGMLogger::finishLogging()
 	_dataStream.seekg( 0x20, std::ios::beg );
 	_dataStream.write((const char*)&_totalSamples - _loopStartSample, 4);
 
-
 	_dataStream.close();
 	_logging = false;
 }
@@ -170,8 +256,8 @@ void VGMLogger::logSample()
 	_totalSamples += 1;
 	if(_sampleCounter == 65535)
 	{
-		_dataStream << (unsigned char)0x61;
-		_dataStream.write((const char*)&_sampleCounter, 2);
+		_commandStream << (unsigned char)0x61;
+		_commandStream.write((const char*)&_sampleCounter, 2);
 		_sampleCounter = 0;
 	}
 }
@@ -180,42 +266,42 @@ void VGMLogger::logWriteSN76489(unsigned char data)
 {
 	if(_sampleCounter > 0)
 	{
-		_dataStream << (unsigned char)0x61;
-		_dataStream.write((const char*)&_sampleCounter, 2);
+		_commandStream << (unsigned char)0x61;
+		_commandStream.write((const char*)&_sampleCounter, 2);
 		_sampleCounter = 0;
 	}
 
-	_dataStream << (unsigned char)0x50;
-	_dataStream << data;
+	_commandStream << (unsigned char)0x50;
+	_commandStream << data;
 }
 
 void VGMLogger::logWriteYM2612(int port, unsigned char reg, unsigned char data)
 {
 	if(_sampleCounter > 0)
 	{
-		_dataStream << (unsigned char)0x61;
-		_dataStream.write((const char*)&_sampleCounter, 2);
+		_commandStream << (unsigned char)0x61;
+		_commandStream.write((const char*)&_sampleCounter, 2);
 		_sampleCounter = 0;
 	}
 
 	if(port == 0)
 	{
-		_dataStream << (unsigned char)0x52;
-		_dataStream << reg;
-		_dataStream << data;
+		_commandStream << (unsigned char)0x52;
+		_commandStream << reg;
+		_commandStream << data;
 	}
 	else
 	{
-		_dataStream << (unsigned char)0x53;
-		_dataStream << reg;
-		_dataStream << data;
+		_commandStream << (unsigned char)0x53;
+		_commandStream << reg;
+		_commandStream << data;
 	}
 }
 
 void VGMLogger::seekDACSample(int seek)
 {
-	_dataStream << (unsigned char)0xe0;
-	_dataStream.write((const char*)&seek, 4);
+	_commandStream << (unsigned char)0xe0;
+	_commandStream.write((const char*)&seek, 4);
 }
 
 void VGMLogger::logDACSample()
@@ -228,7 +314,7 @@ void VGMLogger::logDACSample()
 	//else
 	//{
 		resetSampleCounter();
-		_dataStream << (unsigned char)0x80;
+		_commandStream << (unsigned char)0x80;
 	//}
 }
 
@@ -236,14 +322,14 @@ void VGMLogger::resetSampleCounter()
 {
 	if(_sampleCounter > 0)
 	{
-		_dataStream << (unsigned char)0x61;
-		_dataStream.write((const char*)&_sampleCounter, 2);
+		_commandStream << (unsigned char)0x61;
+		_commandStream.write((const char*)&_sampleCounter, 2);
 	}
 	_sampleCounter = 0;
 }
 
 void VGMLogger::writeLoopPoint()
 {
-	_loopPosition = ((int)_dataStream.tellg()) - 0x1C;
+	_loopPosition = ((int)_commandStream.tellp()) - 0x1C;
 	_loopStartSample = _totalSamples;
 }

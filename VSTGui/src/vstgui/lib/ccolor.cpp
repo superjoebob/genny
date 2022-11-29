@@ -1,52 +1,15 @@
-//-----------------------------------------------------------------------------
-// VST Plug-Ins SDK
-// VSTGUI: Graphical User Interface Framework for VST plugins : 
-//
-// Version 4.0
-//
-//-----------------------------------------------------------------------------
-// VSTGUI LICENSE
-// (c) 2011, Steinberg Media Technologies, All Rights Reserved
-//-----------------------------------------------------------------------------
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-// 
-//   * Redistributions of source code must retain the above copyright notice, 
-//     this list of conditions and the following disclaimer.
-//   * Redistributions in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation 
-//     and/or other materials provided with the distribution.
-//   * Neither the name of the Steinberg Media Technologies nor the names of its
-//     contributors may be used to endorse or promote products derived from this 
-//     software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A  PARTICULAR PURPOSE ARE DISCLAIMED. 
-// IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
+// This file is part of VSTGUI. It is subject to the license terms 
+// in the LICENSE file found in the top-level directory of this
+// distribution and at http://github.com/steinbergmedia/vstgui/LICENSE
 
 #include "ccolor.h"
+#include "cstring.h"
+#include "algorithm.h"
 #include <cmath>
+#include <sstream>
+#include <iomanip>
 
 namespace VSTGUI {
-
-const CColor kTransparentCColor	= CColor (255, 255, 255,   0);
-const CColor kBlackCColor		= CColor (  0,   0,   0, 255);
-const CColor kWhiteCColor		= CColor (255, 255, 255, 255);
-const CColor kGreyCColor		= CColor (127, 127, 127, 255);
-const CColor kRedCColor			= CColor (255,   0,   0, 255);
-const CColor kGreenCColor		= CColor (  0, 255,   0, 255);
-const CColor kBlueCColor		= CColor (  0,   0, 255, 255);
-const CColor kYellowCColor		= CColor (255, 255,   0, 255);
-const CColor kMagentaCColor		= CColor (255,   0, 255, 255);
-const CColor kCyanCColor		= CColor (  0, 255, 255, 255);
 
 /// @cond ignore
 //-----------------------------------------------------------------------------
@@ -69,9 +32,103 @@ inline const _Tp& max3 (const _Tp& v1, const _Tp& v2, const _Tp& v3)
 /// @endcond
 
 //-----------------------------------------------------------------------------
-void CColor::toHSV (double& hue, double& saturation, double& value)
+uint8_t CColor::getLightness () const
 {
-	double rgbMin = (min3<uint8_t> (red, green, blue)) / 255.;
+	return (max3<uint8_t> (red, green, blue) / 2) + (min3<uint8_t>(red, green, blue) / 2);
+}
+
+//-----------------------------------------------------------------------------
+void CColor::toHSL (double& hue, double& saturation, double& lightness) const
+{
+	double r = normRed<double> ();
+	double g = normGreen<double> ();
+	double b = normBlue<double> ();
+	double M = max3<double> (r, g ,b);
+	double m = min3<double> (r, g ,b);
+	double C = M - m;
+	lightness = (M + m) / 2.;
+	if (C == 0.)
+	{
+		hue = saturation = 0.;
+		return;
+	}
+	if (M == r)
+	{
+		hue = fmod (((g-b) / C), 6.);
+	}
+	else if (M == g)
+	{
+		hue = ((b - r) / C) + 2.;
+	}
+	else if (M == b)
+	{
+		hue = ((r - g) / C) + 4.;
+	}
+	hue *= 60.;
+	if (hue < 0.0)
+		hue += 360.0;
+	if (lightness <= 0.5)
+		saturation = C / (2. * lightness);
+	else
+		saturation = C / (2. - 2. * lightness);
+}
+
+//-----------------------------------------------------------------------------
+void CColor::fromHSL (double hue, double saturation, double lightness)
+{
+	while (hue > 360.)
+		hue -= 360.;
+	while (hue < 0.)
+		hue += 360.;
+	double C = (1. - fabs (2 * lightness - 1)) * saturation;
+	double H = hue / 60.;
+	double X = C * (1. - fabs (fmod (H, 2) - 1.));
+	double r,g,b;
+	if (H >= 0 && H < 1.)
+	{
+		r = C;
+		g = X;
+		b = 0.;
+	}
+	else if (H >= 1. && H < 2.)
+	{
+		r = X;
+		g = C;
+		b = 0.;
+	}
+	else if (H >= 2. && H < 3.)
+	{
+		r = 0.;
+		g = C;
+		b = X;
+	}
+	else if (H >= 3. && H < 4.)
+	{
+		r = 0.;
+		g = X;
+		b = C;
+	}
+	else if (H >= 4. && H < 5.)
+	{
+		r = X;
+		g = 0.;
+		b = C;
+	}
+	else // if (H >= 5. && H <= 6.)
+	{
+		r = C;
+		g = 0.;
+		b = X;
+	}
+	double m = lightness - (C / 2.);
+	setNormRed (clampNorm (r + m));
+	setNormGreen (clampNorm (g + m));
+	setNormBlue (clampNorm (b + m));
+}
+
+//-----------------------------------------------------------------------------
+void CColor::toHSV (double& hue, double& saturation, double& value) const
+{
 	double rgbMax = (max3<uint8_t> (red, green, blue)) / 255.;
 	value = rgbMax;
 	if (value == 0)
@@ -81,10 +138,10 @@ void CColor::toHSV (double& hue, double& saturation, double& value)
 	}
 
 	/* Normalize value to 1 */
-	double r = (double)(red / 255.) / value;
-	double g = (double)(green / 255.) / value;
-	double b = (double)(blue / 255.) / value;
-	rgbMin = min3<double> (r, g, b);
+	double r = normRed<double> () / value;
+	double g = normGreen<double> () / value;
+	double b = normBlue<double> () / value;
+	double rgbMin = min3<double> (r, g, b);
 	rgbMax = max3<double> (r, g, b);
 
 	saturation = rgbMax - rgbMin;
@@ -98,7 +155,6 @@ void CColor::toHSV (double& hue, double& saturation, double& value)
 	r = (r - rgbMin)/(rgbMax - rgbMin);
 	g = (g - rgbMin)/(rgbMax - rgbMin);
 	b = (b - rgbMin)/(rgbMax - rgbMin);
-	rgbMin = min3<double> (r, g, b);
 	rgbMax = max3<double> (r, g, b);
 
 	/* Compute hue */
@@ -132,7 +188,7 @@ void CColor::fromHSV (double hue, double saturation, double value)
 		value = 1.;
 	if (saturation <= 0.)
 	{
-		red = green = blue = (uint8_t) (value * 255.);
+		red = green = blue = static_cast<uint8_t> (value * 255.);
 		return;
 	}
 	else if (saturation > 1.)
@@ -143,7 +199,7 @@ void CColor::fromHSV (double hue, double saturation, double value)
 		hue += 360.;
 
 	const double hf  = hue / 60.0;
-	const int32_t i  = (int32_t) floor ( hf );
+	const int32_t i  = static_cast<int32_t> (floor (hf));
 	const double f   = hf - i;
 	const double pv  = value * ( 1 - saturation );
 	const double qv  = value * ( 1 - saturation * f );
@@ -215,48 +271,47 @@ void CColor::fromHSV (double hue, double saturation, double value)
 			break;
 		}
 	}
-	red = (uint8_t) floor (r * 255. + 0.5);
-	green = (uint8_t) floor (g * 255. + 0.5);
-	blue = (uint8_t) floor (b * 255. + 0.5);
+	setNormRed (clampNorm (r));
+	setNormGreen (clampNorm (g));
+	setNormBlue (clampNorm (b));
 }
 
-#if 0 // MAC && DEBUG
-__attribute__((__constructor__)) void testHSVtoRGBAndBack ()
+//-----------------------------------------------------------------------------
+bool CColor::isColorRepresentation (UTF8StringPtr str)
 {
-	CColor color = kBlueCColor;
-	CColor color2;
-	double h,s,v;
-	color.toHSV (h,s,v);
-	double th,ts,tv;
-	for (double i = 0; i < 360; i+= 0.01)
-	{
-		color.fromHSV (i, s, v);
-		color.toHSV (th, ts, tv);
-		color2.fromHSV (th, ts, tv);
-		if (color != color2)
-		{
-			DebugPrint ("issue\n");
-		}
-	}
-	for (double i = 0.; i < 1.; i += 0.0001)
-	{
-		color.fromHSV (h, i, v);
-		color.toHSV (th, ts, tv);
-		color2.fromHSV (th, ts, tv);
-		if (color != color2)
-		{
-			DebugPrint ("issue\n");
-		}
-		color.fromHSV (h, s, i);
-		color.toHSV (th, ts, tv);
-		color2.fromHSV (th, ts, tv);
-		if (color != color2)
-		{
-			DebugPrint ("issue\n");
-		}
-	}
+	if (str && str[0] == '#' && strlen (str) == 9)
+		return true;
+	return false;
 }
 
-#endif
+//-----------------------------------------------------------------------------
+bool CColor::fromString (UTF8StringPtr str)
+{
+	if (!str)
+		return false;
+	if (!isColorRepresentation (str))
+		return false;
+	std::string rv (str + 1, 2);
+	std::string gv (str + 3, 2);
+	std::string bv (str + 5, 2);
+	std::string av (str + 7, 2);
+	red = (uint8_t)strtol (rv.data (), nullptr, 16);
+	green = (uint8_t)strtol (gv.data (), nullptr, 16);
+	blue = (uint8_t)strtol (bv.data (), nullptr, 16);
+	alpha = (uint8_t)strtol (av.data (), nullptr, 16);
+	return true;
+}
 
-} // namespace
+//-----------------------------------------------------------------------------
+UTF8String CColor::toString () const
+{
+	std::stringstream str;
+	str << "#";
+	str << std::hex << std::setw (2) << std::setfill ('0') << static_cast<int32_t> (red);
+	str << std::hex << std::setw (2) << std::setfill ('0') << static_cast<int32_t> (green);
+	str << std::hex << std::setw (2) << std::setfill ('0') << static_cast<int32_t> (blue);
+	str << std::hex << std::setw (2) << std::setfill ('0') << static_cast<int32_t> (alpha);
+	return UTF8String (str.str ());
+}
+
+} // VSTGUI
