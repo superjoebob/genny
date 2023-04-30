@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<log version="1.0" tool="runtool">
+
+<msg id="1" tool="runtool">
+  <type>log-start</type>
+  <arg>2023/04/29 12:06:04</arg>
+</msg>
+<msg id="2" tool="runtool">
+  <type>log-end</type>
+  <arg>2023/04/29 12:06:04</arg>
+</msg>
+
+</log>
+

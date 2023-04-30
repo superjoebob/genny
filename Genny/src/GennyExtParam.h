@@ -2,7 +2,7 @@
 #include <functional>
 #include <string>
 
-const int kMaxInstruments = 16;
+const int kMaxInstruments = 32;
 
 
 enum class PingPongPan
@@ -94,7 +94,7 @@ enum class GEParam
 	TOTAL_EXT_PARAMS = 60,
 };
 
-const int kExtParamsStart = 22500;
+const int kOriginalParamsEnd = 20482;
 const int kExtParamsEnd = 32727;
 const int kNumPingPongSettings = 9;
 enum class ParamDisplayType
@@ -166,6 +166,6 @@ public:
 	void set(float val) { return setFunc(ins, val); }
 	int getTag();
 
-	static int parsePatchFromTag(int tag) { return (int)((tag - kExtParamsStart) / (int)GEParam::TOTAL_EXT_PARAMS); }
-	static GEParam parseParamFromTag(int tag) { return (GEParam)((tag - kExtParamsStart) % (int)GEParam::TOTAL_EXT_PARAMS); }
+	static int parsePatchFromTag(int tag) { return (int)((tag - kOriginalParamsEnd) / (int)GEParam::TOTAL_EXT_PARAMS); }
+	static GEParam parseParamFromTag(int tag) { return (GEParam)((tag - kOriginalParamsEnd) % (int)GEParam::TOTAL_EXT_PARAMS); }
 };

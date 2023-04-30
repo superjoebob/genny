@@ -29,6 +29,22 @@ enum GennyPatchParam
 	GPP_Ins14,
 	GPP_Ins15,
 	GPP_Ins16,
+	GPP_Ins17,
+	GPP_Ins18,
+	GPP_Ins19,
+	GPP_Ins20,
+	GPP_Ins21,
+	GPP_Ins22,
+	GPP_Ins23,
+	GPP_Ins24,
+	GPP_Ins25,
+	GPP_Ins26,
+	GPP_Ins27,
+	GPP_Ins28,
+	GPP_Ins29,
+	GPP_Ins30,
+	GPP_Ins31,
+	GPP_Ins32,
 	GPP_Channel0,
 	GPP_Channel1,
 	GPP_Channel2,
@@ -191,7 +207,7 @@ struct GennyInstrument
 		EnableR = true;
 		Enable = true;
 
-		memset(DACSamplePath, 0, sizeof(int) * 32);
+		//memset(DACSamplePath, 0, sizeof(int) * 32);
 		memset(DrumSampleData, 0, sizeof(char*) * 20);
 
 		for (int i = 0; i < 4; i++)
@@ -244,7 +260,7 @@ struct GennyInstrument
 			else if (opNum == 2)
 				opNum = 1;
 
-			mapExtParam(GEParam::Op3SpecialMidi, "CH3 Special Midi Channel (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorMidiChannel[i]; }, [i](auto ins, float val) { ins->OperatorMidiChannel[i] = (char)val; }, 0.0f, 16.0f, i, ParamDisplayType::MidiChannel);
+			mapExtParam(GEParam::Op3SpecialMidi, "CH3 Special Midi Channel (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorMidiChannel[i]; }, [i](auto ins, float val) { ins->OperatorMidiChannel[i] = (char)val; }, 0.0f, kMaxInstruments, i, ParamDisplayType::MidiChannel);
 			mapExtParam(GEParam::Op3SpecialTranspose, "CH3 Special Semitone (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorTranspose[i]; }, [i](auto ins, float val) { ins->OperatorTranspose[i] = (char)val; }, 0.0f, 22.0f, i, (ParamDisplayType)((int)ParamDisplayType::Semitone | (int)ParamDisplayType::Centered));
 			mapExtParam(GEParam::Op3SpecialOctave, "CH3 Special Octave (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorOctave[i]; }, [i](auto ins, float val) { ins->OperatorOctave[i] = (char)val; }, 0.0f, 6.0f, i, (ParamDisplayType)((int)ParamDisplayType::Octave | (int)ParamDisplayType::Centered));
 			mapExtParam(GEParam::Op3SpecialDetune, "CH3 Special Detune (OP" + std::to_string(opNum + 1) + ")", [i](auto ins) { return ins->OperatorDetune[i]; }, [i](auto ins, float val) { ins->OperatorDetune[i] = (char)val; }, 0.0f, 100.0f, i, (ParamDisplayType)((int)ParamDisplayType::Cents | (int)ParamDisplayType::Centered));
@@ -287,20 +303,20 @@ struct GennyInstrument
 
 	char** DrumSampleData[20];
 
-	float DACSamplePath[32];
-	void setSamplePath(const char* str)
-	{
-		std::string strin = str;
-		if(strin.length() > 125)
-			strin = strin.substr(0, 125);
-		memcpy(DACSamplePath, strin.c_str(), strin.length() + 1);
-	}
-	char* getSamplePath()
-	{
-		if(DACSamplePath[0] != 0)
-			return (char*)DACSamplePath;
-		return nullptr;
-	}
+	//float DACSamplePath[32];
+	//void setSamplePath(const char* str)
+	//{
+	//	std::string strin = str;
+	//	if(strin.length() > 125)
+	//		strin = strin.substr(0, 125);
+	//	memcpy(DACSamplePath, strin.c_str(), strin.length() + 1);
+	//}
+	//char* getSamplePath()
+	//{
+	//	if(DACSamplePath[0] != 0)
+	//		return (char*)DACSamplePath;
+	//	return nullptr;
+	//}
 	int Octave;
 	int Transpose;
 	int Panning;
@@ -314,7 +330,7 @@ struct GennyInstrument
 
 	static unsigned int getNumParameters()
 	{
-		return 16 + YM2612Channel::getNumParameters() + 32 + 10;
+		return 16 + YM2612Channel::getNumParameters() + /*32*/ + 10;
 	}
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
@@ -365,7 +381,7 @@ class GennyVST;
 struct GennyPatch : VSTPatch
 {
 	//YM2612Global Globals;
-	static const unsigned int NumInstruments = 16;
+	static const unsigned int NumInstruments = kMaxInstruments;
 
 	//Links to patch indexes for getPatch(0), links to instrument order remapping for getPatch(1), links to instrument enabled status for getPatch(2)
 	int Instruments[NumInstruments];
@@ -479,6 +495,7 @@ struct GennyPatch : VSTPatch
 
 	GennyPatch(int patchIndex) : InstrumentDef(patchIndex) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; _instrumentMode = GIType::NONE; lastPortaNote = -1; }
 	GennyPatch(const std::string& name) : VSTPatch(name), InstrumentDef(-1) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; _instrumentMode = GIType::NONE; lastPortaNote = -1; }
+	GennyPatch(int patchIndex, const std::string& name) : VSTPatch(name), InstrumentDef(patchIndex) { memset(Instruments, -1, sizeof(int) * NumInstruments); memset(Channels, 1, sizeof(bool) * 10); SelectedInstrument = 0; _instrumentMode = GIType::NONE; lastPortaNote = -1; }
 
 	static unsigned int getNumParameters()
 	{
@@ -560,7 +577,7 @@ public:
 	void noteOn(const int note, float velocity, unsigned char channel, float panning, void* data = nullptr, bool soloTrigger = false);
 	void updateNote(void* noteData, int samples);
 	void noteOff(const int note, int channel, void* noteData = nullptr);
-	void clearNotes();
+	void clearNotes(GennyPatch* instrument = nullptr, int channel = -1);
 
 	void writeParams(int channel) {_chip.writeParams(channel);}
 	void startNote(int channel, int pan);
@@ -594,7 +611,7 @@ public:
 	double* getDefaultFrequencyTable()
 	{
 		return _defaultFrequencyTable;
-	}
+	} 
 
 	void startLogging(std::string file);
 	void stopLogging();
@@ -604,7 +621,6 @@ public:
 	void clearCache();
 	void paramChanged(GennyPatch* patch, YM2612Param param, int channel, int op = 0);
 	void panningChanged(GennyPatch* instrument, int channel);
-
 
 	YM2612 _chip;
 

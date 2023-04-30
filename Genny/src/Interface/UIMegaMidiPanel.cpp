@@ -150,4 +150,5 @@ void UIMegaMidiPanel::setVisible(bool visible)
 {
 	for(int i = 0; i < _views.size(); i++)
 		_views[i]->setVisible(visible);
+	CControl::setVisible(visible);
 }

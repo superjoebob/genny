@@ -284,14 +284,14 @@ int32_t CKickButton::onKeyDown (VstKeyCode& keyCode)
 //------------------------------------------------------------------------
 int32_t CKickButton::onKeyUp (VstKeyCode& keyCode)
 {
-	if (keyCode.modifier == 0 && keyCode.virt == VKEY_RETURN)
-	{
-		value = getMin ();
-		invalid ();
-		valueChanged ();
-		endEdit ();
-		return 1;
-	}
+	//if (keyCode.modifier == 0 && keyCode.virt == VKEY_RETURN)
+	//{
+	//	value = getMin ();
+	//	invalid ();
+	//	valueChanged ();
+	//	endEdit ();
+	//	return 1;
+	//}
 	return -1;
 }
 

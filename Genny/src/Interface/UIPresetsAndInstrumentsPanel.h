@@ -6,6 +6,37 @@ class UIInstrumentsPanel;
 class UIPresetsPanel;
 class UIImportPanel;
 class UIMegaMidiPanel;
+class UIPresetsAndInstrumentsPanel;
+class PresetsButton : public CKickButton
+{
+public:
+	UIPresetsAndInstrumentsPanel* _owner;
+	void* ContextMenu;
+	PresetsButton(const CRect& size, IControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, UIPresetsAndInstrumentsPanel* owner, const CPoint& offset = CPoint(0, 0))
+		: CKickButton(size, listener, tag, heightOfOneImage, background, offset)
+	{
+		ContextMenu = nullptr;
+		_owner = owner;
+	}
+
+	virtual CMouseEventResult onMouseDown(CPoint& where, const CButtonState& buttons);
+}; 
+
+class ImportButton : public CKickButton
+{
+public:
+	UIPresetsAndInstrumentsPanel* _owner;
+	void* ContextMenu;
+	ImportButton(const CRect& size, IControlListener* listener, int32_t tag, CCoord heightOfOneImage, CBitmap* background, UIPresetsAndInstrumentsPanel* owner, const CPoint& offset = CPoint(0, 0))
+		: CKickButton(size, listener, tag, heightOfOneImage, background, offset)
+	{
+		ContextMenu = nullptr;
+		_owner = owner;
+	}
+
+	virtual CMouseEventResult onMouseDown(CPoint& where, const CButtonState& buttons);
+};
+
 class UIPresetsAndInstrumentsPanel : public CView, public IControlListener, public GennyInterfaceObject
 {
 public:
@@ -19,6 +50,8 @@ public:
 	void mapControl(CControl* control, int index) { _controls[index] = control; }
 
 
+	void setInstrumentPreset(int index);
+
 	void updateInstrumentChannels();
 	void makeChannelsDirty();
 	void reconnect();
@@ -31,11 +64,12 @@ public:
 	void addConfirmDialog();
 
 	CLASS_METHODS(UIPresetsAndInstrumentsPanel, CView)
+
 		
+	UIImportPanel* _importView;
 private:
 	GennyInterface* _owner;
 	UIPresetsPanel* _presetsView;
-	UIImportPanel* _importView;
 	UIMegaMidiPanel* _megaMidiView;
 	std::map<int, CControl*> _controls;	
 

@@ -211,40 +211,57 @@ void UIImportPanel::setDirty(bool dirty)
 	//_owner->setDirty(dirty);
 }
 
+bool forceTrigger = false;
+void UIImportPanel::triggerSelection(int sel)
+{
+	for (int i = 0; i < _views.size(); i++)
+	{
+		CControl* control = dynamic_cast<CControl*>(_views[i]);
+
+		if (control != nullptr && control->getTag() == kImportBankButton + sel)
+		{
+			forceTrigger = true;
+			valueChanged(control);
+			forceTrigger = false;
+			return;
+		}
+	}
+}
+
 void UIImportPanel::valueChanged (CControl* control)
 {
-	if(control->getTag() == kImportInsButton && control->getValue() > 0.5f)
+	if(control->getTag() == kImportInsButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openInstrumentImport();
 	}
-	else if(control->getTag() == kExportInsButton && control->getValue() > 0.5f)
+	else if(control->getTag() == kExportInsButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openInstrumentExport();
 	}
-	else if(control->getTag() == kImportBankButton && control->getValue() > 0.5f)
+	else if(control->getTag() == kImportBankButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openBankImport();
 	}
-	else if(control->getTag() == kExportBankButton && control->getValue() > 0.5f)
+	else if(control->getTag() == kExportBankButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openBankExport();
 	}
-	else if (control->getTag() == kImportStateButton && control->getValue() > 0.5f)
+	else if (control->getTag() == kImportStateButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openStateImport();
 	}
-	else if (control->getTag() == kExportStateButton && control->getValue() > 0.5f)
+	else if (control->getTag() == kExportStateButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		getInterface()->openStateExport();
 	}
-	else if(control->getTag() == kLogButton && control->getValue() > 0.5f)
+	else if(control->getTag() == kLogButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		if(getInterface()->getLogging() == false)
 			_owner->getPresetsView()->startLogging();
 		else
 			getVst()->stopLogging();
 	}	
-	else if(control->getTag() == kTuningButton && control->getValue() > 0.5f)
+	else if(control->getTag() == kTuningButton && (control->getValue() > 0.5f || forceTrigger))
 	{
 		if(getVst()->getFrequencyTable() != getVst()->getDefaultFrequencyTable())
 		{
@@ -308,4 +325,6 @@ void UIImportPanel::setVisible(bool visible)
 {
 	for(int i = 0; i < _views.size(); i++)
 		_views[i]->setVisible(visible);
+
+	CControl::setVisible(visible);
 }

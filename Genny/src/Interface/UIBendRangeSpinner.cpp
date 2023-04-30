@@ -99,6 +99,7 @@ void UIBendRangeSpinner::setVisible(bool visible)
 	_midiLabel->setVisible(visible);
 	_upButton->setVisible(visible);
 	_downButton->setVisible(visible);
+	__super::setVisible(visible);
 }
 
 bool UIBendRangeSpinner::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)

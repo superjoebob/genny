@@ -118,7 +118,8 @@ GennyInterface::GennyInterface(void* effect, GennyVST* owner)
 		_logExport(nullptr),
 		_lock(false),
 		_applyingAutomationChange(false),
-		_prevHoverControl(nullptr)
+		_prevHoverControl(nullptr),
+		_signalReconnect(false)
 {
 	_channels[0] = 0;
 	_channels[1] = 0;
@@ -174,8 +175,12 @@ bool GennyInterface::open(void* ptr)
 	rect.right=954; 
 	rect.bottom= 602;
 
-
+#ifdef BUILD_VST
 	UIBitmap back(PNG_VSTBACK);
+#else
+	UIBitmap back(IDB_PNG51);
+#endif
+
 	CView* view = new CView( CRect( 0, 0, back.getWidth(), 602 ) );
 	view->setBackground (back);
 	f->addView(view);
@@ -212,6 +217,11 @@ void GennyInterface::close()
 	_patchEditor = nullptr;
 	hInstance = 0;
 
+}
+
+void GennyInterface::setInstrumentPreset(int index)
+{
+	_patchEditor->setInstrumentPreset(index);
 }
 
 void GennyInterface::midiLearn(GennyInt32 index)
@@ -323,10 +333,23 @@ void GennyInterface::valueChanged(CControl* control)
 		return;
 
 #ifdef BUILD_VST
+	//automationMessage m;
+	//if (control->getExtParam() != nullptr)
+	//	m.index = control->getExtParam()->getTag();
+	//else
+	//	m.index = control->getTag();
+	//m.value = control->getValue() / control->getMax();
+
+	//_vst->_automationMessageMutex.lock();
+	//_vst->_automationMessages.push(m);
+	//_vst->_automationMessageMutex.unlock();
+
+	//_vst->_automationMessageMutex.lock();
 	if (control->getExtParam() != nullptr)
-		effect->setParameterAutomated(control->getExtParam()->getTag(), control->getValue() / control->getMax());
+		effect->setParameterAutomated(control->getExtParam()->getTag() + 99999999, control->getValue() / control->getMax());
 	else
-		effect->setParameterAutomated(control->getTag (), control->getValue() / control->getMax());
+		effect->setParameterAutomated(control->getTag() + 99999999, control->getValue() / control->getMax());
+	//_vst->_automationMessageMutex.unlock();
 #else
 	TFruityPlug* plug = static_cast<TFruityPlug*>(effect);
 	
@@ -363,19 +386,26 @@ void GennyInterface::valueChanged(CControl* control)
 void GennyInterface::valueChangedExt(GennyExtParam* param, float value)
 {
 #ifdef BUILD_VST
-	effect->setParameterAutomated(param->getTag(), value / param->rangeMax);
+	effect->setParameterAutomated(param->getTag() + 99999999, value / param->rangeMax);
 #else
 	TFruityPlug* plug = static_cast<TFruityPlug*>(effect);
 	plug->ProcessParam(param->getTag(), static_cast<int>(value - 0.5f), REC_UpdateValue);
 #endif
 }
 
+void GennyInterface::valueChangedCustom(int index, float value)
+{
+#ifdef BUILD_VST
+	effect->setParameterAutomated(index + 99999999, value);
+#else
+	TFruityPlug* plug = static_cast<TFruityPlug*>(effect);
+	plug->ProcessParam(index, value, REC_PlugReserved);
+#endif
+}
+
 void GennyInterface::reconnect()
 {
-	if(_instrumentUI != NULL)
-		_instrumentUI->reconnect();
-	if(_patchEditor != NULL)
-		_patchEditor->reconnect();
+	_signalReconnect = true;
 }
 
 void GennyInterface::setChannelState(int channel, bool on)
@@ -411,18 +441,22 @@ void GennyInterface::idle()
 	if(_patchEditor)
 		_patchEditor->updateInstrumentChannels();
 
-	_owner->_mutex.lock();
-	if (_owner->_midiUIUpdates.size() > 0)
+	if (_owner->_hasUIUpdates)
 	{
-		auto it = _owner->_midiUIUpdates.begin();
-		for (it; it != _owner->_midiUIUpdates.end(); it++)
+		_owner->_hasUIUpdates = false;
+		_owner->_mutex.lock();
+		std::map<int, int> copy(_owner->_midiUIUpdates);
+		_owner->_midiUIUpdates.clear();
+		_owner->_mutex.unlock();
+		_owner->_clearMidiUIUpdateHistory = true;
+
+		auto it = copy.begin();
+		for (it; it != copy.end(); it++)
 		{
 			midiLearn((*it).first);		
 			setParameter((*it).first, (*it).second);			
 		}
-		_owner->_midiUIUpdates.clear();
 	}
-	_owner->_mutex.unlock();
 
 	/*for(int i = 0; i < _updates.size(); i++)
 	{
@@ -443,6 +477,14 @@ void GennyInterface::idle()
 	}
 	_updates.clear();*/
 
+	if (_signalReconnect)
+	{
+		if (_instrumentUI != NULL)
+			_instrumentUI->reconnect();
+		if (_patchEditor != NULL)
+			_patchEditor->reconnect();
+		_signalReconnect = false;
+	}
 	_lock = false;
 }
 
@@ -459,6 +501,8 @@ void GennyInterface::openInstrumentImport()
 		//_importInstrument->addFileExtension(CFileExtension("YM2612 Drums", "dpack"));
 		//_importInstrument->addFileExtension(CFileExtension("GENNY Drums", "dac"));
 		_importInstrument->setDefaultExtension(CFileExtension("GENNY Instrument", "gen"));
+		_importInstrument->setAllowMultiFileSelection(true);
+
 		_importInstrument->run([&](CNewFileSelector* s) {this->notify(s);});
 		_importInstrument->forget();
 		_importInstrument = nullptr;
@@ -546,6 +590,7 @@ void GennyInterface::openBankExport()
 		_exportBank->addFileExtension(CFileExtension("GENNY Bank", "gnb"));
 		_exportBank->addFileExtension(CFileExtension("YM2612 Bank", "bnk"));
 		_exportBank->addFileExtension(CFileExtension("YM2612 Tiido Bank", "tyi"));
+		_exportBank->addFileExtension(CFileExtension("Separate Files", "folder"));
 		_exportBank->setDefaultExtension(CFileExtension("GENNY Bank", "gnb"));
 		_exportBank->run([&](CNewFileSelector* s) {this->notify(s); });
 		_exportBank->forget();
@@ -839,8 +884,11 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 	return true;
 }
 
+int selectedPatchOffset = 0;
 void GennyInterface::fileDialogFinished(CNewFileSelector* dialog)
-{	
+{
+	selectedPatchOffset = 0;
+
 	FileType type = FileType::Unknown;
 	bool isExport = false;
 	if (dialog == _importTuning)
@@ -887,7 +935,12 @@ void GennyInterface::fileDialogFinished(CNewFileSelector* dialog)
 		return;
 	}
 
-	processFile(dialog->getSelectedFile(0), -1, type, isExport);
+	for (int i = 0; i < dialog->getNumSelectedFiles(); i++)
+	{
+		processFile(dialog->getSelectedFile(i), -1, type, isExport);
+		selectedPatchOffset++;
+	}
+	selectedPatchOffset = 0;
 }
 
 void GennyInterface::processFile(std::string fileName, int patchIndex, FileType type, bool isExport, bool reconnectUI)
@@ -912,9 +965,9 @@ void GennyInterface::processFile(std::string fileName, int patchIndex, FileType 
 	{
 		if (extension == "wav")
 			type = FileType::Sample;
-		else if (extension == "gen" || extension == "vgi" || extension == "tfi" || extension == "dpa" || extension == "dac")
+		else if (extension == "gen" || extension == "vgi" || extension == "tfi" || extension == "dac")
 			type = FileType::Patch;
-		else if (extension == "gnb" || extension == "bnk" || extension == "tyi" || extension == "vgz" || extension == "vgm")
+		else if (extension == "gnb" || extension == "bnk" || extension == "tyi" || extension == "vgz" || extension == "vgm" || extension == "folder")
 			type = FileType::Bank;
 		else if (extension == "tun")
 			type = FileType::Tuning;
@@ -945,6 +998,10 @@ void GennyInterface::processFile(std::string fileName, int patchIndex, FileType 
 
 		GennyPatch* patch0 = static_cast<GennyPatch*>(_owner->getPatch(0));
 		int selectedIndex = (int)patch0->Instruments[patch0->SelectedInstrument];
+		selectedIndex += selectedPatchOffset;
+		if (selectedIndex >= patches.size())
+			return;
+
 		patch = static_cast<GennyPatch*>(patches[selectedIndex]);
 		patchIndex = selectedIndex;
 	}
@@ -1121,14 +1178,14 @@ void GennyInterface::processFile(std::string fileName, int patchIndex, FileType 
 				GennyLoaders::loadTFI(patch, data);
 			else if (extension == "tyi")		 
 				GennyLoaders::loadTYI(patch, data);
-			else if (extension == "dpa")
-			{
-				patch->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex((YM2612Param)YM_TL, 3)), YM2612Param_getRange(YM_TL) - 27);
+			//else if (extension == "dpa")
+			//{
+			//	patch->setFromBaron(getIndexBaron()->getIndex(getIndexBaron()->getYMParamIndex((YM2612Param)YM_TL, 3)), YM2612Param_getRange(YM_TL) - 27);
 
-				int pos = 0;
-				GennyLoaders::loadDPACK(patch, data, &pos);
-				patch->InstrumentDef.setSamplePath(fileName.c_str());
-			}
+			//	int pos = 0;
+			//	GennyLoaders::loadDPACK(patch, data, &pos);
+			//	patch->InstrumentDef.setSamplePath(fileName.c_str());
+			//}
 			delete[] memblock;
 		}
 
@@ -1154,7 +1211,32 @@ void GennyInterface::processFile(std::string fileName, int patchIndex, FileType 
 
 			GennyData dat;
 
-			if (extension == "gnb")
+			if (extension == "folder")
+			{
+				fileName = fileName.substr(0, fileName.length() - 7);
+
+				const char* c = fileName.c_str();
+				const size_t cSize = strlen(c) + 1;
+				wchar_t* wc = new wchar_t[cSize];
+				mbstowcs(wc, c, cSize);
+				
+				
+				if (_wmkdir(wc) < 0 && errno != EEXIST)
+					return;
+
+				std::vector<VSTPatch*> patches = getVSTOwner()->getPatches();
+
+				for (int i = 0; i < patches.size(); i++)
+				{
+					GennyData data = GennyLoaders::saveGEN(static_cast<GennyPatch*>(patches[i]));
+					std::fstream file;
+					file.open(fileName + "//" + std::to_string(i + 1) + ". " + patches[i]->Name + ".gen", std::ios::out | std::ios::binary | std::ios::trunc);
+					file.write(data.data, data.size);
+					file.close();
+					delete[] dat.data;
+				}
+			}
+			else if (extension == "gnb")
 			{
 				GennyData dat;
 				std::vector<VSTPatch*> patches = getVSTOwner()->getPatches();

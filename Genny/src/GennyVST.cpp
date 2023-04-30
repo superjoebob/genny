@@ -40,6 +40,8 @@ GennyVST::GennyVST(void) :
 	bendRange(12),
 	_automationInverse(false),
 	lfo(0),
+	_hasUIUpdates(false),
+	_clearMidiUIUpdateHistory(false),
 #if BUILD_VST
 	_setParameterNormalizedValue(true)
 #else
@@ -295,10 +297,10 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 	stream.seekp(0);
 	stream.write((char*)(&written), sizeof(int));
 
-	_saving = false;
 
 	GennyPatch* patch = static_cast<GennyPatch*>(getPatch(0));
 	setPatchIndex(patch->Instruments[patch->SelectedInstrument]);
+	_saving = false;
 
 	*data = new char[written];
 
@@ -393,7 +395,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		GennyPatch* gennypatch = (GennyPatch*)_currentPatch;
 		DrumSet* set = &gennypatch->InstrumentDef.Drumset;
 		
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < kMaxInstruments; i++)
 		{
 			gennypatch->Instruments[i] = -1;
 		}
@@ -730,7 +732,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 	if (checkVersionLessThan(versionNumber, kVersionIndicator19))
 	{
 		GennyPatch* enabledPatch = static_cast<GennyPatch*>(getPatch(2));
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < kMaxInstruments; i++)
 		{
 			if (enabledPatch->Instruments[i] < 0)
 				((GennyPatch*)_patches[i])->InstrumentDef.Enable = true;
@@ -744,7 +746,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 	GennyPatch* mainPatch = static_cast<GennyPatch*>(getPatch(0));
 	if (orderingPatch->Instruments[0] < 0)
 	{
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < kMaxInstruments; i++)
 		{
 			//Initial setup
 			if (oldOrderingPatch->Instruments[i] >= 0)
@@ -860,7 +862,7 @@ void GennyVST::getParameterName(int index, char* text)
 		}
 	}
 
-	strncpy(text, name.c_str(), name.length() + 1);
+	strcpy(text, name.c_str());
 }
 
 
@@ -945,7 +947,7 @@ void GennyVST::getChannelName(int index, char* text)
 {
 	std::string name = "";
 
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < kMaxInstruments; i++)
 	{
 		GennyPatch* p = (GennyPatch*)_patches[i];
 		if (p->InstrumentDef.MidiChannel == index)
@@ -972,6 +974,34 @@ GennyExtParam* GennyVST::getExtParam(int pTag)
 
 void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 {
+	//automationMessage m;
+	//if (control->getExtParam() != nullptr)
+	//	m.index = control->getExtParam()->getTag();
+	//else
+	//	m.index = control->getTag();
+	//m.value = control->getValue() / control->getMax();
+
+	//_vst->_automationMessageMutex.lock();
+	//_vst->_automationMessages.push(m);
+	//_vst->_automationMessageMutex.unlock();
+
+
+	if (index > 99999999)
+	{
+		index -= 99999999;
+
+		automationMessage m;
+		m.index = index;
+		m.value = value;
+
+		_automationMessageMutex.lock();
+		_automationMessages.push(m);
+		_automationMessageMutex.unlock();
+
+		return;
+	}
+
+
 	if (GennyExtParam::isExtParam(index))
 	{
 		GennyExtParam* p = getExtParam(index);
@@ -980,9 +1010,18 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 			if (_setParameterNormalizedValue)
 				value = value * p->rangeMax;
 
+			bool changed = value != p->get();
 			p->set(value);
 
-			if (p->param == GEParam::LFOEnable)
+			if (p->param == GEParam::InsEnable)
+			{
+				if (changed)
+				{
+					int instrumentIndex = GennyExtParam::parsePatchFromTag(index);
+					getCore()->clearNotes((GennyPatch*)getPatch(instrumentIndex));
+				}
+			}
+			else if (p->param == GEParam::LFOEnable)
 			{
 				for (int i = 0; i < 6; i++)
 				{
@@ -1022,6 +1061,10 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 
 				int idx = _core->getIndexBaron()->getPatchParamIndex(GPP_SelectedInstrument);
 				int selection = (int)getPatch(0)->getFromBaron(_core->getIndexBaron()->getIndex(idx));
+
+				if ((p->param >= GEParam::ChEnable && p->param <= GEParam::ChEnable9))
+					getCore()->clearNotes((GennyPatch*)getPatch(selection), (int)p->param - (int)GEParam::ChEnable);
+
 				if (p->param == GEParam::SnMelodicEnable)
 				{
 					if (p->ins->snMelodicEnable)
@@ -1058,6 +1101,13 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 				}
 			}
 		}
+
+		return;
+	}
+	if (index >= kInstrumentMuteStart && index <= kInstrumentMuteEnd)
+	{
+		int instrumentIndex = index - kInstrumentMuteStart;
+		getCore()->clearNotes((GennyPatch*)getPatch(instrumentIndex));
 
 		return;
 	}
@@ -1320,7 +1370,7 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 		IBPatchParam* param = (IBPatchParam*)idx;
 		if(value >= 0 && _currentPatch == _patches[0])
 			_patches[0]->setFromBaron(idx, value);
-		else if(param != nullptr && value >= 0 && (param->getParameter() >= GennyPatchParam::GPP_Ins01 && param->getParameter() <= GennyPatchParam::GPP_Ins16) && _saving)
+		else if(param != nullptr && value >= 0 && (param->getParameter() >= GennyPatchParam::GPP_Ins01 && param->getParameter() <= GennyPatchParam::GPP_Ins32) && _saving)
 		{
 			if(patch != nullptr)
 				patch->setFromBaron(idx, value);
@@ -1379,6 +1429,11 @@ void GennyVST::setProgramName(char* name)
 		_editor->reconnect();
 }
 
+void GennyVST::setInstrumentPatchSelection(int index)
+{
+	_editor->setInstrumentPreset(index);
+}
+
 void GennyVST::updateChannel(int channel, bool on)
 {
 	if(_editor)
@@ -1400,14 +1455,18 @@ void GennyVST::setCurrentPatch(VSTPatch* patch)
 	{
 		IBIndex* selectedInstrumentIndex = baron->getIndex(baron->getPatchParamIndex(GPP_SelectedInstrument));
 		int selected = getPatch(0)->getFromBaron(selectedInstrumentIndex);
+		int newPatchIndex = getPatchIndex(patch);
 
-		//if(((GennyPatch*)getPatch(1))->Instruments[selected] >= 0)
-		//	selected = ((GennyPatch*)getPatch(1))->Instruments[selected];
+		if (selected < GennyPatch::NumInstruments && selected >= 0 && ((GennyPatch*)getPatch(0))->Instruments[selected] != newPatchIndex)
+		{
+			//clear all playing notes for current instrument since we're changing it's preset
+			getCore()->clearNotes((GennyPatch*)getPatch(selected));
+		}
 
 #if BUILD_VST
 		_setParameterNormalizedValue = false;
 #endif
-		setParameter(kInstrumentMappingStart + selected, getPatchIndex(patch));
+		setParameter(kInstrumentMappingStart + selected, newPatchIndex);
 #if BUILD_VST
 		_setParameterNormalizedValue = true;
 #endif
@@ -1419,6 +1478,17 @@ void GennyVST::setCurrentPatch(VSTPatch* patch)
 
 void GennyVST::getSamples(float** buffer, int numSamples)
 {
+	_automationMessageMutex.lock();
+
+	while (!_automationMessages.empty())
+	{
+		const automationMessage& mess = _automationMessages.top();
+		_base->setParameterAutomated(mess.index, mess.value);
+		_automationMessages.pop();
+	}
+	_automationMessageMutex.unlock();
+
+
 	if (_playingStatusChanged)
 	{
 		_core->clearCache();
@@ -1426,6 +1496,7 @@ void GennyVST::getSamples(float** buffer, int numSamples)
 	}
 
 	_core->update(buffer, numSamples);
+	//_automationMessageMutex.unlock();
 }
 
 
@@ -1482,7 +1553,7 @@ void GennyVST::rejiggerInstruments(bool selected)
 {
 	GennyPatch* patch0 = (GennyPatch*)_patches[0];
 	GennyPatch* patch1 = (GennyPatch*)_patches[1];
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
 		if(!selected || patch0->SelectedInstrument == i)
 		{
@@ -1508,28 +1579,34 @@ int GennyVST::getTotalPatchCount()
 		GennyData file = GennyLoaders::loadResource(SET_NEWPRESETS, L"SET");
 
 		int numPatches = file.readInt();
-		for(int i = 0; i < numPatches; i++)
+		int minNumPatches = 180;
+		for(int i = 0; i < minNumPatches; i++)
 		{
-			if(i >= _patches.size())
-				_patches.push_back(new GennyPatch(i));
-
-			int size = file.readInt();
-
-			GennyData dat;
-			dat.data = new char[size];
-			memcpy(dat.data, file.data + file.dataPos, size);
-			dat.size = size;
-			file.dataPos += size;
+			if (i < numPatches)
+			{
+				if(i >= _patches.size())
+					_patches.push_back(new GennyPatch(i));
 	
-			GennyPatch* patch = (GennyPatch*)_patches[i];
+				int size = file.readInt();
 
-			GennyLoaders::loadGEN(patch, &dat);
+				GennyData dat;
+				dat.data = new char[size];
+				memcpy(dat.data, file.data + file.dataPos, size);
+				dat.size = size;
+				file.dataPos += size;
 
-			if(patch->InstrumentDef.Type == GIType::DAC)
-				patch->setFromBaron(_core->getIndexBaron()->getIndex(_core->getIndexBaron()->getYMParamIndex((YM2612Param)YM_TL, 3)), YM2612Param_getRange(YM_TL) - 27);
+				GennyPatch* patch = (GennyPatch*)_patches[i];
 
-			if(patch->InstrumentDef.DACSampleRate >= 0 && patch->InstrumentDef.DACSampleRate < kNumDACSamplerates)
-				patch->InstrumentDef.Drumset.setSampleRate(kDACSamplerates[patch->InstrumentDef.DACSampleRate]);
+				GennyLoaders::loadGEN(patch, &dat);
+
+				if (patch->InstrumentDef.Type == GIType::DAC)
+					patch->setFromBaron(_core->getIndexBaron()->getIndex(_core->getIndexBaron()->getYMParamIndex((YM2612Param)YM_TL, 3)), YM2612Param_getRange(YM_TL) - 27);
+
+				if (patch->InstrumentDef.DACSampleRate >= 0 && patch->InstrumentDef.DACSampleRate < kNumDACSamplerates)
+					patch->InstrumentDef.Drumset.setSampleRate(kDACSamplerates[patch->InstrumentDef.DACSampleRate]);
+			}
+			else
+				_patches.push_back(new GennyPatch(i, "Empty Preset " + std::to_string(i - numPatches)));
 		}
 
 		_patchesInitialized = true;
@@ -1552,7 +1629,7 @@ int GennyVST::getNumInstruments()
 {
 	int num = 0;
 	GennyPatch* patch = static_cast<GennyPatch*>(getPatch(0));
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
 		if(patch->Instruments[i] != -1)
 			num++;
@@ -1588,17 +1665,6 @@ void GennyVST::saveData(IStream* stream, bool save)
 
 		setPluginState(data, streamSize, false);
 	}
-
-#if !BUILD_VST
-	_base->PlugHost->Dispatcher(_base->HostTag, FHD_SetNumPresets, 0, getTotalPatchCount());
-	//_base->PlugHost->Dispatcher(_base->HostTag, FHD_SetNumParams, 0, kExtParamsEnd);
-	//_base->PlugHost->Dispatcher(_base->HostTag, FHD_SetNewColor, 0, 2);
-
-
-	//_base->PlugHost->Dispatcher(_base->HostTag, FHD_NoteOn, (1000 << 16) | 2, 100);
-
-	
-#endif
 }
 
 void GennyVST::startLogging(std::string file)
@@ -1664,6 +1730,7 @@ void GennyVST::loggingComplete()
 //	return 0;
 //}
 
+#if !BUILD_VST
 void GennyVST::updateNoteControl(GennyPatch* patch, void* noteData)
 {
 	PlugVoice* voice = (PlugVoice*)noteData;
@@ -1762,6 +1829,7 @@ bool GennyVST::noteControlIsAssigned(int idx, int param)
 
 	return found;
 }
+#endif
 
 void GennyVST::MidiCleanLearnedParam(int paramTag, int legacyTag)
 {
@@ -1862,6 +1930,9 @@ void GennyVST::showHint(int parameterTag)
 		_base->PlugHost->OnHint(_base->HostTag, nullptr);
 	else
 	{
+		if (!GennyExtParam::isExtParam(parameterTag))
+			parameterTag += getPatchIndex(_currentPatch) * GennyPatch::getNumParameters();
+
 		char nameString[32] = "";
 		getParameterName(parameterTag, nameString);
 
@@ -1879,13 +1950,21 @@ void GennyVST::showHint(int parameterTag)
 #endif
 }
 
+//int TranslateMidi(int Value, int Min, int Max)
+//{
+//	return Min + (int)(Value * FromMIDI_Div * (Max - Min));
+//}
+
 int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags type)
 {
+	bool fromMidi = ((int)type & (int)AutomationTypeFlags::FromMIDI);
 	bool updateValue = (int)type & (int)AutomationTypeFlags::UpdateValue;
+
+	bool needSetValue = updateValue || fromMidi;
 	bool getValue = (int)type & (int)AutomationTypeFlags::GetValue;
 	bool updateUI = (int)type & (int)AutomationTypeFlags::UpdateControl;
 	bool getValueUI = ((int)type & (int)AutomationTypeFlags::GetValueUI);
-	if (!(updateValue || getValue || updateUI) || (parameterHash > kExtParamsEnd))
+	if (!(needSetValue || updateValue || getValue || updateUI) /* || (parameterHash > kExtParamsEnd)*/)
 		return -1;
 
 	int setValue = 0;
@@ -1897,31 +1976,45 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 		GennyExtParam* p = getExtParam(parameterHash);
 		if (p != nullptr)
 		{
-			isCurrentPatch = (p->ins->patchIndex == ((GennyPatch*)_patches[0])->SelectedInstrument) || ((p->param >= GEParam::ChEnable0) && (p->param <= GEParam::ChEnable9));
+			int currentInstrumentPatch = ((GennyPatch*)_patches[0])->Instruments[((GennyPatch*)_patches[0])->SelectedInstrument];
+			isCurrentPatch = (p->ins->patchIndex == currentInstrumentPatch) || ((p->param >= GEParam::ChEnable0) && (p->param <= GEParam::ChEnable9));
 			GennyPatch* instrumentPatch = ((GennyPatch*)_patches[p->ins->patchIndex]);
 			GennyPatch* realPatch = instrumentPatch;
-			if (!p->isInsParam())
+			if (p->isInsParam()) 
 			{
-				int instrumentIndex = ((GennyPatch*)_patches[0])->Instruments[p->ins->patchIndex];
-				if (instrumentIndex >= 0 && instrumentIndex < _patches.size())
-				{
-					realPatch = ((GennyPatch*)_patches[instrumentIndex]);
-					p = realPatch->getExt(p->param);
-					parameterHash = p->getTag();
-					isCurrentPatch = ((GennyPatch*)_currentPatch)->InstrumentDef.patchIndex == p->ins->patchIndex;
-				}
-				else
-					realPatch = nullptr;
+				isCurrentPatch = p->ins->patchIndex == ((GennyPatch*)_patches[0])->SelectedInstrument;
+				//int currentInstrumentPatch = ((GennyPatch*)_patches[0])->Instruments[((GennyPatch*)_patches[0])->SelectedInstrument];
+
+
+				//int instrumentIndex = ((GennyPatch*)_patches[0])->Instruments[p->ins->patchIndex];
+				//if (instrumentIndex >= 0 && instrumentIndex < _patches.size())
+				//{
+				//	realPatch = ((GennyPatch*)_patches[instrumentIndex]);
+				//	p = realPatch->getExt(p->param);
+				//	parameterHash = p->getTag();
+				//	isCurrentPatch = ((GennyPatch*)_currentPatch)->InstrumentDef.patchIndex == p->ins->patchIndex;
+				//}
+				//else
+				//	realPatch = nullptr;
 			}
 
 			if (realPatch != nullptr)
 			{
-				if (updateValue)
+				if (needSetValue)
 				{
-					//if ((int)type & (int)AutomationTypeFlags::FromMIDI || updateUI)
+					setValue = value;
+
+#if BUILD_VST
+					if ((int)type & (int)AutomationTypeFlags::FromMIDI)
 						setValue = (int)(((value / 65535.0f) * p->rangeMax) + 0.5f);
-					//else
-					//	setValue = value;// min((int)(((value / 127.0f) * p->rangeMax) + 0.5f), (int)p->rangeMax);
+					else
+						setValue = min((int)(((value / 127.0f) * p->rangeMax) + 0.5f), (int)p->rangeMax);
+#else
+
+					if (fromMidi)
+						setValue = TranslateMidi(value, 0, p->rangeMax);
+#endif
+
 				}
 
 				parameterValue = parameterHash;
@@ -1933,13 +2026,14 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 	}
 	else if (parameterHash >= 999999)
 	{
+		//This seems to be for VST only, as MidiLearned midi messages come through as a huge number
 		parameterHash -= 999999;
 		int instrument = ((int)(parameterHash / 9999));
 		int parameter = (int)(parameterHash % 9999);
 
 		IBIndex* idx = _core->getIndexBaron()->getIndex(parameter);
 
-		if (updateValue)
+		if (needSetValue)
 		{
 			int range = 0;
 			if (idx->getType() == IB_YMParam)
@@ -1950,10 +2044,14 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 					value = 65535 - value;
 			}
 
-			//if ((int)type & (int)AutomationTypeFlags::FromMIDI || updateUI)
+			setValue = value;
+			//if (fromMidi)
+			//	setValue = TranslateMidi(value, 0, range);
+
+			if ((int)type & (int)AutomationTypeFlags::FromMIDI /* || updateUI*/)
 				setValue = (int)(((value / 65535.0f) * range) + 0.5f);
-			//else
-			//	setValue = value;// min((int)(((value / 127.0f) * range) + 0.5f), range);
+			else
+				setValue =  min((int)(((value / 127.0f) * range) + 0.5f), range);
 		}
 
 		int realPatchIndex = static_cast<GennyPatch*>(getPatch(0))->Instruments[instrument];
@@ -1975,7 +2073,7 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 		int paramNumber = parameterHash - (patchNum * GennyPatch::getNumParameters());
 		IBIndex* idx = _core->getIndexBaron()->getIndex(paramNumber);
 
-		if (updateValue)
+		if (needSetValue)
 		{
 			int range = 0;
 			if (idx->getType() == IB_YMParam)
@@ -1987,8 +2085,13 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 					value = 65535 - value;
 			}
 
+			setValue = value;
+			if(fromMidi)
+				setValue = TranslateMidi(value, 0, range);
+
+
 			//if ((int)type & (int)AutomationTypeFlags::FromMIDI || updateUI)
-				setValue = (int)(((value / 65535.0f) * range) + 0.5f);
+			//	setValue = (int)(((value / 65535.0f) * range) + 0.5f);
 			//else
 			//	setValue = value;// min((int)(((value / 127.0f) * range) + 0.5f), range);
 		}
@@ -2005,34 +2108,51 @@ int GennyVST::onAutomation(int parameterHash, int value, AutomationTypeFlags typ
 #endif
 
 	int ret = value;
-	if(updateValue)
+	if (needSetValue)
+		ret = setValue;
+
+	if (updateValue)
 		setParameter(parameterValue, setValue, GennyExtParam::isExtParam(parameterValue) ? nullptr : patch);
 
 	if (getValue)
 	{
 		setValue = ret = (int)getParameter(parameterValue, patch);
 
-		if (!getValueUI)
-			ret = (int)((setValue / (float)getParameterRange(parameterValue)) * USHRT_MAX);
+		//if (!getValueUI)
+		//	ret = (int)((setValue / (float)getParameterRange(parameterValue)) * USHRT_MAX);
 	}
 
 	if (_editor != nullptr && updateUI && isCurrentPatch)
 	{
-		if (((int)type & (int)AutomationTypeFlags::UpdateUIThreaded))
+		if (_clearMidiUIUpdateHistory)
 		{
-			_mutex.lock();
-			_midiUIUpdates.push_back(std::pair<int, int>(parameterValue, setValue));
-			_mutex.unlock();
+			_midiUIUpdateHistory.clear();
+			_clearMidiUIUpdateHistory = false;
 		}
-		else
+
+		auto it = _midiUIUpdateHistory.find(parameterValue);
+		if (it == _midiUIUpdateHistory.end() || (*it).second != setValue)
 		{
+			if (((int)type & (int)AutomationTypeFlags::UpdateUIThreaded))
+			{
+				_mutex.lock();
+				_hasUIUpdates = true;
+				_midiUIUpdates[parameterValue] = setValue;
+				_midiUIUpdateHistory[parameterValue] = setValue;
+				_mutex.unlock();
+			}
+			else
+			{
 #if BUILD_VST
-			_mutex.lock();
-			_midiUIUpdates.push_back(std::pair<int, int>(parameterValue, setValue));
-			_mutex.unlock();
+				_mutex.lock();
+				_hasUIUpdates = true;
+				_midiUIUpdates[parameterValue] = setValue;
+				_midiUIUpdateHistory[parameterValue] = setValue;
+				_mutex.unlock();
 #else
-			_editor->setParameter(parameterValue, setValue);
+				_editor->setParameter(parameterValue, setValue);
 #endif
+			}
 		}
 	}
 

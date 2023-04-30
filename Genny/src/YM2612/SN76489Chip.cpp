@@ -408,15 +408,18 @@ void SN76489Chip::updateEnvelopes(int sampleRate)
 		
 	}
 }
-void SN76489Chip::fullStop()
+void SN76489Chip::fullStop(int channel)
 {
-	clearCache();
+	clearCache(channel);
 	for (int i = 0; i < 4; i++)
 	{
-		SimpleEnvelope& channel = _channels[i];
-		channel.state = ES_Finished;
-		_channelVolumes[i] = 20;
-		setVolume(i, 0);
+		if (channel < 0 || channel == i)
+		{
+			SimpleEnvelope& channel = _channels[i];
+			channel.state = ES_Finished;
+			_channelVolumes[i] = 20;
+			setVolume(i, 0);
+		}
 	}
 }
 
@@ -443,7 +446,7 @@ void SN76489Chip::tick()
 	_mutex.unlock();
 }
 
-void SN76489Chip::clearCache()
+void SN76489Chip::clearCache(int channel)
 {
 	_lastWrite = 0;
 }

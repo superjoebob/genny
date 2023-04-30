@@ -17,6 +17,7 @@ public:
 	UIPresetsAndInstrumentsPanel* getOwner() { return _owner; }
 	CFrame* getFrame() { return _owner->getFrame(); }
 	IndexBaron* getIndexBaron() { return _owner->getIndexBaron(); }
+	void triggerSelection(int sel);
 
 	void reconnect();
 	void setVisible(bool visible);

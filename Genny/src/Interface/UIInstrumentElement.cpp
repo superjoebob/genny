@@ -293,7 +293,9 @@ void UIInstrumentElement::valueChanged(CControl* control)
 		{
 			if (((UIInstrumentElementEnableBox*)control)->controlModifier)
 			{
+				((UIInstrumentElementEnableBox*)control)->controlModifier = false;
 				_owner->setSolo(_instrumentIndex);
+				((UIInstrumentElementEnableBox*)control)->controlModifier = true;
 			}
 			else
 			{
@@ -343,7 +345,7 @@ void UIInstrumentElement::unselect()
 GennyPatch* UIInstrumentElement::getPresetLink()
 {
 	GennyPatch* presetLink = nullptr;
-	if (_instrumentIndex >= 0 && _instrumentIndex < 16 && getPatch(0)->Instruments[_instrumentIndex] >= 0)
+	if (_instrumentIndex >= 0 && _instrumentIndex < kMaxInstruments && getPatch(0)->Instruments[_instrumentIndex] >= 0)
 		presetLink = getPatch(getPatch(0)->Instruments[_instrumentIndex]);
 
 	return presetLink;
@@ -352,7 +354,7 @@ GennyPatch* UIInstrumentElement::getPresetLink()
 GennyPatch* UIInstrumentElement::getInstrumentLink()
 {
 	GennyPatch* instrumentLink = nullptr;
-	if (_instrumentIndex >= 0 && _instrumentIndex < 16 && getPatch(0)->Instruments[_instrumentIndex] >= 0)
+	if (_instrumentIndex >= 0 && _instrumentIndex < kMaxInstruments && getPatch(0)->Instruments[_instrumentIndex] >= 0)
 		instrumentLink = getPatch(_instrumentIndex);
 
 	return instrumentLink;

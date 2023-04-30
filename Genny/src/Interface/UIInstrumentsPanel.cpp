@@ -139,6 +139,7 @@ void UIInstrumentsPanel::dragUpdate(UIInstrumentElement* vBox)
 			_currentDrag = newInstrumentIndex;
 			_ignoreRescroll = true;
 			reconnect();
+			//reorganize();
 			_ignoreRescroll = false;
 		}
 	}
@@ -171,7 +172,7 @@ void UIInstrumentsPanel::valueChanged (CControl* control)
 		if(control->getValue() > 0.5f)
 		{	
 			int instrumentSlotIndex = -1;
-			for (instrumentSlotIndex = 0; instrumentSlotIndex < 16; instrumentSlotIndex++)
+			for (instrumentSlotIndex = 0; instrumentSlotIndex < kMaxInstruments; instrumentSlotIndex++)
 			{
 				if (getPatch(0)->Instruments[instrumentSlotIndex] < 0)
 					break;
@@ -244,6 +245,7 @@ void UIInstrumentsPanel::valueChanged (CControl* control)
 				}
 			}
 
+			getInterface()->valueChangedCustom(kInstrumentMuteStart + _selection, 1.0f);
 			getPatch(0)->Instruments[_selection] = -1;
 
 			while (selectionIndex > 0 && getPatch(3)->Instruments[selectionIndex] < 0)
@@ -558,10 +560,18 @@ bool UIInstrumentsPanel::onWheel (const CPoint& where, const CMouseWheelAxis& ax
 
 void UIInstrumentsPanel::setSolo(int idx)
 {
+	GennyPatch* reorderPatch = (GennyPatch*)getPatch(3);
+	//if (reorderPatch->Instruments[idx] >= 0)
+	//	idx = reorderPatch->Instruments[idx];
+
 	bool allOn = true;
 	for(int i = 0; i < kMaxInstruments; i++)
 	{
-		if(i != idx && getPatch(i)->InstrumentDef.Enable)
+		int instrumentOffset = i;
+		if (reorderPatch->Instruments[i] >= 0)
+			instrumentOffset = reorderPatch->Instruments[i];
+
+		if(instrumentOffset != idx && getPatch(instrumentOffset)->InstrumentDef.Enable)
 		{
 			allOn = false;
 			break;
@@ -570,13 +580,17 @@ void UIInstrumentsPanel::setSolo(int idx)
 
 	for(int i = 0; i < kMaxInstruments; i++)
 	{
-		if(idx == i || allOn)
-			getPatch(i)->InstrumentDef.Enable = true;
+		int instrumentOffset = i;
+		if (reorderPatch->Instruments[i] >= 0)
+			instrumentOffset = reorderPatch->Instruments[i];
+
+		if (idx == instrumentOffset || allOn)
+			getInterface()->valueChangedExt(getPatch(instrumentOffset)->getExt(GEParam::InsEnable), 1.5f);
 		else
-			getPatch(i)->InstrumentDef.Enable = false;
+			getInterface()->valueChangedExt(getPatch(instrumentOffset)->getExt(GEParam::InsEnable), 0.0f);
 	}
-		
-	for(int i = 0; i < _elements.size(); i++)
+
+	for (int i = 0; i < _elements.size(); i++)
 	{
 		_elements[i]->updateEnabledStatus();
 	}

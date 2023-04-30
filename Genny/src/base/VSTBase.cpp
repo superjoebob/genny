@@ -25,12 +25,12 @@
 //
 //	return TRUE;
 //}
-
+  
 
 VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	: AudioEffectX ((audioMasterCallback)data, parent->getTotalPatchCount(), GennyPatch::getNumParameters())
-{
-	for (VstInt32 i = 0; i < 16; i++)
+{  
+	for (VstInt32 i = 0; i < kMaxInstruments; i++)
 		_channelPrograms[i] = i;
 
 	if (audioMaster)
@@ -39,12 +39,14 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 		setNumOutputs (2); 
 		canProcessReplacing(true);
 		isSynth(true);
-		setUniqueID ('GENY');
+		setUniqueID ('GENX');
 		programsAreChunks(true); 
 	}
 	_parent = parent;
 	_tempo = 0.0f;
 	_sampleRate = 44100;
+
+
 
 	_currentEvents = (VstEvents *)malloc(sizeof(VstEvents) + 300 * sizeof(VstEvent *));
 	memset(_currentEvents, 0, sizeof(VstEvents)); // zeroing class fields is enough
@@ -358,7 +360,7 @@ VstInt32 VSTBase::getMidiProgramName (VstInt32 channel, MidiProgramName* mpn)
 
 VstInt32 VSTBase::getCurrentMidiProgram (VstInt32 channel, MidiProgramName* mpn)
 {
-	if (channel < 0 || channel >= 16 || !mpn)
+	if (channel < 0 || channel >= kMaxInstruments || !mpn)
 		return -1;
 	VstInt32 prg = _channelPrograms[channel];
 	mpn->thisProgramIndex = prg;
@@ -473,8 +475,8 @@ bool VSTBase::getOutputProperties(VstInt32 index, VstPinProperties* properties)
 TFruityPlugInfo PlugInfo =
 {
 	CurrentSDKVersion,
-	"GennyFL",
-	"GennyFL",
+	"GennyX FL",
+	"GennyX FL",
 	FPF_Type_FullGen | FPF_WantNewTick // the amount of parameters
 };
 
@@ -490,14 +492,14 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserv
 	{
 		hInstance = nullptr;
 		VSTGUI::exit();
-	}
+	}  
 
 	return TRUE;
 }
 
 VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	: TCPPFruityPlug(static_cast<FruityPlugInfo*>(data)->Tag, static_cast<FruityPlugInfo*>(data)->Host, 0)
-{
+{ 
 	FruityPlugInfo* info = static_cast<FruityPlugInfo*>(data);
 	_totalParameters = GennyPatch::getNumParameters();
 	//PlugInfo.NumParams = kExtParamsEnd;
@@ -540,7 +542,7 @@ void VSTBase::initialize()
 void VSTBase::setProgram(int program)
 {
 	_parent->setPatchIndex(program);
-}
+} 
 
 void VSTBase::MidiOut(unsigned char pStatus, unsigned char pData1, unsigned char pData2, unsigned char pPort)
 {
@@ -575,6 +577,13 @@ void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 
 	for(int i = 0; i < _voices.size(); i++)
 	{
+		//Not sure why this needs to be done but FL sets these Vol levels to 
+		//horrible NaN numbers when using note slides to fade notes out
+		if (_voices[i]->Params->InitLevels.Vol < 0)
+			_voices[i]->Params->InitLevels.Vol = 0;
+		if (_voices[i]->Params->FinalLevels.Vol < 0)
+			_voices[i]->Params->FinalLevels.Vol = 0;
+
 		if(_voices[i]->State == 1)
 		{
 			float masterVolume = -1;
@@ -599,6 +608,7 @@ void _stdcall VSTBase::Gen_Render(PWAV32FS DestBuffer, int &Length)
 		}
 		else
 		{
+
 			_parent->updateNote(_voices[i], Length);
 			
 			float masterVolume = -1.0f;
@@ -628,6 +638,10 @@ intptr_t _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Valu
 	{ 
 		_parent->clearNotes();
 	}
+	//else if (ID == FPD_GetParamInfo)
+	//{
+	//	return PI_Float;
+	//}
 	else if (ID == FPD_SetPlaying || ID == FPD_SongPosChanged)
 	{
 		_parent->_playingStatusChanged = true;
@@ -646,6 +660,12 @@ intptr_t _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Valu
 			}
 			else if( EditorHandle == 0 )
 			{
+				PlugHost->Dispatcher(HostTag, FHD_SetNumPresets, 0, _parent->getTotalPatchCount());
+				PlugHost->Dispatcher(HostTag, FHD_NamesChanged, 0, FPN_Semitone);
+
+				int totalParams = (int)(_parent->getTotalPatchCount() * (int)(_totalParameters + (int)GEParam::TOTAL_EXT_PARAMS));
+				PlugHost->Dispatcher(HostTag, FHD_SetNumParams, 0, totalParams);
+
 				// open editor
 				_editor->open(reinterpret_cast<HWND>(Value));
 				_editor->getFrame()->takeFocus();
@@ -668,6 +688,11 @@ intptr_t _stdcall VSTBase::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Valu
 		_sampleRate = Value;
 		sampleRateChanged(Value);
 	}
+	else if (ID == FPD_SetPreset)
+	{
+		_parent->setInstrumentPatchSelection(Index);
+		return -1;
+	}
 
 	return 0;
 }
@@ -680,6 +705,11 @@ void VSTBase::sampleRateChanged(double newRate)
 void _stdcall VSTBase::SaveRestoreState(IStream *Stream, BOOL Save)
 {
 	_parent->saveData(Stream, Save ? true : false);
+
+	PlugHost->Dispatcher(HostTag, FHD_SetNumPresets, 0, _parent->getTotalPatchCount());
+	PlugHost->Dispatcher(HostTag, FHD_NamesChanged, 0, FPN_Semitone);
+	int totalParams = (int)(_parent->getTotalPatchCount() * (int)(_totalParameters + (int)GEParam::TOTAL_EXT_PARAMS));
+	PlugHost->Dispatcher(HostTag, FHD_SetNumParams, 0, totalParams);
 }
 
 
@@ -729,7 +759,7 @@ void _stdcall VSTBase::Voice_Kill(TVoiceHandle Handle)
 
 void VSTBase::KillAllVoices()
 {
-	while(_voices.size() > 0)
+	while(_voices.size() > 0) 
 	{
 		PlugHost->Voice_Kill(_voices[0]->HostTag, true);
 	}
@@ -738,7 +768,7 @@ void VSTBase::KillAllVoices()
 
 void _stdcall VSTBase::GetName(int Section, int Index, int Value, char *Name)
 {
-	if (Section == FPN_Param)
+	if (Section == FPN_Param) 
 		_parent->getParameterName(Index, Name);
 	else if (Section == FPN_ParamValue)
 		_parent->getParameterValue(Index, Name);
@@ -749,7 +779,7 @@ void _stdcall VSTBase::GetName(int Section, int Index, int Value, char *Name)
 			char nameString[32] = "Note control 1";
 			strncpy(Name, nameString, 32);
 		}
-		if (Index == 1)
+		if (Index == 1) 
 		{
 			char nameString[32] = "Note control 2";
 			strncpy(Name, nameString, 32);
@@ -757,6 +787,8 @@ void _stdcall VSTBase::GetName(int Section, int Index, int Value, char *Name)
 	}
 	else if (Section == FPN_VoiceColor)
 		_parent->getChannelName(Index, Name);
+	else if (Section == FPN_Preset)
+		strcpy(Name, _parent->getPatch(Index)->Name.c_str());
 }
 
 int _stdcall VSTBase::ProcessEvent(int EventID, int EventValue, int Flags)
@@ -771,6 +803,7 @@ int _stdcall VSTBase::ProcessEvent(int EventID, int EventValue, int Flags)
 	return 0;
 }
 
+
 int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 {
 	if (RECFlags & REC_PlugReserved)
@@ -778,7 +811,7 @@ int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 		if (Index <= kExtParamsEnd)
 		{
 			int realIndex = Index;
-			if (realIndex < kExtParamsStart)
+			if (realIndex < kOriginalParamsEnd)
 				realIndex += GennyPatch::getNumParameters() * _parent->getPatchIndex(_parent->getCurrentPatch());
 
 			PlugHost->OnParamChanged(HostTag, realIndex, Value);
@@ -863,6 +896,7 @@ int _stdcall VSTBase::Voice_ProcessEvent(TVoiceHandle Handle, int EventID, int E
 void _stdcall VSTBase::Idle_Public()
 {
 	if(_editor) _editor->idle();
+	TCPPFruityPlug::Idle_Public();
 }
 
 void VSTBase::setEditor(void* editor)

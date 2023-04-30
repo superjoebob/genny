@@ -1,5 +1,5 @@
 #ifdef _USE_AFX
-	#include "stdafx.h"
+	//#include "stdafx.h"
 	#include <afxwin.h>
 #endif
 #ifdef __BORLANDC__
@@ -60,10 +60,10 @@ inline int AlignBlock_32(int Value)
 
 
 // some constants for TAudioRenderer
-const int Ramp_Res_Unit    = 1.0/1000.0;			// will take this number of samples to go from 0 to 1 at 44100Hz
-const int Ramp_Res_Norm    = Ramp_Res_Unit;			// source is -1..1 normalized
-const int Ramp_Res_Min     = Ramp_Res_Unit*10.0;	// source is -1..1 normalized, but quicker ramping, with minimum safety
-const int Ramp_Res_FromInt = Ramp_Res_Unit*32768.0;	// source is integer
+const float Ramp_Res_Unit    = 1.0f/1000.0f;			// will take this number of samples to go from 0 to 1 at 44100Hz
+const float Ramp_Res_Norm    = Ramp_Res_Unit;			// source is -1..1 normalized
+const float Ramp_Res_Min     = Ramp_Res_Unit*10.0f;		// source is -1..1 normalized, but quicker ramping, with minimum safety
+const float Ramp_Res_FromInt = Ramp_Res_Unit*32768.0f;	// source is integer
 
 
 
@@ -99,11 +99,11 @@ int TAudioRenderer::getSmpRate()
 void TAudioRenderer::setSmpRate(int newValue)
 {
 	fSmpRate = newValue;
-	SmpRateScale = 44100.0/fSmpRate;
+	SmpRateScale = 44100.0f/fSmpRate;
 
 	// filters
 	OmegaMul = M_PI*2.0/fSmpRate;
-	FilterMaxFreq = fSmpRate*0.4999;
+	FilterMaxFreq = fSmpRate*0.4999f;
 
 	// ramping
 	Ramp_Res_Norm    = Ramp_Res_Unit*SmpRateScale;
@@ -139,7 +139,7 @@ TCPPFruityPlug::TCPPFruityPlug(intptr_t SetHostTag, TFruityPlugHost *SetPlugHost
     #endif
 
 #ifndef __APPLE__
-	char *path = (char *)(PlugHost->Dispatcher(HostTag,FHD_GetProgPath,0,0));
+	char *path = (char *)(PlugHost->Dispatcher(HostTag,FHD_GetPath, GP_ProgPath, 0));
 	strcpy_s(ProgPath, MAX_PATH, path);
 #endif
 }
@@ -194,12 +194,12 @@ void TCPPFruityPlug::SkipRendering(void *SourceBuffer, void *DestBuffer, int Len
 // get the speed step to go through the LFO table at a given pitch (cents) (tuned around C5)
 int TCPPFruityPlug::GetStep_Cents(int Pitch)
 {
-    return PitchMul * exp(NoteMul*Pitch);
+    return (int)(PitchMul * exp(NoteMul*Pitch));
 }
 
 float TCPPFruityPlug::GetStep_Cents(float Pitch)
 {
-    return PitchMul * exp(NoteMul*Pitch);
+    return (float)(PitchMul * exp(NoteMul*Pitch));
 }
 
 int TCPPFruityPlug::GetStep_Freq(int Freq)
@@ -233,14 +233,14 @@ void TCPPFruityPlug::ShowHintMsg(char *Msg)
 
 void TCPPFruityPlug::ShowHintMsg_Direct(char *Msg)
 {
-    PlugHost->Dispatcher(HostTag, FHD_OnHint_Direct, 0, (int)Msg);
+    PlugHost->Dispatcher(HostTag, FHD_OnHint_Direct, 0, (intptr_t)Msg);
 }
 
 
 void TCPPFruityPlug::ShowHintMsg_Percent(int Value, int Max)
 {
     char tempc[256];
-    sprintf(tempc, "%d%", Value*100 / Max);
+    sprintf(tempc, "%d%%", Value*100 / Max);
     PlugHost->OnHint(HostTag, tempc);
 }
 
@@ -286,9 +286,9 @@ void TCPPFruityPlug::ShowHintMsg_Pitch(float Value, int PitchType, int Digits)
     sprintf(M2, M2, Value, PitchTypeT[PitchType+1]);
 
     if (fabs(Value) > 1 && PitchType < 2)
-        sprintf(Msg, "+%ss");
+        sprintf(Msg, "+%ss", M2);
     else if (Value >= 0)
-        sprintf(Msg, "+%s");
+        sprintf(Msg, "+%s", M2);
 
     PlugHost->OnHint(HostTag, Msg);
 }
@@ -325,10 +325,10 @@ void TCPPFruityPlug::ShowHintMsg_Time(int Value)
 
 void TCPPFruityPlug::CheckItem(HMENU Menu, int Item, int ParamNum, int Index)
 {
-    int funcresult = PlugHost->Dispatcher(HostTag, FHD_GetParamMenuFlags, ParamNum, Index);
+    intptr_t funcresult = PlugHost->Dispatcher(HostTag, FHD_GetParamMenuFlags, ParamNum, Index);
 
     unsigned int check = 0;
-#ifndef __APPLE__
+	#ifndef __APPLE__
     if ((funcresult & FHP_Checked) != 0)  check = MF_CHECKED;
     else  check = MF_UNCHECKED;
     CheckMenuItem(Menu, Item, MF_BYPOSITION | check);
@@ -336,7 +336,7 @@ void TCPPFruityPlug::CheckItem(HMENU Menu, int Item, int ParamNum, int Index)
     if ((funcresult & FHP_Disabled) == 0)  check = MF_ENABLED;
     else  check = MF_DISABLED;
     EnableMenuItem(Menu, Item, MF_BYPOSITION | check);
-#endif
+	#endif
 }
 
 
@@ -391,11 +391,11 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
         return;
 
     // delete the old entries
-    /*int count = GetMenuItemCount(Item);
+    int count = GetMenuItemCount(Item);
     while (count > FirstItemIndex)  {
         DeleteMenu(Item, count-1, MF_BYPOSITION);
         count--;
-    }*/
+    }
 
     // add (append) new ones
     int n = 0;
@@ -407,8 +407,6 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
         // get menu entry
         MenuEntry = (PParamMenuEntry)(PlugHost->Dispatcher(HostTag, FHD_GetParamMenuEntry, ParamNum, n));
         if (MenuEntry) {
-
-            bool skip = false;
             // create, fill & add item
             flags = MF_STRING;
             if (MenuEntry->Flags & FHP_Disabled)
@@ -419,17 +417,11 @@ void TCPPFruityPlug::AdjustParamPopup(HMENU Item, int ParamNum, int FirstItemInd
                 flags = flags | MF_CHECKED;
             else
                 flags = flags | MF_UNCHECKED;
-
-
             if (strcmp(MenuEntry->Name, "-") == 0)
                 flags = flags | MF_SEPARATOR;
-            else if (MenuEntry->Name[0] == '-')
-                skip = true;
 
             id = FirstID + n;
-            if(!skip)
-                AppendMenuA(Item, flags, id, MenuEntry->Name);
-
+            AppendMenuA(Item, flags, id, MenuEntry->Name);
             n++;
         }
     }
@@ -445,7 +437,14 @@ void _stdcall TCPPFruityPlug::NewTick()
 
 intptr_t _stdcall TCPPFruityPlug::Dispatcher(intptr_t ID, intptr_t Index, intptr_t Value)
 {
-    return 0;
+	intptr_t v = 0;
+
+	switch (ID)
+	{
+		case FPD_UseIncreasedMIDIResolution:	v = 1;
+	}
+
+	return v;
 }
 
 void _stdcall TCPPFruityPlug::Eff_Render(PWAV32FS SourceBuffer, PWAV32FS DestBuffer, int Length)
@@ -482,7 +481,7 @@ void _stdcall TCPPFruityPlug::Voice_Kill(TVoiceHandle Handle)
 {
 }
 
-int _stdcall TCPPFruityPlug::Voice_ProcessEvent(TVoiceHandle Handle, int EventID, int EventValue, int Flags)
+int _stdcall TCPPFruityPlug::Voice_ProcessEvent(TVoiceHandle Handle, intptr_t EventID, intptr_t EventValue, intptr_t Flags)
 {
     return 0;
 }
@@ -524,13 +523,10 @@ void _stdcall TCPPFruityPlug::MsgIn(intptr_t Msg)
 {
 }
 
-// translate a controller value (0..65536)
+// translate a controller value (0..FromMIDI_Max) 
 int TranslateMidi(int Value, int Min, int Max)
 {
-	int result = Min + (Value * 1.0f / (Max-Min+1) * (Max-Min+1));
-	if (result > Max)
-		result = Max;
-	return result;
+	return Min + (int)(Value * FromMIDI_Div * (Max - Min));
 }
 
 const int HintPBMax   = 20;  // 20 steps for the hint progress bar

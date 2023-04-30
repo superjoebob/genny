@@ -18,9 +18,10 @@
 #define MIDIMsg_PortMask 0xFFFFFF;
 #define MIDIMsg_Null     0xFFFFFFFF;
 
-const int FromMIDI_Max	= 65536;  // see REC_FromMIDI
-const int FromMIDI_Half	= 32768;
-
+// see REC_FromMIDI
+const int FromMIDI_Max = 1 << 30;
+const int FromMIDI_Half = FromMIDI_Max >> 1;
+const float FromMIDI_Div = 1.0f / FromMIDI_Max;
 
 
 
@@ -29,9 +30,9 @@ typedef float TWaveT[WaveT_Size];
 typedef TWaveT *PWaveT;
 
 // interlaced stereo 32Bit float buffer
-typedef float TWAV32FS[1][2];
+typedef float TWAV32FS[2];
 typedef TWAV32FS *PWAV32FS;
-typedef float TWAV32FM[1];
+typedef float TWAV32FM;
 typedef TWAV32FM *PWAV32FM;
 
 

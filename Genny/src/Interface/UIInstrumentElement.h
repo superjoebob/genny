@@ -36,15 +36,16 @@ public:
 	virtual void setVisible(bool visible);
 	void updateEnabledStatus();
 	virtual void invalid();
+	CCheckBox* _enabledCheckbox;
+	int _displayIndex;
+	int _instrumentIndex;
 
 	CLASS_METHODS(UIInstrumentElement, CCheckBox)
 
 private:
 	UIInstrumentsPanel* _owner;
-	CCheckBox* _enabledCheckbox;
 	CTextLabel* _label;
 	UIImage* _typeDisplay;
-	int _instrumentIndex;
 
 	std::vector<UIImage*> _lights;
 	std::vector<float> _lightVals;
@@ -53,6 +54,5 @@ private:
 	CPoint _clickDragStart;
 	bool _selected;
 	bool _wide;
-	int _displayIndex;
 };
 

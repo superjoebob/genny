@@ -12,7 +12,7 @@ public:
 	virtual void valueChanged (CControl* control);
 	virtual void draw (CDrawContext* pContext);
 	virtual void setVisible(bool visible);
-	void reconnect();
+	void reconnect(); 
 	
 	virtual bool onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons);
 
@@ -24,7 +24,7 @@ public:
 	virtual CMouseEventResult onMouseExited(CPoint& where, const CButtonState& buttons);
 
 	CLASS_METHODS(UIMidiChannel, CControl)
-
+		 
 private:
 	CTextLabel* _midiLabel;
 	CKickButton* _upArrow;

@@ -94,5 +94,5 @@ bool UICheckBoxNum::attached (CView* parent)
 void UICheckBoxNum::setVisible(bool visible)
 {
 	_label->setVisible(visible);
-	UICheckbox::setVisible(visible);
+	__super::setVisible(visible);
 }

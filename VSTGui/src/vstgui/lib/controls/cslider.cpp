@@ -521,6 +521,10 @@ bool CSliderBase::onWheel (const CPoint& where, const CMouseWheelAxis& axis, con
 	//	_distance *= -1.f;
 	//if (isInverseStyle ())
 	//	_distance *= -1.f;
+
+	if (!isStyleHorizontal())
+		_distance *= -1.f;
+
 	float normValue = getValueNormalized ();
 	if (buttons & kZoomModifier)
 		normValue += 0.1f * _distance * getWheelInc ();

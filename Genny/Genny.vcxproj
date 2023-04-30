@@ -103,6 +103,8 @@
     <ClCompile Include="src\Interface\UISlider.cpp" />
     <ClCompile Include="src\Interface\UISpinner.cpp" />
     <ClCompile Include="src\Interface\UIWaveForm.cpp" />
+    <ClCompile Include="src\minieditor.cpp" />
+    <ClCompile Include="src\minihost.cpp" />
     <ClCompile Include="src\VST\VirtualInstrument.cpp" />
     <ClCompile Include="src\YM2612\blip_buf.cpp" />
     <ClCompile Include="src\YM2612\DrumSet.cpp" />
@@ -139,6 +141,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h" />
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_def.h" />
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_extra.h" />
     <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h" />
     <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffect.h" />
     <ClInclude Include="..\VSTGui\lib\vstsdk2.4\pluginterfaces\vst2.x\aeffectx.h" />
@@ -393,6 +397,7 @@
     <Image Include="res\ssgDisplay.png" />
     <Image Include="res\transTabs.png" />
     <Image Include="res\velocity_map.png" />
+    <Image Include="res\vst_back_fl.png" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="changelog.txt" />
@@ -404,11 +409,11 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
-    <EnableASAN>true</EnableASAN>
+    <PlatformToolset>v142</PlatformToolset>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -426,9 +431,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <CharacterSet>NotSet</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
-    <EnableASAN>false</EnableASAN>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -493,7 +498,7 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Genny</TargetName>
+    <TargetName>GennyX</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -501,22 +506,22 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Genny_x64</TargetName>
+    <TargetName>GennyX_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
     <TargetExt>.dll</TargetExt>
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyFL</TargetName>
+    <TargetName>GennyX FL</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">
     <TargetExt>.dll</TargetExt>
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
-    <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyFL_x64</TargetName>
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>GennyX FL_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -583,13 +588,12 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\VSTGui\bin\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2" /XX
-if %errorlevel% leq 8 exit 0 else exit %errorlevel%</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
@@ -616,7 +620,7 @@ if %errorlevel% leq 8 exit 0 else exit %errorlevel%</Command>
     </Link>
     <PostBuildEvent />
     <PostBuildEvent>
-      <Command>call xcopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\GennyFL.dll" "C:\Program Files (x86)\Image-Line\FL Studio 11\Plugins\Fruity\Generators\GennyFL" /q /c /y</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyX FL"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">
@@ -625,8 +629,9 @@ if %errorlevel% leq 8 exit 0 else exit %errorlevel%</Command>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;C:\Program Files (x86)\Visual Leak Detector\include\</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -638,8 +643,7 @@ if %errorlevel% leq 8 exit 0 else exit %errorlevel%</Command>
       <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 20\Plugins\Fruity\Generators\GennyFL"
-if %errorlevel% leq 1 exit 0 else exit %errorlevel%</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyX FL"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

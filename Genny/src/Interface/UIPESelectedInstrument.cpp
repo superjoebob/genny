@@ -521,7 +521,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 
 			std::vector<VSTPatch*> patches = getVst()->getPatches();
 			std::vector<int> indexes;
-			for(int i = 0; i < 16; i++)
+			for(int i = 0; i < kMaxInstruments; i++)
 			{
 				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
 				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
@@ -572,7 +572,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 
 			std::vector<VSTPatch*> patches = getVst()->getPatches();
 			std::vector<int> indexes;
-			for(int i = 0; i < 16; i++)
+			for(int i = 0; i < kMaxInstruments; i++)
 			{
 				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
 				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
@@ -631,7 +631,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 
 			std::vector<VSTPatch*> patches = getVst()->getPatches();
 			std::vector<int> indexes;
-			for(int i = 0; i < 16; i++)
+			for(int i = 0; i < kMaxInstruments; i++)
 			{
 				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
 				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
@@ -700,7 +700,7 @@ void UIPESelectedInstrument::setPatchLink(GennyPatch* patch)
 		IndexBaron* baron = _owner->getIndexBaron();
 		std::vector<VSTPatch*> patches = getVst()->getPatches();
 		std::vector<int> indexes;
-		for(int i = 0; i < 16; i++)
+		for(int i = 0; i < kMaxInstruments; i++)
 		{
 			int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
 			int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));

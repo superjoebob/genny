@@ -99,6 +99,7 @@ void UIMegaMidiPortSpinner::setVisible(bool visible)
 	_midiLabel->setVisible(visible);
 	_upButton->setVisible(visible);
 	_downButton->setVisible(visible);
+	CControl::setVisible(visible);
 }
 
 bool UIMegaMidiPortSpinner::onWheel (const CPoint& where, const CMouseWheelAxis& axis, const float& distance, const CButtonState& buttons)

@@ -78,12 +78,15 @@ public:
 	virtual void setParameter (GennyInt32 index, float value);
 	virtual void valueChanged (CControl* control);
 	virtual void valueChangedExt(GennyExtParam* param, float value);
+	virtual void valueChangedCustom(int index, float value);
 	void reconnect();
 
 	void setChannelState(int channel, bool on);
 	virtual void idle();
 
 	bool getChannelState(int channel) { return _channels[channel]; }
+
+	void setInstrumentPreset(int index);
 
 	CFrame* getFrame() {return frame;}
 	GennyVST* getVSTOwner() { return _owner; }
@@ -106,6 +109,7 @@ public:
 	void dragEnd();
 
 	HWND hInstance;
+	bool _signalReconnect;
 
 private:
 	CControl* _prevHoverControl;

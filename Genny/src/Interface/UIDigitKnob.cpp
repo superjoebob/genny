@@ -109,4 +109,5 @@ void UIDigitKnob::setVisible(bool visible)
 		_display->setVisible(visible);
 		_knob->setVisible(visible);
 	}
+	CControl::setVisible(visible);
 }

@@ -122,8 +122,8 @@ public:
 
 	bool _hardwareMode;
 	bool _emulationMute;
-	void clearCache();
-	void fullStop();
+	void clearCache(int channel = -1);
+	void fullStop(int channel = -1);
 	void setProcessor(YM2612Processor* processor) { _processor = processor; }
 
 	SN76489Clock _clock;

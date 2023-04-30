@@ -17,7 +17,12 @@ const char** GennyExtParam::kDefaultPingPongSettings = new const char* [kNumPing
 
 bool GennyExtParam::isExtParam(int tag)
 {
-	return tag >= kExtParamsStart && tag <= kExtParamsEnd;
+	return tag >= kOriginalParamsEnd && tag <= kExtParamsEnd;
 }
 
-int GennyExtParam::getTag() { return (kExtParamsStart + (ins->patchIndex * (int)GEParam::TOTAL_EXT_PARAMS)) + (int)param; }
+int GennyExtParam::getTag() 
+{
+	int originalParamsEnd = kOriginalParamsEnd; //(GennyPatch::getNumParameters() * getVst()->getNumPatches());
+	int originalExtPatchIndex = (ins->patchIndex * (int)GEParam::TOTAL_EXT_PARAMS) + (int)param;
+	return originalParamsEnd + originalExtPatchIndex;
+}

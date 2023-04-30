@@ -1,4 +1,4 @@
-LIBRARY	"Genny FL"
+LIBRARY	"GennyX FL"
 ;DESCRIPTION  'Sega Genesis YM2612/SN76489 Emulator Plugin'
 
 EXPORTS

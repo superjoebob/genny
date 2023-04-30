@@ -161,7 +161,8 @@ float YM2612Channel::getFromBaron(IBIndex* param)
 
 //YM2612
 //-------------------------------------------------------------------
-
+std::thread::id this_id;
+bool threadInit = false;
 int kMaxPreparedClusters = 256;
 int kCurrentPreparedCluster = 0;
 int kThreadPreparedCluster = 0;
@@ -902,37 +903,54 @@ void YM2612::SendChipReset()
 }
 
 
-void YM2612::fullStop()
+void YM2612::fullStop(int channel)
 {
 	for (int i = 0; i < 6; i++)
 	{
-		_channels[i].op[0].RR.val = 15;
-		_channels[i].op[1].RR.val = 15;
-		_channels[i].op[2].RR.val = 15;
-		_channels[i].op[3].RR.val = 15;
-		writeParameter(YM2612Param::YM_RR, i, 0);
-		writeParameter(YM2612Param::YM_RR, i, 1);
-		writeParameter(YM2612Param::YM_RR, i, 2);
-		writeParameter(YM2612Param::YM_RR, i, 3);
+		if (channel < 0 || channel == i)
+		{
+			_channels[i].op[0].RR.val = 15;
+			_channels[i].op[1].RR.val = 15;
+			_channels[i].op[2].RR.val = 15;
+			_channels[i].op[3].RR.val = 15;
+			writeParameter(YM2612Param::YM_RR, i, 0);
+			writeParameter(YM2612Param::YM_RR, i, 1);
+			writeParameter(YM2612Param::YM_RR, i, 2);
+			writeParameter(YM2612Param::YM_RR, i, 3);
 
-		_channels[i].op[0].TL.val = 0;
-		_channels[i].op[1].TL.val = 0;
-		_channels[i].op[2].TL.val = 0;
-		_channels[i].op[3].TL.val = 0;
-		writeParameter(YM2612Param::YM_TL, i, 0);
-		writeParameter(YM2612Param::YM_TL, i, 1);
-		writeParameter(YM2612Param::YM_TL, i, 2);
-		writeParameter(YM2612Param::YM_TL, i, 3);
-		noteOff(i, 0);
+			_channels[i].op[0].TL.val = 0;
+			_channels[i].op[1].TL.val = 0;
+			_channels[i].op[2].TL.val = 0;
+			_channels[i].op[3].TL.val = 0;
+			writeParameter(YM2612Param::YM_TL, i, 0);
+			writeParameter(YM2612Param::YM_TL, i, 1);
+			writeParameter(YM2612Param::YM_TL, i, 2);
+			writeParameter(YM2612Param::YM_TL, i, 3);
+			noteOff(i, 0);
+		}
 	}
 
-	dirtyChannels();
-	clearCache();
+	dirtyChannels(channel);
+	clearCache(channel);
 	_resetDACSamplerate = true;
 }
 
 void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock, int specialLogData)
 {
+	if (threadInit == false)
+	{
+		threadInit = true;
+		this_id = std::this_thread::get_id();
+	}
+
+	if (this_id != std::this_thread::get_id())
+	{
+		int qq = 1;
+		this_id = std::this_thread::get_id();
+	}
+
+
+
 	if (inLock == false)
 		writeDataMutex.lock();
 
@@ -1510,35 +1528,45 @@ void YM2612::setDACEnable(bool enable)
 	}
 }
 
-void YM2612::dirtyChannels()
+void YM2612::dirtyChannels(int channel)
 {
 	for (int i = 0; i < 6; i++)
 	{
-		_channels[i].becomeDirty();
+		if(channel < 0 || channel == i)
+			_channels[i].becomeDirty();
 	}
 }
 
-void YM2612::clearCache()
+void YM2612::clearCache(int channel)
 {
 	_writeMap.clear();
 	for (int c = 0; c < 5; c++)
 	{
 		for (int i = 0; i < 6; i++)
 		{
-			channelLSB[c][i] = -1;
-			channelMSB[c][i] = -1;
+			if (channel < 0 || channel == i)
+			{
+				channelLSB[c][i] = -1;
+				channelMSB[c][i] = -1;
+			}
 		}
 	}
 
 	for (int c = 0; c < 6; c++)
 	{
-		//rewrite pan states
-		channelPanStatesWrittenL[c] = -1;
-		channelPanStatesWrittenR[c] = -1;
+		if (channel < 0 || channel == c)
+		{
+			//rewrite pan states
+			channelPanStatesWrittenL[c] = -1;
+			channelPanStatesWrittenR[c] = -1;
+		}
 	}
 
-	_inSpecialMode3 = -1;
-	_dacEnable = -1;
+	if(channel < 0 || channel == 2)
+		_inSpecialMode3 = -1;
+
+	if (channel < 0 || channel == 5)
+		_dacEnable = -1;
 }
 
 

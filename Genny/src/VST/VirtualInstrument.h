@@ -28,26 +28,29 @@ const int kChannelEnableStart = 980590;
 const int kChannelEnableEnd = 980600;
 const int kSelectedInstrument = 980610;
 const int kInstrumentMappingStart = 980620;
-const int kInstrumentMappingEnd = 980636;
-const int kOctaveStart = 980637;
-const int kOctaveEnd = 980700;
-const int kTransposeStart = 980701;
-const int kTransposeEnd = 980800;
-const int kPanningStart = 980801;
-const int kPanningEnd = 980900;
+const int kInstrumentMappingEnd = kInstrumentMappingStart + 32;//kMaxInstruments
+const int kOctaveStart = 990637;
+const int kOctaveEnd = 990700;
+const int kTransposeStart = 990701;
+const int kTransposeEnd = 990800;
+const int kPanningStart = 990801;
+const int kPanningEnd = 990900;
 
-const int kRangeLowStart = 980901;
-const int kRangeLowEnd = 981200;
+const int kRangeLowStart = 990901;
+const int kRangeLowEnd = 991200;
 
-const int kRangeHighStart = 981201;
-const int kRangeHighEnd = 981400;
+const int kRangeHighStart = 991201;
+const int kRangeHighEnd = 991400;
 
-const int kDelayStart = 981401;
-const int kDelayEnd = 981500;
+const int kDelayStart = 991401;
+const int kDelayEnd = 991500;
 
 
-const int kOperatorVelocityStart = 981600;
-const int kOperatorVelocityEnd = 981604;
+const int kOperatorVelocityStart = 991600;
+const int kOperatorVelocityEnd = 991604;
+
+const int kInstrumentMuteStart = 991704;
+const int kInstrumentMuteEnd = 991704 + 32;//kMaxInstruments
 
 
 class VSTBase;
@@ -86,6 +89,10 @@ public:
 	virtual void setParameter(int index, float value, VSTPatch* patch = nullptr) = 0;
 	virtual void setPatchIndex(int index);
 	virtual void setCurrentPatch(VSTPatch* patch) = 0;
+
+	virtual void setInstrumentPatchSelection(int index) = 0;
+
+
 	void setTempCurrentPatchIndex(int index) { _currentPatch = _patches[index];}
 	void setTempCurrentPatch(VSTPatch* patch) { _currentPatch = patch;}
 

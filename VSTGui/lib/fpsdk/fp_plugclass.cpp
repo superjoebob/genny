@@ -1,5 +1,5 @@
 #ifdef _USE_AFX
-#include "stdafx.h"
+//#include "stdafx.h"
 #endif
 #include "fp_plugclass.h"
 

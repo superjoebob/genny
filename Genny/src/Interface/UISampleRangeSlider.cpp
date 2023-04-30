@@ -117,6 +117,7 @@ void UISampleRangeSlider::reconnect()
 void UISampleRangeSlider::setVisible(bool visible)
 {
 	_slider->setVisible(visible);
+	__super::setVisible(visible);
 
 	if(visible)
 		reconnect();

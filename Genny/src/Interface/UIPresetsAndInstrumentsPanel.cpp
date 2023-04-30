@@ -8,6 +8,92 @@
 #include "UIPresetsPanel.h"
 #include "UIImportPanel.h"
 #include "UIMegaMidiPanel.h"
+#include "lib/platform/win32/win32frame.h"
+
+CMouseEventResult PresetsButton::onMouseDown(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+	{
+		Win32Frame* winFrame = (Win32Frame*)_owner->getOwner()->getFrame()->getPlatformFrame();
+		CPoint mousePos, globalPos;
+		winFrame->getCurrentMousePosition(mousePos);
+		winFrame->getGlobalPosition(globalPos);
+		mousePos = mousePos + globalPos;
+
+		std::vector<VSTPatch*> patches = _owner->getVst()->getPatches();
+
+		if (ContextMenu == nullptr)
+			ContextMenu = CreatePopupMenu();
+
+		int count = GetMenuItemCount((HMENU)ContextMenu);
+		while (count > 0) {
+			DeleteMenu((HMENU)ContextMenu, count - 1, MF_BYPOSITION);
+			count--;
+		}
+
+		unsigned int flags = MF_STRING;
+		int numSinceBreak = 0;
+		for (int i = 0; i < patches.size(); i++)
+		{
+			if (numSinceBreak > 25)
+			{
+				AppendMenuA((HMENU)ContextMenu, flags | MF_MENUBARBREAK, i + 1, patches[i]->Name.c_str());
+				numSinceBreak = 0;
+			}
+			else
+				AppendMenuA((HMENU)ContextMenu, flags, i + 1, patches[i]->Name.c_str());
+			numSinceBreak++;		
+		}	
+
+		BOOL r = TrackPopupMenu((HMENU)ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow(), NULL);
+		if (r > 0)
+			_owner->setInstrumentPreset(r - 1);
+
+		return CMouseEventResult::kMouseEventHandled;
+	}
+
+	return CKickButton::onMouseDown(where, buttons);
+}
+
+CMouseEventResult ImportButton::onMouseDown(CPoint& where, const CButtonState& buttons)
+{
+	if (buttons.isRightButton())
+	{
+		Win32Frame* winFrame = (Win32Frame*)_owner->getOwner()->getFrame()->getPlatformFrame();
+		CPoint mousePos, globalPos;
+		winFrame->getCurrentMousePosition(mousePos);
+		winFrame->getGlobalPosition(globalPos);
+		mousePos = mousePos + globalPos;
+
+		std::vector<VSTPatch*> patches = _owner->getVst()->getPatches();
+
+		if (ContextMenu == nullptr)
+			ContextMenu = CreatePopupMenu();
+
+		int count = GetMenuItemCount((HMENU)ContextMenu);
+		while (count > 0) {
+			DeleteMenu((HMENU)ContextMenu, count - 1, MF_BYPOSITION);
+			count--;
+		}
+
+		unsigned int flags = MF_STRING;
+		AppendMenuA((HMENU)ContextMenu, flags, 1, "Import Bank");
+		AppendMenuA((HMENU)ContextMenu, flags, 2, "Export Bank");
+		AppendMenuA((HMENU)ContextMenu, flags, 3, "Import Instrument");
+		AppendMenuA((HMENU)ContextMenu, flags, 4, "Export Instrument");
+		AppendMenuA((HMENU)ContextMenu, flags, 5, "Log VGM");
+		AppendMenuA((HMENU)ContextMenu, flags, 6, "Import Tuning");
+		AppendMenuA((HMENU)ContextMenu, flags, 7, "Load State");
+		AppendMenuA((HMENU)ContextMenu, flags, 8, "Save State");
+		BOOL r = TrackPopupMenu((HMENU)ContextMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, mousePos.x, mousePos.y, 0, winFrame->getPlatformWindow(), NULL);
+		if (r > 0)
+			_owner->_importView->triggerSelection(r - 1);
+
+		return CMouseEventResult::kMouseEventHandled;
+	}
+
+	return CKickButton::onMouseDown(where, buttons);
+}
 
 const int kPresetsTab = 0;
 const int kImportTab = 1;
@@ -32,12 +118,12 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 	frame->addView(_presetTab);
 
 
+	
 
-
-	_presetsTabButton = new CKickButton(CRect(638 + 82, 98, 638 + 82 + 68, 98 + 20), this, 9999, 20, nullptr );
+	_presetsTabButton = new PresetsButton(CRect(638 + 82, 98, 638 + 82 + 68, 98 + 20), this, 9999, 20, nullptr, this);
 	frame->addView(_presetsTabButton);
 
-	_importTabButton = new CKickButton(CRect(802, 96, 878, 116), this, 999, 20, nullptr );
+	_importTabButton = new ImportButton(CRect(802, 96, 878, 116), this, 999, 20, nullptr, this);
 	frame->addView(_importTabButton);
 
 	_megamidiTabButton = new CKickButton(CRect(880, 96, 910, 116), this, 999, 20, nullptr);
@@ -141,6 +227,11 @@ void UIPresetsAndInstrumentsPanel::draw (CDrawContext* pContext)
 void UIPresetsAndInstrumentsPanel::setParam(int index, float val)
 {
 
+}
+
+void UIPresetsAndInstrumentsPanel::setInstrumentPreset(int index)
+{
+	_presetsView->setSelection(index);
 }
 
 void UIPresetsAndInstrumentsPanel::reconnect()

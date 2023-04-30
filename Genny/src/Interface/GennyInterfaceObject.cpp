@@ -114,6 +114,13 @@ void GennyInterfaceObject::onMouseUpContext(int tag)
 	int patchNum = patch0->Instruments[patch0->SelectedInstrument];
 	int paramTag = (numParams * patchNum) + tag;
 
+	if (GennyExtParam::isExtParam(tag))
+	{
+		//int originalParamsEnd = numParams * getVst()->getNumPatches();
+		//int extParamIndex = kExtParamsStart - tag;
+		paramTag = tag;
+	}
+
 	int learnedInstrumentParamIndex = paramTag;
 	IBIndex* idx = getVst()->getCore()->getIndexBaron()->getIndex(tag);
 	if (idx != nullptr && idx->global)
@@ -282,6 +289,7 @@ void GennyInterfaceObject::onMouseUpContext(int tag)
 				}
 			}
 		}
+#if !BUILD_VST
 		else if (r == 6) //link to note control 1
 		{
 			if(getVst()->noteControlIsAssigned(0, paramTag))
@@ -296,6 +304,7 @@ void GennyInterfaceObject::onMouseUpContext(int tag)
 		else
 			getVst()->assignNoteControl(1, paramTag);
 		}
+#endif
 	}
 #if !BUILD_VST
 	else if(r != DefaultMenuID)

@@ -333,6 +333,7 @@ void UIPresetsPanel::setVisible(bool visible)
 	_scrollBar->setVisible(visible);
 	_upArrow->setVisible(visible);
 	_downArrow->setVisible(visible);
+	__super::setVisible(visible);
 	if(visible)
 		reconnect();
 }

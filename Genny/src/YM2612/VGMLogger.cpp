@@ -160,7 +160,7 @@ void VGMLogger::startLogging(GennyVST* vst, std::string file)
 
 	//Reset all DAC stream positions
 	GennyPatch* patch0 = static_cast<GennyPatch*>(vst->getPatch(0));
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
 		if(patch0->Instruments[i] != -1)
 		{

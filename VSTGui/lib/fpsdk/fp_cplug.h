@@ -100,7 +100,7 @@ public:
     virtual TVoiceHandle _stdcall TriggerVoice(PVoiceParams VoiceParams, intptr_t SetTag);
     virtual void _stdcall Voice_Release(TVoiceHandle Handle);
     virtual void _stdcall Voice_Kill(TVoiceHandle Handle);
-    virtual int _stdcall Voice_ProcessEvent(TVoiceHandle Handle, int EventID, int EventValue, int Flags);
+    virtual int _stdcall Voice_ProcessEvent(TVoiceHandle Handle, intptr_t EventID, intptr_t EventValue, intptr_t Flags);
     // FPF_UseSampler only
     virtual int _stdcall Voice_Render(TVoiceHandle Handle, PWAV32FS DestBuffer, int &Length);
 
@@ -113,7 +113,7 @@ public:
 
 	// buffered messages to itself (see PlugMsg_Delayed)
     virtual void _stdcall MsgIn(intptr_t Msg);
-	virtual int _stdcall OutputVoice_ProcessEvent(TOutVoiceHandle Handle, int EventID, int EventValue, int Flags) { return 0; };
+	virtual int _stdcall OutputVoice_ProcessEvent(TOutVoiceHandle Handle, intptr_t EventID, intptr_t EventValue, intptr_t Flags) { return 0; };
 	virtual void _stdcall OutputVoice_Kill(TVoiceHandle Handle) {};
 
 
@@ -163,10 +163,10 @@ extern char PluginPath[MaxPath];   // path to this DLL plugin (for loading of re
 const int AbsPPN = 192 / 4;  // 192 PPQ
 
 // see ShowHintMsg_Pitch
-const int PT_Octaves   = -1;
-const int PT_Semitones = 0;
-const int PT_Cents     = 1;
-const int PT_Hz        = 2;
+const int PitchType_Octaves   = -1;
+const int PitchType_Semitones = 0;
+const int PitchType_Cents     = 1;
+const int PitchType_Hz        = 2;
 
 
 

@@ -134,4 +134,5 @@ void UIDigitDisplay::setVisible(bool visible)
 	{
 		_digits[i]->setVisible(visible);
 	}
+	CView::setVisible(visible);
 }

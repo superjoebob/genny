@@ -28,6 +28,13 @@ const long kLatestVersion = kVersionIndicator19;
 #define GENNY_VERSION_STRING "1.1"
 #endif
 
+struct automationMessage
+{
+public:
+	int index;
+	float value;
+};
+
 class Genny2612;
 class GennyInterface;
 struct GennyPatch;
@@ -53,6 +60,7 @@ public:
 	virtual ParamDisplayType getParameterType(int index);
 	virtual void setParameter(int index, float value, VSTPatch* patch = nullptr);
 	virtual void setProgramName(char* name);
+	virtual void setInstrumentPatchSelection(int index);
 
 	void updateChannel(int channel, bool on);
 
@@ -106,13 +114,21 @@ public:
 	bool _automationInverse;
 	char _hintString[128];
 
+#if !BUILD_VST
 	void assignNoteControl(int idx, int param);
 	void unassignNoteControl(int idx, int param);
 	bool noteControlIsAssigned(int idx, int param);
 	void updateNoteControl(GennyPatch* patch, void* noteData);
+#endif
 
+	std::pair<int, int> _lastUIUpdate;
 	std::map<int, std::vector<int>> _midiLearn;
-	std::vector<std::pair<int, int>> _midiUIUpdates;
+	//std::vector<std::pair<int, int>> _midiUIUpdates;
+	std::map<int, int> _midiUIUpdates;
+	std::map<int, int> _midiUIUpdateHistory;
+	bool _hasUIUpdates;
+	bool _clearMidiUIUpdateHistory;
+
 	std::mutex _mutex;
 	int _midiLearnParameter;
 
@@ -120,6 +136,8 @@ public:
 	WaveData* triggerWave;
 
 	unsigned char lfo;
+	std::mutex _automationMessageMutex;
+	std::stack<automationMessage> _automationMessages;
 
 private:
 

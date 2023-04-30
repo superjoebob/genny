@@ -288,6 +288,8 @@
       <Filter>base</Filter>
     </ClCompile>
     <ClCompile Include="src\GennyExtParam.cpp" />
+    <ClCompile Include="src\minieditor.cpp" />
+    <ClCompile Include="src\minihost.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -518,12 +520,6 @@
     <ClInclude Include="src\Interface\UIPresetElement.h">
       <Filter>Interface</Filter>
     </ClInclude>
-    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
-      <Filter>base</Filter>
-    </ClInclude>
     <ClInclude Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.h">
       <Filter>base</Filter>
     </ClInclude>
@@ -651,6 +647,18 @@
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="src\GennyExtParam.h" />
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_extra.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_cplug.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_def.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
+      <Filter>base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VST">
@@ -808,6 +816,7 @@
     <Image Include="res\sampleSliderKnob.png" />
     <Image Include="res\infoButton.png" />
     <Image Include="res\infoTab.png" />
+    <Image Include="res\vst_back_fl.png" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="changelog.txt" />

@@ -73,7 +73,7 @@ public:
 protected:
 	void FillProgram (VstInt32 channel, VstInt32 prg, MidiProgramName* mpn);
 	VirtualInstrument* _parent;
-	VstInt32 _channelPrograms[16];
+	VstInt32 _channelPrograms[32];
 	float _tempo;
 	std::vector<MidiNote> _midiNotes;
 

@@ -106,4 +106,6 @@ void UIDigitSlider2::setVisible(bool visible)
 
 	if(_display != NULL)
 		_display->setVisible(visible);
+
+	CControl::setVisible(visible);
 }

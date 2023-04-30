@@ -338,13 +338,13 @@ public:
 
 	void setDACEnable(bool enable);
 	void setDrumSet(DrumSet* drumset) { _drumSet = drumset; }
-	void dirtyChannels();
+	void dirtyChannels(int channel = -1);
 
 	GennyData* _commandBuffer;
 	bool _hardwareMode;
 	bool _emulationMute;
 	bool _mdmMode;
-	void clearCache();
+	void clearCache(int channel = -1);
 
 	void Update(int *buffer, int length);
 
@@ -361,7 +361,7 @@ public:
 	unsigned char packParameter(YM2612Param param, int channel, int op);
 	int getRegister(YM2612Param param, int channel, int op, int specialOffset = -1);
 
-	void fullStop();
+	void fullStop(int channel = -1);
 	void setProcessor(YM2612Processor* processor) { _processor = processor; }
 
 	GennyVST* _vst;

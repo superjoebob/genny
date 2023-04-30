@@ -135,12 +135,12 @@ void GennyInstrument::catalogue(IndexBaron* baron)
 	baron->addIndex(new IBInsParam(0, GIP_MidiChannel, 0, 15, "Midi CH"));
 	baron->addIndex(new IBInsParam(0, GIP_FM, 0, 1, "FM Enable"));
 
-	for(int i = 0; i < 32; i++)
+	/*for(int i = 0; i < 32; i++)
 	{
 		baron->addIndex(new IBInsParam(0, (GennyInstrumentParam)(GIP_DACSamplePathStart + i), 0, 999999));
 	}
 
-	
+	*/
 
 	baron->addIndex(new IBInsParam(0, GIP_Octave, 0, GennyInstrumentParam_getRange(GIP_Octave), "Octave"));
 	baron->addIndex(new IBInsParam(0, GIP_Transpose, 0, GennyInstrumentParam_getRange(GIP_Transpose), "Transpose"));
@@ -241,11 +241,11 @@ void GennyInstrument::setFromBaron(IBIndex* param, float val)
 			break;
 
 		default:
-			if(p->getParameter() >= GIP_DACSamplePathStart && p->getParameter() <= GIP_DACSamplePathEnd)
+	/*		if(p->getParameter() >= GIP_DACSamplePathStart && p->getParameter() <= GIP_DACSamplePathEnd)
 			{
 				DACSamplePath[p->getParameter() - GIP_DACSamplePathStart] = val;
 				break;
-			}
+			}*/
 			break;
 
 		}
@@ -285,11 +285,11 @@ float  GennyInstrument::getFromBaron(IBIndex* param)
 		case GIP_Delay: return (float)Delay;
 		case GIP_Extra: return 0.0f;
 		default:
-			if(p->getParameter() >= GIP_DACSamplePathStart && p->getParameter() <= GIP_DACSamplePathEnd)
-			{
-				return DACSamplePath[p->getParameter() - GIP_DACSamplePathStart];
-				break;
-			}
+			//if(p->getParameter() >= GIP_DACSamplePathStart && p->getParameter() <= GIP_DACSamplePathEnd)
+			//{
+			//	return DACSamplePath[p->getParameter() - GIP_DACSamplePathStart];
+			//	break;
+			//}
 			break;
 		}
 	}
@@ -303,12 +303,12 @@ float  GennyInstrument::getFromBaron(IBIndex* param)
 void GennyPatch::catalogue(IndexBaron* baron)
 {
 	//Globals.catalogue(baron);
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 		baron->addIndex(new IBPatchParam((GennyPatchParam)(GPP_Ins01 + i), 0, 1));
 	for(int i = 0; i < 10; i++)
 		baron->addIndex(new IBPatchParam((GennyPatchParam)(GPP_Channel0 + i), 0, 1));
 
-	baron->addIndex(new IBPatchParam(GPP_SelectedInstrument, 0, 16));
+	baron->addIndex(new IBPatchParam(GPP_SelectedInstrument, 0, kMaxInstruments));
 	InstrumentDef.catalogue(baron);
 }
 
@@ -318,7 +318,7 @@ void GennyPatch::setFromBaron(IBIndex* param, float val)
 	{
 		IBPatchParam* p = static_cast<IBPatchParam*>(param);
 		
-		if(p->getParameter() >= GPP_Ins01 && p->getParameter() <= GPP_Ins16)
+		if(p->getParameter() >= GPP_Ins01 && p->getParameter() <= GPP_Ins32)
 		{
 			int index = (int)p->getParameter() - (int)GPP_Ins01;
 			Instruments[index] = (int)val;
@@ -364,7 +364,7 @@ float GennyPatch::getFromBaron(IBIndex* param)
 	{
 		IBPatchParam* p = static_cast<IBPatchParam*>(param);
 
-		if(p->getParameter() >= GPP_Ins01 && p->getParameter() <= GPP_Ins16)
+		if(p->getParameter() >= GPP_Ins01 && p->getParameter() <= GPP_Ins32)
 		{
 			int index = (int)p->getParameter() - (int)GPP_Ins01;
 			return (float)Instruments[index];
@@ -505,7 +505,7 @@ void Genny2612::noteOn(const int note, float velocity, unsigned char channel, fl
 	std::vector<int> channels;
 	GennyPatch* patch0 = static_cast<GennyPatch*>(_owner->getPatch(0));
 	IndexBaron* baron = _indexBaron;
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < kMaxInstruments; i++)
 	{
 		channels.clear();
 
@@ -778,7 +778,7 @@ void Genny2612::noteOn(const int note, float velocity, unsigned char channel, fl
 					_chip._channels[bestIndex].delay = ch.delay;
 					if( patch->InstrumentDef.Type == GIType::DAC)
 					{
-						char* cpath = patch->InstrumentDef.getSamplePath();
+		/*				char* cpath = patch->InstrumentDef.getSamplePath();
 						if(cpath != nullptr)
 						{
 							std::string path = cpath;
@@ -801,7 +801,7 @@ void Genny2612::noteOn(const int note, float velocity, unsigned char channel, fl
 								GennyLoaders::loadDPACK(patch, data, &pos);
 								delete[] memblock;
 							}
-						}
+						}*/
 
 						_chip.setDACEnable(true);
 						_chip.setDrumSet(&patch->InstrumentDef.Drumset);
@@ -1050,45 +1050,78 @@ void Genny2612::noteOff(const int note, int channel, void* noteData)
 	}
 }
 
-void Genny2612::clearNotes()
+void Genny2612::clearNotes(GennyPatch* instrument, int channel)
 {
- 	_vibratoNotes.clear();	
-	clearCache();
-	
+	if (instrument == nullptr && channel < 0)
+	{
+		clearCache(); //Full clear
+		_vibratoNotes.clear();
+	}
+	else //Targeted clear
+	{
+		//Reset pingpongs
+		for (int i = 0; i < kMaxInstruments; i++)
+		{
+			if (instrument == nullptr || _owner->_patches[i] == instrument)
+				((GennyPatch*)_owner->_patches[i])->InstrumentDef.PingPongPanIndex = 0;
+		}
+	}
+
 	for (int i = 0; i < kNumNoteChannels; i++)
 	{
 		NoteInfo& ch = _channels[i];
-		if (ch.note >= 0)
+		if ((instrument == nullptr || ch.instrumentPatch == instrument) && (channel < 0 || i == channel))
 		{
+			int size = _vibratoNotes.size();
+			for (int i2 = 0; i2 < size; i2++)
+			{
+				if ((_vibratoNotes[i2].noteData == nullptr && _vibratoNotes[i2].note == ch.note && _vibratoNotes[i2].channel == channel) || (_vibratoNotes[i2].noteData != nullptr && _vibratoNotes[i2].noteData == ch.noteData))
+				{
+					_vibratoNotes.erase(_vibratoNotes.begin() + i2);
+					size--;
+					i2--;
+				}
+			}
+
+			_channelPatches[i] = nullptr;
+			channelDirty[i] = true;
+			if (i <= 5)
+			{
+				_chip.clearCache(i);
+				_chip.fullStop(i);
+			}
+			else if (i < 10)
+				_snChip.fullStop(i - 6);
+
+			if (ch.note >= 0 && ch.instrumentPatch != nullptr)
+			{
 #if BUILD_VST
-			int offset = (ch.instrumentPatch->InstrumentDef.Octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2));
-			offset += (ch.instrumentPatch->InstrumentDef.Transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2));
+				int offset = (ch.instrumentPatch->InstrumentDef.Octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2));
+				offset += (ch.instrumentPatch->InstrumentDef.Transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2));
 #else
-			int offset = (ch.instrumentPatch->InstrumentDef.Octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2)) * 1200;
-			offset += (ch.instrumentPatch->InstrumentDef.Transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2)) * 100;
+				int offset = (ch.instrumentPatch->InstrumentDef.Octave - (GennyInstrumentParam_getRange(GIP_Octave) / 2)) * 1200;
+				offset += (ch.instrumentPatch->InstrumentDef.Transpose - (GennyInstrumentParam_getRange(GIP_Transpose) / 2)) * 100;
 #endif
 
-			if (i < 6)
-				_chip.noteOff(i, ch.note + offset);
-			else
-				_snChip.noteOff(i - 6);
+				if (i < 6)
+					_chip.noteOff(i, ch.note + offset);
+				else if(i < 10)
+					_snChip.noteOff(i - 6);
 
-			ch.noteStack.clear();
-			ch.note = -1;
-			ch.noteGlideFrom = -1;
-			ch.noteGlideCurrent = -1;
-			ch.release = _releases;
-			ch.noteData = NULL;
+				ch.noteStack.clear();
+				ch.note = -1;
+				ch.noteGlideFrom = -1;
+				ch.noteGlideCurrent = -1;
+				ch.release = _releases;
+				ch.noteData = NULL;
+			}
 
+			ch.instrumentPatch = nullptr;
 			if(i < 10)
 				_owner->updateChannel(i, false);
 		}
 	}
 
-
-
-	_chip.fullStop();
-	_snChip.fullStop();
 }
 
 int waiter = 0;
@@ -1257,3 +1290,5 @@ void Genny2612::panningChanged(GennyPatch* instrument, int channel)
 		}
 	}
 }
+
+
