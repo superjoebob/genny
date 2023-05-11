@@ -131,57 +131,6 @@
     <ClCompile Include="src\YM2612\resampler\resamplesubs.c">
       <Filter>YM2612\resampler</Filter>
     </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Bessel.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Biquad.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Butterworth.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Cascade.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\ChebyshevI.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\ChebyshevII.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Custom.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Design.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Documentation.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Elliptic.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Filter.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Legendre.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\Param.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\PoleFilter.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\RBJ.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\RootFinder.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
-    <ClCompile Include="src\YM2612\filters\source\State.cpp">
-      <Filter>YM2612\filters</Filter>
-    </ClCompile>
     <ClCompile Include="src\Interface\UIWaveForm.cpp">
       <Filter>Interface</Filter>
     </ClCompile>
@@ -433,75 +382,6 @@
     <ClInclude Include="src\YM2612\resampler\resample_defs.h">
       <Filter>YM2612\resampler</Filter>
     </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Cascade.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevI.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevII.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Common.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Custom.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Design.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Dsp.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Elliptic.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Filter.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Layout.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Legendre.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\MathSupplement.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Params.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\PoleFilter.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RBJ.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RootFinder.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\SmoothedFilter.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\State.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Types.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Utilities.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Bessel.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Biquad.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Butterworth.h">
-      <Filter>YM2612\filters\include</Filter>
-    </ClInclude>
     <ClInclude Include="src\Interface\UIWaveForm.h">
       <Filter>Interface</Filter>
     </ClInclude>
@@ -675,12 +555,6 @@
     </Filter>
     <Filter Include="Interface">
       <UniqueIdentifier>{f62d1ffc-6738-4656-b920-4b26215710f2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="YM2612\filters">
-      <UniqueIdentifier>{a453a073-13a8-4a05-aeeb-e592840524c6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="YM2612\filters\include">
-      <UniqueIdentifier>{0398d662-a3ea-4b45-a60e-bf7d0bc47ec6}</UniqueIdentifier>
     </Filter>
     <Filter Include="vgm2pre">
       <UniqueIdentifier>{c37fbe02-a08e-4e2f-8609-b6d973d99e20}</UniqueIdentifier>

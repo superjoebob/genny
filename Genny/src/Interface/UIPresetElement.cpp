@@ -144,6 +144,7 @@ CMouseEventResult UIPresetElement::onMouseDown (CPoint& where, const CButtonStat
 			if (DialogBoxW(hMod, str, winFrame->getPlatformWindow(), (DLGPROC)RenameItemProc) == IDOK)
 				_owner->getOwner()->reconnect();
 #endif
+			return CMouseEventResult::kMouseEventHandled;
 		}
 	}
 	else

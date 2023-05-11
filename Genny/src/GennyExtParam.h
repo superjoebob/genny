@@ -94,7 +94,7 @@ enum class GEParam
 	TOTAL_EXT_PARAMS = 60,
 };
 
-const int kOriginalParamsEnd = 20482;
+const int kOriginalParamsEnd = 22770;
 const int kExtParamsEnd = 32727;
 const int kNumPingPongSettings = 9;
 enum class ParamDisplayType

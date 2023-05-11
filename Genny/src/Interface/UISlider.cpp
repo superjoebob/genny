@@ -24,7 +24,7 @@ UISlider::~UISlider()
 {
 	// destroy our popup menu and all subitems
 	int count = GetMenuItemCount(ContextMenu);
-	while (count) {
+	while (count > 0) {
 		DeleteMenu(ContextMenu, count-1, MF_BYPOSITION);
 		count--;
 	}

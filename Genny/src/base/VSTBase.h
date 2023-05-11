@@ -151,6 +151,8 @@ public:
 	int getSamplesPerTick() { return _samplesPerTick; }
 	double _sampleRate;
 
+	virtual void _stdcall DestroyObject();
+
 	/*virtual VstInt32 processEvents (VstEvents* events);
 
 	virtual float getParameter (VstInt32 index);

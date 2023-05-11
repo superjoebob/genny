@@ -61,6 +61,7 @@ struct VSTPatch
 public:
 	VSTPatch() {}
 	VSTPatch(const std::string& name) : Name(name) {}
+	virtual ~VSTPatch() {}
 
 	std::string Name;
 	std::string Prefix;
@@ -138,6 +139,8 @@ public:
 	float getTempo() { return _base->getTempo(); }
 	float getSamplesPerTick() { return (float)_base->getSamplesPerTick(); }
 	VSTBase* getBase() { return _base;}
+
+	virtual void destroy() = 0;
 	
 	std::vector<VSTPatch*> _patches;
 	std::map<int, std::vector<int>> _midiLearn;

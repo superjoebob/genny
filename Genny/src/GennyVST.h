@@ -121,6 +121,8 @@ public:
 	void updateNoteControl(GennyPatch* patch, void* noteData);
 #endif
 
+	virtual void destroy();
+
 	std::pair<int, int> _lastUIUpdate;
 	std::map<int, std::vector<int>> _midiLearn;
 	//std::vector<std::pair<int, int>> _midiUIUpdates;
@@ -136,8 +138,12 @@ public:
 	WaveData* triggerWave;
 
 	unsigned char lfo;
+
+
+#if BUILD_VST
 	std::mutex _automationMessageMutex;
 	std::stack<automationMessage> _automationMessages;
+#endif
 
 private:
 

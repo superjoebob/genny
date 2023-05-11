@@ -32,6 +32,7 @@ SN76489Chip::SN76489Chip(GennyVST* pVST)
 SN76489Chip::~SN76489Chip()
 {
 	_prevSample = 0;
+	Terminate();
 }
 
 //-------------------------------------------------------------------------
@@ -85,8 +86,17 @@ void SN76489Chip::setSampleRate(double rate)
 
 void SN76489Chip::Terminate()
 {
-	if( _impl != nullptr )
+	if (_impl != nullptr)
+	{
 		delete _impl;
+		_impl = nullptr;
+	}
+
+	if (_implHQ != nullptr)
+	{
+		delete _implHQ;
+		_implHQ = nullptr;
+	}
 }
 
 //-------------------------------------------------------------------------

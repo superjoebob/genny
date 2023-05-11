@@ -108,23 +108,6 @@
     <ClCompile Include="src\VST\VirtualInstrument.cpp" />
     <ClCompile Include="src\YM2612\blip_buf.cpp" />
     <ClCompile Include="src\YM2612\DrumSet.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Bessel.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Biquad.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Butterworth.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Cascade.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\ChebyshevI.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\ChebyshevII.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Custom.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Design.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Documentation.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Elliptic.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Filter.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Legendre.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\Param.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\PoleFilter.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\RBJ.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\RootFinder.cpp" />
-    <ClCompile Include="src\YM2612\filters\source\State.cpp" />
     <ClCompile Include="src\YM2612\resampler\filterkit.c" />
     <ClCompile Include="src\YM2612\resampler\Fir_Resampler.cpp" />
     <ClCompile Include="src\YM2612\resampler\resample.c" />
@@ -229,29 +212,6 @@
     <ClInclude Include="src\YM2612\atomicops.h" />
     <ClInclude Include="src\YM2612\blip_buf.h" />
     <ClInclude Include="src\YM2612\DrumSet.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Bessel.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Biquad.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Butterworth.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Cascade.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevI.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\ChebyshevII.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Common.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Custom.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Design.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Dsp.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Elliptic.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Filter.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Layout.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Legendre.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\MathSupplement.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Params.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\PoleFilter.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RBJ.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\RootFinder.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\SmoothedFilter.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\State.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Types.h" />
-    <ClInclude Include="src\YM2612\filters\source\include\DspFilters\Utilities.h" />
     <ClInclude Include="src\YM2612\readerwriterqueue.h" />
     <ClInclude Include="src\YM2612\resampler\configtemplate.h" />
     <ClInclude Include="src\YM2612\resampler\filterkit.h" />
@@ -433,7 +393,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
-    <EnableASAN>true</EnableASAN>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -520,7 +480,7 @@
     <TargetExt>.dll</TargetExt>
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
     <TargetName>GennyX FL_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

@@ -27,6 +27,23 @@ YM2612Processor::YM2612Processor(void)
 
 YM2612Processor::~YM2612Processor(void)
 {
+	if (snSamples != nullptr)
+	{
+		for (int i = 0; i < 2; ++i)
+		{
+			delete[] snSamples[i];
+		}
+		delete[] snSamples;
+		snSamples = nullptr;
+	}	
+	
+	if (_delayedCommandLoop != nullptr)
+	{
+		delete[] _delayedCommandLoop;
+		_delayedCommandLoop = nullptr;
+	}
+
+	_resampler.Fir_Resampler_shutdown();
 }
 
 void YM2612Processor::initialize(YM2612* chip, SN76489Chip* chip2, double sampleRate)
@@ -56,10 +73,9 @@ void YM2612Processor::setSampleRate(double rate)
 	_delayedCommandLoop = new DelayedChipCommands[_delayedCommandLoopSize];
 }
 
-void YM2612Processor::terminate()
-{
-	_resampler.Fir_Resampler_shutdown();
-}
+//void YM2612Processor::terminate()
+//{
+//}
 
 #if !BUILD_VST
 typedef float TWAV32FS[1][2];

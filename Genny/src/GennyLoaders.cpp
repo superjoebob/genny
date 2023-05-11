@@ -892,10 +892,6 @@ void GennyLoaders::loadGDAC(GennyPatch* patch, GennyData* loadData)
 				wave->_pitch = loadData->readShort();
 			}
 
-			WaveData* drum = patch->InstrumentDef.Drumset.getDrum(i);
-			if(drum != nullptr)
-				delete drum;
-
 			patch->InstrumentDef.Drumset.mapDrum(i, wave);
 		}
 	}

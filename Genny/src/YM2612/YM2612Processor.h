@@ -49,7 +49,7 @@ public:
 
 	void initialize(YM2612* chip, SN76489Chip* chip2, double sampleRate);
 	void setSampleRate(double rate);
-	void terminate();
+	//void terminate();
 	void update(float** buffer, int numSamples);
 	void setMasterVolume(float vol) { _masterVolume = vol; }
 	DelayedChipCommands* lockChipCommands(unsigned int loopPosition)

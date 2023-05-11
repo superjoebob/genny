@@ -384,6 +384,8 @@ float GennyPatch::getFromBaron(IBIndex* param)
 		IBInsParam* p = static_cast<IBInsParam*>(param);
 		return InstrumentDef.getFromBaron(param);
 	}
+
+	return 0.0f;
 }
 
 Genny2612::Genny2612(GennyVST* owner):
@@ -396,7 +398,7 @@ Genny2612::Genny2612(GennyVST* owner):
 	_snChip(owner),
 	_initializedChannels(false)
 {
-	memset(_channelPatches, 0, sizeof(int) * kNumNoteChannels);
+	memset(_channelPatches, 0, sizeof(GennyPatch*) * kNumNoteChannels);
 	memset(channelDirty, 0, sizeof(char) * kNumNoteChannels);
 
 	_defaultFrequencyTable = new double[129];
@@ -421,11 +423,26 @@ Genny2612::Genny2612(GennyVST* owner):
 
 Genny2612::~Genny2612(void)
 {
-	if(_frequencyTable != NULL)
-		delete[] _frequencyTable;
+	if (_frequencyTable != NULL)
+	{
+		if (_defaultFrequencyTable == _frequencyTable)
+			_defaultFrequencyTable = nullptr;
 
-	delete[] _defaultFrequencyTable;
-	delete _indexBaron;
+		delete[] _frequencyTable;
+		_frequencyTable = nullptr;
+	}
+
+	if (_defaultFrequencyTable != nullptr)
+	{
+		delete[] _defaultFrequencyTable;
+		_defaultFrequencyTable = nullptr;
+	}
+
+	if (_indexBaron != nullptr)
+	{
+		delete _indexBaron;
+		_indexBaron = nullptr;
+	}
 }
 
 void Genny2612::initialize()

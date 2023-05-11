@@ -18,13 +18,16 @@ UICheckbox::UICheckbox (const CRect& size, IControlListener* listener, int32_t t
 
 UICheckbox::~UICheckbox()
 {
-	// destroy our popup menu and all subitems
-	int count = GetMenuItemCount(ContextMenu);
-	while (count) {
-		DeleteMenu(ContextMenu, count-1, MF_BYPOSITION);
-		count--;
+	if (ContextMenu != nullptr)
+	{
+		// destroy our popup menu and all subitems
+		int count = GetMenuItemCount(ContextMenu);
+		while (count > 0) {
+			DeleteMenu(ContextMenu, count - 1, MF_BYPOSITION);
+			count--;
+		}
+		DestroyMenu(ContextMenu);
 	}
-	DestroyMenu(ContextMenu);
 }
 
 

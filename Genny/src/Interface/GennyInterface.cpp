@@ -410,7 +410,7 @@ void GennyInterface::reconnect()
 
 void GennyInterface::setChannelState(int channel, bool on)
 {
-	if (channel < 10)
+	if (channel < 9)
 	{
 		_sync = true;
 		_channels[channel] = on;

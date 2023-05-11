@@ -55,9 +55,27 @@ GennyVST::GennyVST(void) :
 
 GennyVST::~GennyVST(void)
 {
-	for(int i = 0; i < _patches.size(); i++)
+	destroy();
+}
+
+void GennyVST::destroy()
+{
+	for (int i = 0; i < _patches.size(); i++)
 	{
 		delete _patches[i];
+	}
+	_patches.clear();
+
+	if (_editor != nullptr)
+	{
+		delete _editor;
+		_editor = nullptr;
+	}
+
+	if (_core != nullptr)
+	{
+		delete _core;
+		_core = nullptr;
 	}
 }
 
@@ -308,7 +326,6 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 	stream.read ((char*)(*data), written);
 	return written;
 }
-
 int GennyVST::setPluginState (void* data, int size, bool isPreset)
 {	
 	std::stringstream stream(std::string((char*)data));
@@ -373,7 +390,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 	for(int i = 0; i < numPatches; i++)
 	{
-		if(i > getTotalPatchCount())
+		if(i >= getTotalPatchCount())
 		{
 			_patches.push_back(new GennyPatch(i));
 		}
@@ -457,11 +474,6 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 					WaveData* wave = new WaveData(sampleData, sampleSize);
 					wave->sampleRate = sampleRate;
-
-					WaveData* drum = set->getDrum(i);
-					if (drum != nullptr)
-						delete drum;
-
 					set->mapDrum(i, wave);
 				}
 			}
@@ -769,6 +781,13 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 float GennyVST::getParameter(int index, VSTPatch* patch)
 {
+	int numparms = GennyPatch::getNumParameters();
+	for (int i = 0; i < numparms; i++)
+	{
+		IBIndex* ibb = _core->getIndexBaron()->getIndex(i);
+		int qq = 1;
+	}
+
 	if (GennyExtParam::isExtParam(index))
 	{
 		GennyExtParam* param = getExtParam(index);
@@ -972,8 +991,12 @@ GennyExtParam* GennyVST::getExtParam(int pTag)
 	return nullptr;
 }
 
+/*int test1[20];
+int test2[20]*/;
 void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 {
+	//test1[20] = 3;
+
 	//automationMessage m;
 	//if (control->getExtParam() != nullptr)
 	//	m.index = control->getExtParam()->getTag();
@@ -986,6 +1009,7 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 	//_vst->_automationMessageMutex.unlock();
 
 
+#if BUILD_VST
 	if (index > 99999999)
 	{
 		index -= 99999999;
@@ -1000,6 +1024,7 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 
 		return;
 	}
+#endif
 
 
 	if (GennyExtParam::isExtParam(index))
@@ -1478,6 +1503,7 @@ void GennyVST::setCurrentPatch(VSTPatch* patch)
 
 void GennyVST::getSamples(float** buffer, int numSamples)
 {
+#if BUILD_VST
 	_automationMessageMutex.lock();
 
 	while (!_automationMessages.empty())
@@ -1487,6 +1513,7 @@ void GennyVST::getSamples(float** buffer, int numSamples)
 		_automationMessages.pop();
 	}
 	_automationMessageMutex.unlock();
+#endif
 
 
 	if (_playingStatusChanged)
@@ -1579,7 +1606,7 @@ int GennyVST::getTotalPatchCount()
 		GennyData file = GennyLoaders::loadResource(SET_NEWPRESETS, L"SET");
 
 		int numPatches = file.readInt();
-		int minNumPatches = 180;
+		int minNumPatches = 165;
 		for(int i = 0; i < minNumPatches; i++)
 		{
 			if (i < numPatches)

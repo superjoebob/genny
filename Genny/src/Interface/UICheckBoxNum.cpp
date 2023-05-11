@@ -27,7 +27,7 @@ CMouseEventResult UICheckBoxNum::onMouseUp(CPoint& where, const CButtonState& bu
 		return kMouseEventHandled;
 	}
 
-	__super::onMouseUp(where, buttons);
+	return __super::onMouseUp(where, buttons);
 }
 
 CMouseEventResult UICheckBoxNum::onMouseEntered(CPoint& where, const CButtonState& buttons)

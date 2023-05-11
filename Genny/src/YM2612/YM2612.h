@@ -399,7 +399,7 @@ private:
 
 
 	YM2612CommandCluster _currentCluster;
-	YM2612CommandCluster** _preparedClusters;
+	//YM2612CommandCluster** _preparedClusters;
 	bool _dirtyCluster = false;
 
 

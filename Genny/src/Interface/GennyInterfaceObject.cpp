@@ -30,6 +30,16 @@ GennyInterfaceObject::GennyInterfaceObject(GennyInterfaceObject* parent)
 
 GennyInterfaceObject::~GennyInterfaceObject(void)
 {
+	if (ContextMenu != nullptr)
+	{
+		// destroy our popup menu and all subitems
+		int count = GetMenuItemCount((HMENU)ContextMenu);
+		while (count > 0) {
+			DeleteMenu((HMENU)ContextMenu, count - 1, MF_BYPOSITION);
+			count--;
+		}
+		DestroyMenu((HMENU)ContextMenu);
+	}
 }
 
 GennyPatch* GennyInterfaceObject::getPatch(int index)

@@ -19,7 +19,7 @@ float* YM2612Channel::getParameter(YM2612Param param, int channel, int op)
 	//Operator parameters
 	if(param >= YM_DT && param <= YM_SSG)
 	{
-		op = max( 0, min( op, 4 ) );
+		op = max( 0, min( op, 3 ) );
 		std::map<YM2612Param, float>::iterator it = _operators[op].find(param);
 		if( it != _operators[op].end() )
 			return &(*it).second;
@@ -196,11 +196,11 @@ YM2612::YM2612(GennyVST* pVST)
 {
 	clearCache();
 
-	_preparedClusters = new YM2612CommandCluster*[kMaxPreparedClusters];
-	for (int i = 0; i < kMaxPreparedClusters; i++)
-	{
-		_preparedClusters[i] = nullptr;
-	}
+	//_preparedClusters = new YM2612CommandCluster*[kMaxPreparedClusters];
+	//for (int i = 0; i < kMaxPreparedClusters; i++)
+	//{
+	//	_preparedClusters[i] = nullptr;
+	//}
 
 
 	ch3SpecialOpNoteOnStates[0] = false;
@@ -261,6 +261,11 @@ YM2612::YM2612(GennyVST* pVST)
 
 YM2612::~YM2612(void)
 {
+	//if (_preparedClusters != nullptr)
+	//{
+	//	delete[] _preparedClusters;
+	//	_preparedClusters = nullptr;
+	//}
 	//if(_hardwareMode)
 	//	CloseHandle(serialHandle);
 }
@@ -1153,6 +1158,8 @@ unsigned char YM2612::packParameter(YM2612Param param, int channel, int op)
 		}
 		break;
 	}
+
+	return 0;
 }
 
 //Returns the register corresponding to a specific parameter. Some registers

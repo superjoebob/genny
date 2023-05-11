@@ -208,7 +208,7 @@ struct GennyInstrument
 		Enable = true;
 
 		//memset(DACSamplePath, 0, sizeof(int) * 32);
-		memset(DrumSampleData, 0, sizeof(char*) * 20);
+		//memset(DrumSampleData, 0, sizeof(char*) * 20);
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -276,6 +276,7 @@ struct GennyInstrument
 		{
 			delete (*it).second;
 		}
+		_extendedParamMap.clear();
 	}
 
 	void initializeInstrumentSettings()
@@ -301,7 +302,7 @@ struct GennyInstrument
 	bool Channels[10];
 	unsigned int MidiChannel;
 
-	char** DrumSampleData[20];
+	//char** DrumSampleData[20];
 
 	//float DACSamplePath[32];
 	//void setSamplePath(const char* str)
@@ -505,6 +506,10 @@ struct GennyPatch : VSTPatch
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
 	float getFromBaron(IBIndex* param);
+
+	virtual ~GennyPatch()
+	{
+	}
 
 private:	
 	//Tells the first 16 patches which instrument mode they're in

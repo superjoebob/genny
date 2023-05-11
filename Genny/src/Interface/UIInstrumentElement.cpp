@@ -223,6 +223,8 @@ CMouseEventResult UIInstrumentElement::onMouseDown (CPoint& where, const CButton
 
 				_owner->getOwner()->reconnect();
 			}
+
+			return CMouseEventResult::kMouseEventHandled;
 		}
 #endif	
 	}

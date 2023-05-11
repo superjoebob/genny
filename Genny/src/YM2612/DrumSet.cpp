@@ -12,9 +12,6 @@ WaveData* DrumSet::getDrum(int note, int samplerate, bool processed)
 	std::map<int, WaveData*>::iterator it = _drumMap.find(note);
 	if (it != _drumMap.end())
 	{
-		//if(processed)
-		//	return	(*it).second->getProcessed(samplerate);
-
 		return (*it).second;
 	}
 	return nullptr;

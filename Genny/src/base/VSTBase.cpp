@@ -499,7 +499,9 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserv
 
 VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	: TCPPFruityPlug(static_cast<FruityPlugInfo*>(data)->Tag, static_cast<FruityPlugInfo*>(data)->Host, 0)
-{ 
+{
+	//SetInstanceHandle(GetModuleHandle(NULL));
+
 	FruityPlugInfo* info = static_cast<FruityPlugInfo*>(data);
 	_totalParameters = GennyPatch::getNumParameters();
 	//PlugInfo.NumParams = kExtParamsEnd;
@@ -967,6 +969,15 @@ void VSTBase::MsgIn(int Msg)
 void VSTBase::MidiFlush()
 {
 
+}
+
+void _stdcall VSTBase::DestroyObject()
+{
+	KillAllVoices();
+	if (_parent != nullptr)
+		_parent->destroy();
+
+	_parent = nullptr;
 }
 
 

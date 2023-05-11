@@ -210,6 +210,8 @@ char IndexBaron::getCCRange(IBIndex* param)
 			case YM2612Param::YM_SPECIAL : return 1;
 		}
 	}	
+
+	return 0;
 }
 
 
