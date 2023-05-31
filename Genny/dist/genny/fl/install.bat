@@ -1,1 +1,0 @@
-FPSetup -f GennyFL.scr

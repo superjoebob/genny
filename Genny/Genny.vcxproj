@@ -212,6 +212,29 @@
     <ClInclude Include="src\YM2612\atomicops.h" />
     <ClInclude Include="src\YM2612\blip_buf.h" />
     <ClInclude Include="src\YM2612\DrumSet.h" />
+    <ClInclude Include="src\YM2612\filters\biquad.h" />
+    <ClInclude Include="src\YM2612\filters\biquad_modified.h" />
+    <ClInclude Include="src\YM2612\filters\filter_common.h" />
+    <ClInclude Include="src\YM2612\filters\filter_includes.h" />
+    <ClInclude Include="src\YM2612\filters\fo_apf.h" />
+    <ClInclude Include="src\YM2612\filters\fo_hpf.h" />
+    <ClInclude Include="src\YM2612\filters\fo_lpf.h" />
+    <ClInclude Include="src\YM2612\filters\fo_shelving_high.h" />
+    <ClInclude Include="src\YM2612\filters\fo_shelving_low.h" />
+    <ClInclude Include="src\YM2612\filters\so_apf.h" />
+    <ClInclude Include="src\YM2612\filters\so_bpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_bsf.h" />
+    <ClInclude Include="src\YM2612\filters\so_butterworth_bpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_butterworth_bsf.h" />
+    <ClInclude Include="src\YM2612\filters\so_butterworth_hpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_butterworth_lpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_hpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_linkwitz_riley_hpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_linkwitz_riley_lpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_lpf.h" />
+    <ClInclude Include="src\YM2612\filters\so_parametric_cq_boost.h" />
+    <ClInclude Include="src\YM2612\filters\so_parametric_cq_cut.h" />
+    <ClInclude Include="src\YM2612\filters\so_parametric_ncq.h" />
     <ClInclude Include="src\YM2612\readerwriterqueue.h" />
     <ClInclude Include="src\YM2612\resampler\configtemplate.h" />
     <ClInclude Include="src\YM2612\resampler\filterkit.h" />
@@ -458,7 +481,7 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyX</TargetName>
+    <TargetName>Genny</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -466,14 +489,14 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyX_x64</TargetName>
+    <TargetName>Genny_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
     <TargetExt>.dll</TargetExt>
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyX FL</TargetName>
+    <TargetName>GennyFL</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">
@@ -481,7 +504,7 @@
     <OutDir>$(ProjectDir)\bin\$(Configuration)\$(PlatformShortName)</OutDir>
     <IntDir>$(ProjectDir)\obj\$(Configuration)\$(PlatformShortName)</IntDir>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>GennyX FL_x64</TargetName>
+    <TargetName>GennyFL_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -531,7 +554,7 @@
       <AdditionalOptions>/VERBOSE %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>echo robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)\Gennydev.dll" "$(ProgramFiles)\VstPlugins\" /y</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -603,7 +626,7 @@
       <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyX FL"</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyFL"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -625,7 +648,7 @@
       <ModuleDefinitionFile>$(ProjectDir)src/vstplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\vst" "Genny.dll"</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">
@@ -646,7 +669,7 @@
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\fl\GennyFL" "GennyFL.dll"</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyX FL"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -668,7 +691,7 @@
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\vst" "Genny_x64.dll"</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'">
@@ -690,7 +713,7 @@
       <ModuleDefinitionFile>$(ProjectDir)src/flplug.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>call robocopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "$(ProjectDir)dist\genny\fl\GennyFL" "GennyFL_x64.dll"</Command>
+      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Image-Line\FL Studio 21\Plugins\Fruity\Generators\GennyX FL"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

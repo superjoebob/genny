@@ -539,6 +539,75 @@
     <ClInclude Include="..\VSTGui\lib\fpsdk\fp_plugclass.h">
       <Filter>base</Filter>
     </ClInclude>
+    <ClInclude Include="src\YM2612\filters\biquad.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\biquad_modified.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\filter_common.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\filter_includes.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\fo_apf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\fo_hpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\fo_lpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\fo_shelving_high.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\fo_shelving_low.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_apf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_bpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_bsf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_butterworth_bpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_butterworth_bsf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_butterworth_hpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_butterworth_lpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_hpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_linkwitz_riley_hpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_linkwitz_riley_lpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_lpf.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_parametric_cq_boost.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_parametric_cq_cut.h">
+      <Filter>filters</Filter>
+    </ClInclude>
+    <ClInclude Include="src\YM2612\filters\so_parametric_ncq.h">
+      <Filter>filters</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VST">
@@ -561,6 +630,9 @@
     </Filter>
     <Filter Include="zip">
       <UniqueIdentifier>{6e6ff4ed-b8b8-495c-b0fc-f42a6ed1ca9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="filters">
+      <UniqueIdentifier>{54872339-d4c3-4754-b335-118a1e2ee73d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

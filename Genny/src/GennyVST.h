@@ -22,10 +22,11 @@ const long kVersionIndicator16 = 1127443261; //Feb 23, 2022 (automation inverse 
 const long kVersionIndicator17 = 1127443262; //March 8, 2022 (lfo is now saved from a variable in GennyVST)
 const long kVersionIndicator18 = 1127443263; //March 13, 2022 - added note control information to save data
 const long kVersionIndicator19 = 1127443264; //March 14, 2022 - changed the way instrument enabled params are saved
-const long kLatestVersion = kVersionIndicator19;
+const long kVersionIndicator20 = 1227443200; //May 21, 2022 - increased instrument limit to 32, removed DAC path parameter
+const long kLatestVersion = kVersionIndicator20;
 
 #ifndef GENNY_VERSION_STRING
-#define GENNY_VERSION_STRING "1.1"
+#define GENNY_VERSION_STRING "1.5"
 #endif
 
 struct automationMessage
@@ -110,6 +111,7 @@ public:
 	bool megaMidiVSTMute;
 	bool accurateEmulationMode;
 	bool _setParameterNormalizedValue;
+	bool _loading16InstrumentMode;
 
 	bool _automationInverse;
 	char _hintString[128];

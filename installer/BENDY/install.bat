@@ -1,1 +1,0 @@
-FPSetup -f BENDY.scr

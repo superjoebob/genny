@@ -901,6 +901,8 @@ void Genny2612::updateNote(void* noteData, int samples)
 	for (int i = 0; i < kNumNoteChannels; i++)
 	{
 		NoteInfo& ch = _channels[i];
+
+		ch.age += samples;
 		if (ch.instrumentPatch == nullptr)
 			continue;
 
@@ -970,8 +972,6 @@ void Genny2612::updateNote(void* noteData, int samples)
 #endif
 			ch.noteGlideCurrent = offsetPitch;
 			offsetPitch += offset;
-
-			ch.age += samples;
 
 			if (ch.patch->InstrumentDef.Ch3Special)
 				_chip.noteOnCh3Special(offsetPitch, velocity, vibrato, _frequencyTable, ch.patch, false, ch.operatorChannel, true, ch.triggerUnsetOperators);

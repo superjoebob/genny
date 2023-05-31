@@ -41,6 +41,7 @@ GennyVST::GennyVST(void) :
 	_automationInverse(false),
 	lfo(0),
 	_hasUIUpdates(false),
+	_loading16InstrumentMode(false),
 	_clearMidiUIUpdateHistory(false),
 #if BUILD_VST
 	_setParameterNormalizedValue(true)
@@ -350,6 +351,13 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		readPos += sizeof(versionNumber);
 	}
 
+	bool oldParameterLayout = checkVersionLessThan(versionNumber, kVersionIndicator20);
+	if (oldParameterLayout)
+	{
+		numParams = GennyPatch::getNumParametersPreV19();
+		_loading16InstrumentMode = true;
+	}
+
 	if (checkVersionGreaterThan(versionNumber, kLatestVersion))
 	{
 		int msgboxID = MessageBoxA(
@@ -388,9 +396,9 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		readPos += sizeof(int);
 	}
 
-	for(int i = 0; i < numPatches; i++)
+	for (int i = 0; i < numPatches; i++)
 	{
-		if(i >= getTotalPatchCount())
+		if (i >= getTotalPatchCount())
 		{
 			_patches.push_back(new GennyPatch(i));
 		}
@@ -411,7 +419,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		//Read drum samples
 		GennyPatch* gennypatch = (GennyPatch*)_currentPatch;
 		DrumSet* set = &gennypatch->InstrumentDef.Drumset;
-		
+
 		for (int i = 0; i < kMaxInstruments; i++)
 		{
 			gennypatch->Instruments[i] = -1;
@@ -420,6 +428,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		int numDrums = 56;
 		if (checkVersionLessThan(versionNumber, kVersionIndicator10))
 			numDrums = 55;
+
 
 
 		if (checkVersionLessThan(versionNumber, kVersionIndicator10))
@@ -509,22 +518,50 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 #if !BUILD_VST
 		_setParameterNormalizedValue = true;
 #endif
+
+		int skipSamplePaths = 32;
+		bool skippingSamplePaths = false;
 		for(int j = 0; j < numParams; j++)
 		{
 			float val = 0.0f;
 			memcpy(&val, &((char*)data)[readPos], sizeof(val));
 			readPos += sizeof(val);
 
+			int paramIndex = j;
+			if (oldLFO && j > 2)
+				paramIndex = j - 3;
+
+			if (skippingSamplePaths)
+				paramIndex -= 32;
+
+			if (oldParameterLayout)
+			{
+				if(paramIndex > 15)
+					paramIndex += 16; //Skip GIP_Instruments 17 to 32
+
+				IBIndex* ib = _core->getIndexBaron()->getIndex(paramIndex);
+				if (!skippingSamplePaths)
+				{
+					if (ib->getType() == IB_InsParam && ((IBInsParam*)ib)->getParameter() == GennyInstrumentParam::GIP_FM)
+						skippingSamplePaths = true;
+				}
+				else if(skipSamplePaths > 0)
+				{
+					skipSamplePaths--;
+					continue;
+				}
+			}
+
 			if (oldParameterRanges)
 			{
-				IBIndex* ib = _core->getIndexBaron()->getIndex(j);
+				IBIndex* ib = _core->getIndexBaron()->getIndex(paramIndex);
 				if (ib != nullptr)
 					val = val / ib->maxValue;
 			}
 
 			if (checkVersionLessThan(versionNumber, kVersionIndicator15))
 			{
-				IBIndex* ib = _core->getIndexBaron()->getIndex(j);
+				IBIndex* ib = _core->getIndexBaron()->getIndex(paramIndex);
 				if (ib->getType() == IBType::IB_YMParam)
 				{
 					if (YM2612Param_getIsReverseParam(((IBYMParam*)ib)->getParameter()))
@@ -532,13 +569,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 				}
 			}
 
-			if (oldLFO)
-			{
-				if(j > 2)
-					setParameter(j - 3, val);
-			}
-			else
-				setParameter(j, val);
+			setParameter(paramIndex, val);
 		}
 #if !BUILD_VST
 		_setParameterNormalizedValue = false;
@@ -776,6 +807,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 	if (_editor != NULL)
 		_editor->reconnect();
 
+	_loading16InstrumentMode = false;
 	return readPos;
 }
 
@@ -1389,10 +1421,16 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 
 	if(idx->getType() == IB_PatchParam)
 	{
-		if (_setParameterNormalizedValue)
-			value = value * idx->maxValue;
-
 		IBPatchParam* param = (IBPatchParam*)idx;
+		if (_setParameterNormalizedValue)
+		{
+			int max = idx->maxValue;
+			if (_loading16InstrumentMode && param->getParameter() == GPP_SelectedInstrument)
+				max = 16;
+
+			value = value * max;
+		}
+
 		if(value >= 0 && _currentPatch == _patches[0])
 			_patches[0]->setFromBaron(idx, value);
 		else if(param != nullptr && value >= 0 && (param->getParameter() >= GennyPatchParam::GPP_Ins01 && param->getParameter() <= GennyPatchParam::GPP_Ins32) && _saving)
@@ -1768,7 +1806,7 @@ void GennyVST::updateNoteControl(GennyPatch* patch, void* noteData)
 		std::vector<int>& vec = _noteControlParams[0];
 		for (auto it = vec.begin(); it != vec.end(); it++)
 		{
-			onAutomation((*it), ((voice->Params->FinalLevels.FCut + 1.0f) / 2.0f) * 65535, (AutomationTypeFlags)((int)AutomationTypeFlags::UpdateValue | (int)AutomationTypeFlags::UpdateControl | (int)AutomationTypeFlags::UpdateUIThreaded));
+			onAutomation((*it), ((voice->Params->FinalLevels.FCut + 1.0f) / 2.0f) * FromMIDI_Max, (AutomationTypeFlags)((int)AutomationTypeFlags::UpdateValue | (int)AutomationTypeFlags::UpdateControl | (int)AutomationTypeFlags::UpdateUIThreaded | (int)AutomationTypeFlags::FromMIDI));
 		}
 	}	
 	
@@ -1778,7 +1816,7 @@ void GennyVST::updateNoteControl(GennyPatch* patch, void* noteData)
 		std::vector<int>& vec = _noteControlParams[1];
 		for (auto it = vec.begin(); it != vec.end(); it++)
 		{
-			onAutomation((*it), ((voice->Params->FinalLevels.FRes + 1.0f) / 2.0f) * 65535, (AutomationTypeFlags)((int)AutomationTypeFlags::UpdateValue | (int)AutomationTypeFlags::UpdateControl | (int)AutomationTypeFlags::UpdateUIThreaded));
+			onAutomation((*it), ((voice->Params->FinalLevels.FRes + 1.0f) / 2.0f) * FromMIDI_Max, (AutomationTypeFlags)((int)AutomationTypeFlags::UpdateValue | (int)AutomationTypeFlags::UpdateControl | (int)AutomationTypeFlags::UpdateUIThreaded | (int)AutomationTypeFlags::FromMIDI));
 		}
 	}
 }

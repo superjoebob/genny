@@ -220,6 +220,7 @@ void SN76489Chip::WriteVolume( int channel, float value )
 
 void SN76489Chip::setVolume(int channel, float volume, bool noteOn)
 {
+	volume = min(volume, 1.0f);
 	volume = 1.0f - volume;
 	//LATCH
 	//--------------------------------------

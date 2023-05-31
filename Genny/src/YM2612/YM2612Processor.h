@@ -39,6 +39,7 @@ struct DelayedChipCommands
 	DelayedChipCommands() : hasCommands(false) {}
 };
 
+class FO_LPF;
 class YM2612;
 class SN76489Chip;
 class YM2612Processor
@@ -99,5 +100,6 @@ private:
 	short prevSample;
 	short** snSamples;
 	double _sampleRate;
+	FO_LPF* _lowpass;
 };
 

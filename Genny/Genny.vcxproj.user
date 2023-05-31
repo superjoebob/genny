@@ -5,21 +5,37 @@
     <NXTargetSerialNumber>Default</NXTargetSerialNumber>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'">
-    <NXTargetName>Default</NXTargetName>
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">
-    <NXTargetName>Default</NXTargetName>
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NXTargetName>Default</NXTargetName>
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NXTargetName>Default</NXTargetName>
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <NXTargetName>Default</NXTargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <NXTargetName>Default</NXTargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'">
+    <NXTargetName>Default</NXTargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'">
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
 </Project>

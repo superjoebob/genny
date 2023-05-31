@@ -155,7 +155,7 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 	_infoLabel = new CTextLabel(CRect(422, -84, 416 + 508, 96 + 206), UTF8String(
 
 
-		"GENNY v" + std::string(GENNY_VERSION_STRING) + " - CORPTRON GAMES CORP. 2022\n"
+		"GENNY v" + std::string(GENNY_VERSION_STRING) + " - CORPTRON GAMES CORP. 2023\n"
 		"-----------------------------------------------------------------------------------------------------------------------\n"
 		"Created by Landon Podbielski (superjoebob), but could not have been made without:\n"
 		"\n"

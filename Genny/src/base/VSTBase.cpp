@@ -475,8 +475,8 @@ bool VSTBase::getOutputProperties(VstInt32 index, VstPinProperties* properties)
 TFruityPlugInfo PlugInfo =
 {
 	CurrentSDKVersion,
-	"GennyX FL",
-	"GennyX FL",
+	"GennyFL",
+	"GennyFL",
 	FPF_Type_FullGen | FPF_WantNewTick // the amount of parameters
 };
 

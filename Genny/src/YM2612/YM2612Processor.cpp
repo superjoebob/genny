@@ -4,6 +4,7 @@
 #include "sn76489.h"
 #include "sn76489_plusgx.h"
 #include "blip_buf.h"
+#include "filters/fo_lpf.h"
 
 YM2612Processor::YM2612Processor(void)
 	: _leftoverSamples(0)
@@ -22,6 +23,7 @@ YM2612Processor::YM2612Processor(void)
 		snSamples[ i ]  = new short[ 1 ];
 		snSamples[ i ][0] = 0; 
 	}
+	_lowpass = new FO_LPF();
 }
 
 
@@ -43,6 +45,12 @@ YM2612Processor::~YM2612Processor(void)
 		_delayedCommandLoop = nullptr;
 	}
 
+	if (_lowpass != nullptr)
+	{
+		delete _lowpass;
+		_lowpass = nullptr;
+	}
+
 	_resampler.Fir_Resampler_shutdown();
 }
 
@@ -50,6 +58,7 @@ void YM2612Processor::initialize(YM2612* chip, SN76489Chip* chip2, double sample
 {
 	_chip = chip;
 	_snChip = chip2;
+
 
 	chip->setProcessor(this);
 	chip2->setProcessor(this);
@@ -71,6 +80,8 @@ void YM2612Processor::setSampleRate(double rate)
 		delete[] _delayedCommandLoop;
 
 	_delayedCommandLoop = new DelayedChipCommands[_delayedCommandLoopSize];
+
+	_lowpass->calculate_coeffs(1500, (int)rate);
 }
 
 //void YM2612Processor::terminate()
@@ -94,7 +105,7 @@ void YM2612Processor::update(float** buffer, int numSamples)
 #endif
 
 	float amp = 3.0 * _masterVolume;
-	float snamp = 4.5 * _masterVolume;
+	float snamp = 6.0 * _masterVolume;
 	for(int i = 0; i < numSamples; i++)
 	{
 #if BUILD_VST
@@ -146,13 +157,30 @@ void YM2612Processor::update(float** buffer, int numSamples)
 			else
 				_snChip->getCore()->SN76489_Update(snSamples, 1);
 
+			float filterAmount = 0.48f;
+			float leftSamp = (snSamples[0][0] / (float)32767) * snamp;
+			float rightSamp = (snSamples[0][0] / (float)32767) * snamp;
+			float leftSampFiltered = leftSamp;
+			float rightSampFiltered = rightSamp;
+
+			if (_snChip->_hq)
+			{
+				leftSampFiltered = _lowpass->process(leftSamp);
+				rightSampFiltered = _lowpass->process(rightSamp);
+
+				leftSampFiltered = (leftSamp * (1.0f - filterAmount)) + (leftSampFiltered * filterAmount);
+				rightSampFiltered = (rightSamp * (1.0f - filterAmount)) + (rightSampFiltered * filterAmount);
+			}
+
 #if BUILD_VST
-			out1[i] += (snSamples[0][0] / (float)32767) * snamp;
-			out2[i] += (snSamples[1][0] / (float)32767) * snamp;
+			out1[i] += leftSampFiltered;
+			out2[i] += rightSampFiltered;
 #else
-			(*buf)[i][0] += (snSamples[0][0] / (float)32767) * snamp;
-			(*buf)[i][1] += (snSamples[1][0] / (float)32767) * snamp;
+			(*buf)[i][0] += leftSampFiltered;
+			(*buf)[i][1] += rightSampFiltered;
 #endif
+
+
 		}
 
 		_snChip->updateEnvelopes((int)_sampleRate);
