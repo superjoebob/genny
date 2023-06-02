@@ -481,19 +481,26 @@ TFruityPlugInfo PlugInfo =
 };
 
 void* hInstance = nullptr; // used by VSTGUI
+
+static int instanceCount = 0;
 extern "C" BOOL WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserved)
 {
-	if (hInstance == nullptr && dwReason != 0)
+	if (dwReason == DLL_PROCESS_ATTACH)
 	{
-		hInstance = hInst;
-		VSTGUI::init(hInst);
-	}	
-	if (hInstance != nullptr && dwReason == 0)
-	{
-		hInstance = nullptr;
-		VSTGUI::exit();
-	}  
+		if (instanceCount == 0)
+		{
+			hInstance = hInst;
+			VSTGUI::init(hInst);
+		}
 
+		instanceCount++;
+	}		
+	else if (dwReason == DLL_PROCESS_DETACH)
+	{
+		instanceCount--;
+		if (instanceCount == 0)
+			VSTGUI::exit();
+	}
 	return TRUE;
 }
 

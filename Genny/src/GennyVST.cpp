@@ -69,6 +69,7 @@ void GennyVST::destroy()
 
 	if (_editor != nullptr)
 	{
+		_editor->close();
 		delete _editor;
 		_editor = nullptr;
 	}
