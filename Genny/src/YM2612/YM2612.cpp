@@ -942,17 +942,17 @@ void YM2612::fullStop(int channel)
 
 void YM2612::writeData(int reg, unsigned char data, int channel, int realChannel, bool inLock, int specialLogData)
 {
-	if (threadInit == false)
-	{
-		threadInit = true;
-		this_id = std::this_thread::get_id();
-	}
+	//if (threadInit == false)
+	//{
+	//	threadInit = true;
+	//	this_id = std::this_thread::get_id();
+	//}
 
-	if (this_id != std::this_thread::get_id())
-	{
-		int qq = 1;
-		this_id = std::this_thread::get_id();
-	}
+	//if (this_id != std::this_thread::get_id())
+	//{
+	//	int qq = 1;
+	//	this_id = std::this_thread::get_id();
+	//}
 
 
 

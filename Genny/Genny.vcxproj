@@ -388,7 +388,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7BF8BDD9-0B61-4267-B419-130BFDA38709}</ProjectGuid>
     <RootNamespace>Genny</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -402,20 +402,20 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>NotSet</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -423,7 +423,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|Win32'" Label="Configuration">
@@ -431,14 +431,14 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|x64'" Label="Configuration">
@@ -446,7 +446,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -540,7 +540,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </ClCompile>
     <Link>
@@ -562,9 +562,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\resampler2</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -584,7 +585,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre;$(SolutionDir)libsndfile\headers;$(ProjectDir)src\vgm2pre</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST;ITERATOR_DEBUG_LEVEL=1;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST;ITERATOR_DEBUG_LEVEL=1;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalOptions>/verbose %(AdditionalOptions)</AdditionalOptions>
@@ -611,7 +612,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;C:\Program Files (x86)\Visual Leak Detector\include\</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -636,8 +637,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -658,7 +660,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -679,7 +682,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\vgm2pre</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WIN64;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WIN64;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;BUILD_VST;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -701,8 +707,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\YM2612;$(ProjectDir)src\Interface;$(ProjectDir)src\VST;$(SolutionDir)VSTGui\lib\vstsdk2.4;$(SolutionDir)VSTGui\src\vstgui;$(SolutionDir)VSTGui\lib\fpsdk;$(ProjectDir)src\YM2612\vgm2pre</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WIN64;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>WIN32;_WIN64;_WINDOWS;_USRDLL;_CRT_SECURE_NO_DEPRECATE=1;NBUILD_VST;VSTGUI_OPENGL_SUPPORT=0</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

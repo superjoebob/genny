@@ -17,10 +17,10 @@ IF "%arg1%" == "-v" (
 )
 
 
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.com" Genny.sln /build "Release|Win32" || goto :error
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.com" Genny.sln /build "Release|x64" || goto :error
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.com" Genny.sln /build "ReleaseFL|Win32" || goto :error
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.com" Genny.sln /build "ReleaseFL|x64" || goto :error
+"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com" Genny.sln /build "Release|Win32" || goto :error
+"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com" Genny.sln /build "Release|x64" || goto :error
+"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com" Genny.sln /build "ReleaseFL|Win32" || goto :error
+"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com" Genny.sln /build "ReleaseFL|x64" || goto :error
 
 supercopy "Genny\bin\ReleaseFL\x64\GennyFL_x64.dll" "Genny\dist\genny\fl\GennyFL\GennyFL_x64.dll" || goto :copyerror
 supercopy "Genny\bin\ReleaseFL\x86\GennyFL.dll" "Genny\dist\genny\fl\GennyFL\GennyFL.dll" || goto :copyerror

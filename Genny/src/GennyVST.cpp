@@ -1557,6 +1557,7 @@ void GennyVST::getSamples(float** buffer, int numSamples)
 
 	if (_playingStatusChanged)
 	{
+		_core->clearNotes();
 		_core->clearCache();
 		_playingStatusChanged = false;
 	}
