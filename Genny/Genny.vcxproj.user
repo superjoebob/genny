@@ -9,7 +9,17 @@
     <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
     <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseFL|ARM'">
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|x64'">
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFL|ARM'">
     <NintendoTargetName>Default</NintendoTargetName>
     <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
     <NXTargetName>$(NintendoTargetName)</NXTargetName>
@@ -19,7 +29,17 @@
     <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
     <NXTargetName>$(NintendoTargetName)</NXTargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <NintendoTargetName>Default</NintendoTargetName>
+    <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
+    <NXTargetName>$(NintendoTargetName)</NXTargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <NintendoTargetName>Default</NintendoTargetName>
     <NXTargetSerialNumber>$(NintendoTargetSerialNumber)</NXTargetSerialNumber>
     <NXTargetName>$(NintendoTargetName)</NXTargetName>

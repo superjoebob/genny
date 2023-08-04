@@ -146,6 +146,7 @@ public:
 	std::mutex _automationMessageMutex;
 	std::stack<automationMessage> _automationMessages;
 #endif
+	bool _versionTooOld;
 
 private:
 

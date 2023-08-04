@@ -43,6 +43,7 @@ GennyVST::GennyVST(void) :
 	_hasUIUpdates(false),
 	_loading16InstrumentMode(false),
 	_clearMidiUIUpdateHistory(false),
+	_versionTooOld(false),
 #if BUILD_VST
 	_setParameterNormalizedValue(true)
 #else
@@ -341,10 +342,18 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 	int readSize = (((unsigned char*)data)[readPos + 3] << 24) +(((unsigned char*)data)[readPos + 2] << 16) + (((unsigned char*)data)[readPos + 1] << 8) + ((unsigned char*)data)[readPos];
 	readPos += sizeof(int);
-
+	 
 	
 	long versionNumber = 0;
 	memcpy(&versionNumber, &((char*)data)[readPos], sizeof(versionNumber));
+
+	if (versionNumber > kLatestVersion)
+	{ 
+		_versionTooOld = true;
+		return 0;
+	}
+
+
 	if(isVersionNumber(versionNumber) == false)
 		numPatches = 122;
 	else

@@ -199,6 +199,10 @@ bool GennyInterface::open(void* ptr)
 	_patchEditor->addConfirmDialog();
 	setKnobMode(kLinearMode);
 
+	if (_owner->_versionTooOld)
+		f->addView(new UIImage(CRect(0, 0, 954, 602), IDB_PNG53));
+
+
 	return true;
 }
 

@@ -763,6 +763,7 @@
     <Image Include="res\infoButton.png" />
     <Image Include="res\infoTab.png" />
     <Image Include="res\vst_back_fl.png" />
+    <Image Include="res\newer_version.png" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="changelog.txt" />
