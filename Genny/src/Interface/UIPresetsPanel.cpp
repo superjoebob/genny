@@ -10,7 +10,7 @@
 const int kConfirmOKButton = 593594;
 const int kConfirmCancelButton = 593595;
 static int numPresets = 10;
-UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner):
+UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* owner) :
 	CControl(size, owner),
 	GennyInterfaceObject(owner),
 	_owner(owner),
@@ -18,7 +18,8 @@ UIPresetsPanel::UIPresetsPanel(const CRect& size, UIPresetsAndInstrumentsPanel* 
 	_topItem(0),
 	_initialized(false),
 	_loggingMode(false),
-	_category("")
+	_category(""),
+	_resetPatch(nullptr)
 {
 	CFrame* frame = getInterface()->getFrame();
 	frame->addView(this);
@@ -58,22 +59,17 @@ void UIPresetsPanel::addConfirmDialog()
 
 	UIImage* image = new UIImage(CRect(416, 96, 416 + 508, 96 + 206), PNG_COPYDIALOG);
 	image->setVisible(false);
-	//image->setTransparency(true);
 	frame->addView(image);
 	_confirmDialog.push_back(image);
-
-	//image->setMouseableArea(CRect(416, 96, 416 + 508, 96 + 206));
-	//image->setMouseEnabled(true);
-
 	 
 	image = new UIImage(CRect(416, 96, 416 + 508, 96 + 206), PNG_LOGGINGDIALOG);
 	image->setVisible(false);
-	//image->setTransparency(true);
 	frame->addView(image);
-
-	//image->setMouseableArea(CRect(416, 96, 416 + 508, 96 + 206));
-	//image->setMouseEnabled(true);
-
+	_confirmDialog.push_back(image);	
+	
+	image = new UIImage(CRect(416, 96, 416 + 508, 96 + 206), IDB_PNG55);
+	image->setVisible(false);
+	frame->addView(image);
 	_confirmDialog.push_back(image);
 
 	CKickButton* confirmOKButton = new CKickButton(CRect(416 + 146, 96 + 137, 416 + 146 + 102, 96 + 137 + 34), this, kConfirmOKButton, UIBitmap(PNG_COPYOKBUTTON));
@@ -117,7 +113,29 @@ void UIPresetsPanel::valueChanged (CControl* control)
 				getInterface()->openLogExport();
 				return;
 			}
-			
+			else if (_resetPatch != nullptr)
+			{
+				int idx = getVst()->getPatchIndex(_resetPatch);
+				if (idx > 0 && idx < getVst()->_originalPresets.size())
+				{
+					GennyLoaders::loadGEN(_resetPatch, &getVst()->_originalPresets[idx]);
+					IndexBaron* baron = getIndexBaron();
+					int count = GennyPatch::getNumParameters();
+					getCurrentPatch()->Name = _copyName;
+
+					for (int i = 0; i < 6; i++)
+					{
+						if (getVst()->getCore()->getChannelPatch(i) == getVst()->getCurrentPatch())
+							getVst()->getCore()->clearChannelPatch(i);
+					}
+
+					getVst()->rejiggerInstruments(true);
+					getInterface()->reconnect();
+				}
+
+				_resetPatch = nullptr;
+				return;
+			}
 
 			if(_copyData.data != nullptr)
 			{
@@ -151,6 +169,11 @@ void UIPresetsPanel::valueChanged (CControl* control)
 			if(_loggingMode)
 			{
 				_loggingMode = false;
+				return;
+			}
+			if (_resetPatch != nullptr)
+			{
+				_resetPatch = nullptr;
 				return;
 			}
 		}
@@ -230,7 +253,7 @@ void UIPresetsPanel::pastePatch()
 	{
 		for(int i = 0; i < _confirmDialog.size(); i++)
 		{
-			if(i == 1)
+			if(i == 1 || i == 2)
 				_confirmDialog[i]->setVisible(false);
 			else
 				_confirmDialog[i]->setVisible(true);
@@ -239,12 +262,27 @@ void UIPresetsPanel::pastePatch()
 	}
 }
 
+void UIPresetsPanel::resetPatch(GennyPatch* patch)
+{
+	_resetPatch = patch;
+	for (int i = 0; i < _confirmDialog.size(); i++)
+	{
+		if (i == 0 || i == 1)
+			_confirmDialog[i]->setVisible(false);
+		else
+			_confirmDialog[i]->setVisible(true);
+
+		_confirmDialog[i]->invalid();
+	}
+}
+
+
 void UIPresetsPanel::startLogging()
 {
 	_loggingMode = true;
 	for(int i = 0; i < _confirmDialog.size(); i++)
 	{
-		if(i == 0)
+		if(i == 0 || i == 2)
 			_confirmDialog[i]->setVisible(false);
 		else
 			_confirmDialog[i]->setVisible(true);

@@ -11,8 +11,7 @@
 
 #include "win32frame.h"
 #include "win32support.h"
-#include <cmath>b
-jyt
+#include <cmath>
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------

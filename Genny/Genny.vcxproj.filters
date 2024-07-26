@@ -158,9 +158,6 @@
     <ClCompile Include="..\VSTGui\src\vstgui\plugin-bindings\plugguieditor.cpp">
       <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\VSTGui\src\vstgui\vstgui_win32.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
     <ClCompile Include="src\Interface\UIMegaMidiPanel.cpp">
       <Filter>Interface</Filter>
     </ClCompile>
@@ -239,6 +236,9 @@
     <ClCompile Include="src\GennyExtParam.cpp" />
     <ClCompile Include="src\minieditor.cpp" />
     <ClCompile Include="src\minihost.cpp" />
+    <ClCompile Include="..\VSTGui\src\vstgui\vstgui_win32.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GennyVST.h" />
@@ -764,6 +764,8 @@
     <Image Include="res\infoTab.png" />
     <Image Include="res\vst_back_fl.png" />
     <Image Include="res\newer_version.png" />
+    <Image Include="res\reset_button.png" />
+    <Image Include="res\resetDialogue.png" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="changelog.txt" />

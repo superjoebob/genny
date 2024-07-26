@@ -140,7 +140,11 @@ void Win32Frame::initWindowClass ()
 	{
 		OleInitialize (nullptr);
 
-		VSTGUI_SPRINTF (gClassName, TEXT("VSTGUI%p"), GetInstance ());
+#ifdef BUILD_VST
+		VSTGUI_SPRINTF(gClassName, TEXT("VSTGUINU%p"), GetInstance());
+#else
+		VSTGUI_SPRINTF(gClassName, TEXT("VSTGUINU_FL%p"), GetInstance());
+#endif
 		
 		WNDCLASS windowClass;
 		windowClass.style = CS_GLOBALCLASS | CS_DBLCLKS;//|CS_OWNDC; // add Private-DC constant 

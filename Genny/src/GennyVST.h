@@ -23,7 +23,8 @@ const long kVersionIndicator17 = 1127443262; //March 8, 2022 (lfo is now saved f
 const long kVersionIndicator18 = 1127443263; //March 13, 2022 - added note control information to save data
 const long kVersionIndicator19 = 1127443264; //March 14, 2022 - changed the way instrument enabled params are saved
 const long kVersionIndicator20 = 1227443200; //May 21, 2022 - increased instrument limit to 32, removed DAC path parameter
-const long kLatestVersion = kVersionIndicator20;
+const long kVersionIndicator21 = 1227443201; //July 14, 2024 - added legacy mode for lining up automation when loading 1.16 projects
+const long kLatestVersion = kVersionIndicator21;
 
 #ifndef GENNY_VERSION_STRING
 #define GENNY_VERSION_STRING "1.5"
@@ -72,6 +73,7 @@ public:
 	virtual void updateNote(void* noteData, int samples);
 	virtual void noteOff(int note, unsigned char channel, void* noteData = nullptr);
 	virtual void clearNotes();
+	virtual void clearCache();
 
 	virtual std::string getEffectName() { return "Genny"; }
 	virtual std::string getProductName() { return "Genny"; }
@@ -140,7 +142,6 @@ public:
 	WaveData* triggerWave;
 
 	unsigned char lfo;
-
 
 #if BUILD_VST
 	std::mutex _automationMessageMutex;

@@ -159,7 +159,7 @@ private:
 class IndexBaron
 {
 public:
-	IndexBaron(void);
+	IndexBaron(bool legacy);
 	~IndexBaron(void);
 
 	void addIndex(IBIndex* index){_catalogue.push_back(index);}
@@ -183,6 +183,7 @@ public:
 	int getNumParams() const { return _catalogue.size(); }
 
 	bool enableTrueStereo;
+	bool legacy;
 
 private:
 	std::vector<IBIndex*> _catalogue;

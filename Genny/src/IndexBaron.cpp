@@ -11,9 +11,10 @@ std::string IBYMParam::getValue(GennyPatch* patch)
 	return buf;
 }
 
-IndexBaron::IndexBaron(void)
+IndexBaron::IndexBaron(bool legacy)
 	:_currentInstrument(-1)
 	,enableTrueStereo(false)
+	,legacy(legacy)
 {
 }
 

@@ -45,6 +45,7 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	_parent = parent;
 	_tempo = 0.0f;
 	_sampleRate = 44100;
+	_legacy = false;
 
 
 
@@ -73,19 +74,50 @@ void VSTBase::initialize()
 
 void VSTBase::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)
 {
-	_parent->getSamples(outputs, sampleFrames);
-
 	VstTimeInfo* time = getTimeInfo(kVstTempoValid | kVstTransportChanged | kVstPpqPosValid);
 	_tempo = time->tempo;
 
 	if (time->flags & kVstTransportChanged)
 	{
-		_parent->_playingStatusChanged = true;
+		_parent->clearNotes();
+		_parent->clearCache();
+		//_parent->_playingStatusChanged = true;
 		//_parent->clearNotes();
 
 		//for (int i = 0; i < 16; i++)
 		//	_parent->_globalPitchOffset[i] = 0.0f;
 	}
+
+
+	if (_midiNotes.size() > 0)
+	{
+		//Note off and log notes first
+		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
+		{
+			if ((*it).velocity < 0)
+				_parent->noteOff((*it).note, (*it).channel);
+			else if ((*it).note < 3)
+				_parent->noteOn((*it).note, (*it).velocity, (*it).channel, 0);
+		}
+
+		//Now note on events
+		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
+		{
+			if ((*it).velocity >= 0 && (*it).note >= 3)
+			{
+				(*it).velocity += 27;
+				if ((*it).velocity > 127)
+					(*it).velocity = 127;
+
+				_parent->noteOn((*it).note, (*it).velocity, (*it).channel, 0);
+			}
+		}
+	}
+	_midiNotes.clear();
+
+
+
+	_parent->getSamples(outputs, sampleFrames);
 }
 
 void VSTBase::process (float** inputs, float** outputs, VstInt32 sampleFrames)
@@ -102,7 +134,6 @@ VstInt32 VSTBase::processEvents (VstEvents* ev)
 {
 	_sampleRate = updateSampleRate();
 
-	_midiNotes.clear();
 	for (VstInt32 i = 0; i < ev->numEvents; i++)
 	{
 		if ((ev->events[i])->type != kVstMidiType)
@@ -177,31 +208,6 @@ VstInt32 VSTBase::processEvents (VstEvents* ev)
 
 		event++;
 	} 
-
-	if (_midiNotes.size() > 0)
-	{
-		//Note off and log notes first
-		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
-		{
-			if((*it).velocity < 0)
-				_parent->noteOff((*it).note, (*it).channel);
-			else if((*it).note < 3)
-				_parent->noteOn((*it).note, (*it).velocity, (*it).channel, 0);
-		}	
-
-		//Now note on events
-		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
-		{
-			if ((*it).velocity >= 0 && (*it).note >= 3)
-			{
-				(*it).velocity += 27;
-				if ((*it).velocity > 127)
-					(*it).velocity = 127;
-
-				_parent->noteOn((*it).note, (*it).velocity, (*it).channel, 0);
-			}
-		}
-	}
 
 	return 1;
 }
@@ -519,6 +525,7 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	_editor = nullptr;
 	_samplesPerTick = 100;
 	_tempo = 120;
+	_legacy = false;
 
 	_sampleRate = 44100;
 
@@ -821,7 +828,7 @@ int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 		{
 			int realIndex = Index;
 			if (realIndex < kOriginalParamsEnd)
-				realIndex += GennyPatch::getNumParameters() * _parent->getPatchIndex(_parent->getCurrentPatch());
+				realIndex += GennyPatch::getNumParameters() * ((GennyPatch*)_parent->getPatch(0))->Instruments[((GennyPatch*)_parent->getPatch(0))->SelectedInstrument];
 
 			PlugHost->OnParamChanged(HostTag, realIndex, Value);
 		}

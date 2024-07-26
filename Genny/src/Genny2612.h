@@ -331,7 +331,8 @@ struct GennyInstrument
 
 	static unsigned int getNumParameters()
 	{
-		return 16 + YM2612Channel::getNumParameters() + /*32*/ + 10;
+		return getNumParametersPreV19();
+		//return 16 + YM2612Channel::getNumParameters() + /*32*/ + 10;
 	}	
 	
 	static unsigned int getNumParametersPreV19()
@@ -505,7 +506,8 @@ struct GennyPatch : VSTPatch
 
 	static unsigned int getNumParameters()
 	{
-		return NumInstruments + 11 + GennyInstrument::getNumParameters();
+		return getNumParametersPreV19();
+		//return NumInstruments + 11 + GennyInstrument::getNumParameters();
 	}
 
 	static unsigned int getNumParametersPreV19()
@@ -585,6 +587,7 @@ public:
 
 	Genny2612(GennyVST* owner);
 	~Genny2612(void);
+	void legacy(bool legacy);
 	void initialize();
 	void setSampleRate(double rate);
 

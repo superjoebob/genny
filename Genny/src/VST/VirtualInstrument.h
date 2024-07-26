@@ -125,6 +125,7 @@ public:
 	virtual void updateNote(void* noteData, int samples){};
 	virtual void noteOff(int note, unsigned char channel, void* noteData = nullptr) = 0;
 	virtual void clearNotes() = 0;
+	virtual void clearCache() = 0;
 
 	virtual void pitchChanged(int channel, int pitch) {}
 
@@ -143,6 +144,7 @@ public:
 	virtual void destroy() = 0;
 	
 	std::vector<VSTPatch*> _patches;
+	std::vector<GennyData> _originalPresets;
 	std::map<int, std::vector<int>> _midiLearn;
 	bool _playingStatusChanged;
 	float _globalPitchOffset[16];

@@ -16,7 +16,7 @@ class Win32Frame;
 
 //-----------------------------------------------------------------------------
 class Win32OpenGLView final : public IPlatformOpenGLView
-{n
+{
 public:
 	Win32OpenGLView (Win32Frame* win32Frame);
 	~Win32OpenGLView () noexcept;

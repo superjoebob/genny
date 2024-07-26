@@ -21,6 +21,7 @@ public:
 
 	void copyPatch(GennyPatch* patch);
 	void pastePatch();
+	void resetPatch(GennyPatch* patch);
 	void startLogging();
 
 	void reconnect();
@@ -49,6 +50,7 @@ private:
 	std::string _category;
 
 	std::vector<VSTPatch*> _patches;
+	GennyPatch* _resetPatch;
 
 	std::vector<CView*> _confirmDialog;
 	bool _loggingMode;

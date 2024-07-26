@@ -36,6 +36,7 @@ private:
 	GennyPatch* _patch;
 	CKickButton* _copyButton;
 	CKickButton* _pasteButton;
+	CKickButton* _resetButton;
 	std::string _category;
 
 	UIImage* _typeDisplay;

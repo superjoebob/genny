@@ -36,7 +36,7 @@ struct PixelFormat
 };
 
 //-----------------------------------------------------------------------------
-class IOpenGLViewvn
+class IOpenGLView
 {
 public:
 	virtual void drawOpenGL (const CRect& updateRect) = 0;

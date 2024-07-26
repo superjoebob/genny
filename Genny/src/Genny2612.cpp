@@ -135,12 +135,16 @@ void GennyInstrument::catalogue(IndexBaron* baron)
 	baron->addIndex(new IBInsParam(0, GIP_MidiChannel, 0, 15, "Midi CH"));
 	baron->addIndex(new IBInsParam(0, GIP_FM, 0, 1, "FM Enable"));
 
-	/*for(int i = 0; i < 32; i++)
+	//if (baron->legacy)
 	{
-		baron->addIndex(new IBInsParam(0, (GennyInstrumentParam)(GIP_DACSamplePathStart + i), 0, 999999));
+		//Line shit up in the hackiest way possible :O)
+		for (int i = 0; i < 16; i++)
+		{
+			baron->addIndex(new IBInsParam(0, (GennyInstrumentParam)(GIP_DACSamplePathStart + i), 0, 999999));
+		}
 	}
 
-	*/
+	
 
 	baron->addIndex(new IBInsParam(0, GIP_Octave, 0, GennyInstrumentParam_getRange(GIP_Octave), "Octave"));
 	baron->addIndex(new IBInsParam(0, GIP_Transpose, 0, GennyInstrumentParam_getRange(GIP_Transpose), "Transpose"));
@@ -412,12 +416,24 @@ Genny2612::Genny2612(GennyVST* owner):
 	//_snChip._commandBuffer = _chip._commandBuffer;
 	_snChip._2612 = &_chip;
 
-	_indexBaron = new IndexBaron();
+	_indexBaron = new IndexBaron(false);
 	GennyPatch defaultPatch(0);
 	defaultPatch.catalogue(_indexBaron);
 
 
 	//_patches[0].catalogue(_indexBaron);
+}
+void Genny2612::legacy(bool legacy)
+{
+	if (_indexBaron != nullptr && _indexBaron->legacy != legacy)
+	{
+		if (_indexBaron != nullptr)
+			delete _indexBaron;
+
+		_indexBaron = new IndexBaron(legacy);
+		GennyPatch defaultPatch(0);
+		defaultPatch.catalogue(_indexBaron);
+	}
 }
 
 

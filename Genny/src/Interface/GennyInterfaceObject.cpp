@@ -121,15 +121,17 @@ void GennyInterfaceObject::onMouseUpContext(int tag)
 
 	GennyPatch* patch0 = static_cast<GennyPatch*>(getVst()->getPatch(0));
 	int numParams = GennyPatch::getNumParameters();
-	int patchNum = patch0->Instruments[patch0->SelectedInstrument];
-	int paramTag = (numParams * patchNum) + tag;
+	int patchNum = patch0->SelectedInstrument;
 
+	int paramTag = (numParams * patchNum) + tag;
 	if (GennyExtParam::isExtParam(tag))
 	{
 		//int originalParamsEnd = numParams * getVst()->getNumPatches();
 		//int extParamIndex = kExtParamsStart - tag;
 		paramTag = tag;
 	}
+
+
 
 	int learnedInstrumentParamIndex = paramTag;
 	IBIndex* idx = getVst()->getCore()->getIndexBaron()->getIndex(tag);

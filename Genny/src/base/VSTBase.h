@@ -178,6 +178,7 @@ public:
 	virtual VstInt32 canDo (char* text);*/
 
 	int _totalParameters;
+	bool _legacy;
 protected:
 	VirtualInstrument* _parent;
 

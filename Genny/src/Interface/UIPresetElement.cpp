@@ -12,6 +12,7 @@
 //======================================================================================
 const int kCopyButton = 9990;
 const int kPasteButton = 9991;
+const int kResetButton = 9992;
 const int kElementWidth = 186;
 UIPresetElement::UIPresetElement(const CPoint& vPosition, UIPresetsPanel* vOwner, GennyPatch* vPatch, int vIndex):
 	CCheckBox(CRect(vPosition.x, vPosition.y, vPosition.x + kElementWidth, vPosition.y + 16), nullptr, vIndex, "", UIBitmap(PNG_PRESETELEMENT), 0),
@@ -20,7 +21,8 @@ UIPresetElement::UIPresetElement(const CPoint& vPosition, UIPresetsPanel* vOwner
 	_selected(false),
 	_patch(vPatch),
 	_copyButton(NULL),
-	_typeDisplay(nullptr)
+	_typeDisplay(nullptr),
+	_resetButton(nullptr)
 {
 
 }
@@ -64,6 +66,11 @@ bool UIPresetElement::attached (CView* parent)
 	_pasteButton = new CKickButton(CRect(size.left + 172, size.top + 3, size.left + 172 + pasteImage.getWidth(), size.top + 3 + (pasteImage.getHeight() / 2)), this, kPasteButton, pasteImage);
 	_owner->getFrame()->addView(_pasteButton);
 	_pasteButton->setVisible(false);
+
+	UIBitmap resetImage = UIBitmap(IDB_PNG54);
+	_resetButton = new CKickButton(CRect(size.left + 172, size.top + 3, size.left + 172 + resetImage.getWidth(), size.top + 3 + (resetImage.getHeight() / 2)), this, kResetButton, resetImage);
+	_owner->getFrame()->addView(_resetButton);
+	_resetButton->setVisible(false);
 
 	setPatchLink(_patch);
 
@@ -166,6 +173,11 @@ void UIPresetElement::valueChanged (CControl* control)
 	{
 		if(control->getValue() > 0.5f)
 			_owner->pastePatch();
+	}
+	else if (control->getTag() == kResetButton)
+	{
+		if (control->getValue() > 0.5f)
+			_owner->resetPatch(static_cast<GennyPatch*>(getVst()->getCurrentPatch()));
 	}
 }
 
