@@ -155,6 +155,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\base\VSTBase.h" />
     <ClInclude Include="src\Genny2612.h" />
+    <ClInclude Include="src\GennyData.h" />
     <ClInclude Include="src\GennyExtParam.h" />
     <ClInclude Include="src\GennyLoaders.h" />
     <ClInclude Include="src\GennyVST.h" />
@@ -826,7 +827,8 @@
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>supercopy "$(ProjectDir)bin\$(Configuration)\$(PlatformShortName)" "C:\Program Files\Common Files\VST2"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">

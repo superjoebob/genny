@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include "base\VSTBase.h"
+#include "GennyData.h"
 
 enum class AutomationTypeFlags
 {

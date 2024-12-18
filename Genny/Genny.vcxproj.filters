@@ -608,6 +608,7 @@
     <ClInclude Include="src\YM2612\filters\so_parametric_ncq.h">
       <Filter>filters</Filter>
     </ClInclude>
+    <ClInclude Include="src\GennyData.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VST">

@@ -9,3 +9,4 @@ VSTGui\bin\
 /Genny/bin
 /.vs
 /Genny.VC.db
+*.ipch
