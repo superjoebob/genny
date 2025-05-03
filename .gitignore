@@ -10,3 +10,5 @@ VSTGui\bin\
 /.vs
 /Genny.VC.db
 *.ipch
+/VSTGui/ARM
+/Genny/ARM
