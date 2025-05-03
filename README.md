@@ -1,7 +1,12 @@
 # GENNY 
 Sega Genesis/Megadrive YM2612/SN76486 Emulation in the form of a VST/FL Plugin!
-
 I'm new to the whole public repository thing so if I'm doing anything wrong or ridiculous please let me know!
+
+First of all right out the gate:
+
+>This code is TERRIBLE. It is so awful and so bad and it belongs in C++ jail. There are probably still memory errors in it, it’s build setup is a mess and there are inconsistencies everywhere. This has been hacked together over more than 10 years, it was started when I had no idea what I was doing and continued without the intention of ever having anyone else look at the code. It is not a happy codebase.
+>
+So if you plan to learn from it, be warned that you might be learning things the wrong way. I'm sorry.
 
 This plugin would not be possible without code from the following repositories: 
 
