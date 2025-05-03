@@ -155,21 +155,20 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 	_infoLabel = new CTextLabel(CRect(422, -84, 416 + 508, 96 + 206), UTF8String(
 
 
-		"GENNY v" + std::string(GENNY_VERSION_STRING) + " - CORPTRON GAMES CORP. 2023\n"
+		"GENNY v" + std::string(GENNY_VERSION_STRING) + " - CORPTRON GAMES CORP. 2025\n"
 		"-----------------------------------------------------------------------------------------------------------------------\n"
 		"Created by Landon Podbielski (superjoebob), but could not have been made without:\n"
-		"\n"
 		"Jarek Burczynski, hiro-shi(Hiromitsu Shioya) - MAME YM2612 Emulation Code\n"
 		"Eke-Eke - Genesis Plus GX YM2612/SN76489 Emulation Code\n" 
 		"Tiido Priimägi, Maxim - YM2612 Hardware Experts\n"
 		"Aidan Lawrence - MEGA MIDI Hardware\n"
 		"VSTGUI - (c) Steinberg Media Technologies, All Rights Reserved\n"
 		"\n"
-		"Thanks to Howard Drossin, John Baker, Tommy Tallarico, Matt Furniss,\n"
+		"Thanks to Howard Drossin, John Baker, Matt Furniss,\n"
 		"Masato Nakamura, Masaru Setsumaru, Yuzo Koshiro and many more for composing\n"
 		"some of the great YM2612 music that GENNY's presets come from.\n"
 		"GENNY is and will always be freeware.\n"
-	
+		"If it's crashing, please email me at superjoebob@gmail.com!\n"
 	));
 
 	_infoLabel->setFont(kNormalFont); 

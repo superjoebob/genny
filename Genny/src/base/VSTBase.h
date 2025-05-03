@@ -68,6 +68,7 @@ public:
 
 	float getTempo() { return _tempo; }
 	double _sampleRate;
+	bool _legacy;
 
 
 protected:
