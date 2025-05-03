@@ -1,6 +1,8 @@
 # GENNY 
 Sega Genesis/Megadrive YM2612/SN76486 Emulation in the form of a VST/FL Plugin!
 
+I'm new to the whole public repository thing so if I'm doing anything wrong or ridiculous please let me know!
+
 This plugin would not be possible without code from the following repositories: 
 
 https://github.com/AidanHockey5/MegaMIDI - MegaMIDI support
