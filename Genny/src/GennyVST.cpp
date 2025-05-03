@@ -35,7 +35,7 @@ GennyVST::GennyVST(void) :
 	megaMidiPort(0),
 	megaMidiVSTMute(false),
 	genMDMPort(7),
-	accurateEmulationMode(true),
+	accurateEmulationMode(false),
 	triggerWave(nullptr),
 	bendRange(12),
 	_automationInverse(false),
@@ -559,8 +559,13 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 			readPos += sizeof(val);
 
 			int paramIndex = j;
-			if (oldLFO && j > 2)
-				paramIndex = j - 3;
+			if (oldLFO)
+			{
+				if (j <= 2)
+					continue; //Just ignore YM_LFO_EN and YM_SPECIAL from ancient projects
+				else
+					paramIndex = j - 3;
+			}
 
 			if (skippingSamplePaths)
 				paramIndex -= 16; //only gotta skip 16 since we have the last 16 for legacy compatibility D:
