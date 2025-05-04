@@ -92,7 +92,7 @@ struct FruityPlugInfo
 };
 
 struct PlugVoice {
-	int HostTag;
+	intptr_t HostTag;
 	PVoiceParams Params;
 	//int Pos[nOsc];
 	int State;
