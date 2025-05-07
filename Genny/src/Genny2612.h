@@ -331,14 +331,22 @@ struct GennyInstrument
 
 	static unsigned int getNumParameters()
 	{
-		return getNumParametersPreV19();
-		//return 16 + YM2612Channel::getNumParameters() + /*32*/ + 10;
+		int dacToFM = 13;
+		int sampleStartParams = 16;
+		int finalPlusExtra = 13;
+		return dacToFM + sampleStartParams + finalPlusExtra + YM2612Channel::getNumParameters();
 	}	
 	
 	static unsigned int getNumParametersPreV19()
 	{
 		return 16 + YM2612Channel::getNumParameters() + 32 + 10;
 	}
+
+	static unsigned int getNumParametersV20()
+	{
+		return 16 + YM2612Channel::getNumParameters() + /*32*/ +10;
+	}
+
 	void catalogue(IndexBaron* baron);
 	void setFromBaron(IBIndex* param, float val);
 	float getFromBaron(IBIndex* param);
@@ -506,13 +514,18 @@ struct GennyPatch : VSTPatch
 
 	static unsigned int getNumParameters()
 	{
-		return getNumParametersPreV19();
-		//return NumInstruments + 11 + GennyInstrument::getNumParameters();
+		return NumInstruments + 11 + GennyInstrument::getNumParameters();
 	}
 
 	static unsigned int getNumParametersPreV19()
 	{
 		return 16 + 11 + GennyInstrument::getNumParametersPreV19();
+	}
+
+	static unsigned int getNumParametersV20()
+	{
+		//32 = NumInstruments in V20
+		return 32 + 11 + GennyInstrument::getNumParametersV20();
 	}
 
 	void catalogue(IndexBaron* baron);

@@ -373,12 +373,18 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		readPos += sizeof(versionNumber);
 	}
 
+	bool v20Unfuck = false;
 	bool oldParameterLayout = checkVersionLessThan(versionNumber, kVersionIndicator20);
 	if (oldParameterLayout)
 	{
 		_base->_legacy = true;
 		numParams = GennyPatch::getNumParametersPreV19();
 		_loading16InstrumentMode = true;
+	}
+	else if (checkVersionEqualTo(versionNumber, kVersionIndicator20))
+	{
+		numParams = GennyPatch::getNumParametersV20();
+		v20Unfuck = true;
 	}
 
 	if (checkVersionGreaterThan(versionNumber, kLatestVersion))
@@ -552,6 +558,7 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 		int skipSamplePaths = 32;
 		bool skippingSamplePaths = false;
+		bool v20UnfuckSkip = false;
 		for(int j = 0; j < numParams; j++)
 		{
 			float val = 0.0f;
@@ -569,6 +576,18 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 			if (skippingSamplePaths)
 				paramIndex -= 16; //only gotta skip 16 since we have the last 16 for legacy compatibility D:
+
+			if (v20Unfuck)
+			{
+				IBIndex* ib = _core->getIndexBaron()->getIndex(paramIndex);
+				if (ib->getType() == IB_InsParam && ((IBInsParam*)ib)->getParameter() == GennyInstrumentParam::GIP_FM)
+				{
+					v20UnfuckSkip = true;
+					v20Unfuck = false;
+				}
+			}
+			if (v20UnfuckSkip)
+				paramIndex += 16; //Didn't write the 16 GIP_DACSamplePathStart HACK values in v20, so we need to skip them...
 
 			if (oldParameterLayout)
 			{
