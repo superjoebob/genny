@@ -225,3 +225,10 @@ int IndexBaron::getIBIndex(IBIndex* index)
 	}
 	return -1;
 }
+
+
+void IndexBaron::stripInstrumentsFromCatalogue()
+{
+	for (int i = 0; i < kMaxInstruments; i++)
+		_catalogue.erase(_catalogue.begin());
+}

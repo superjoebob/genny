@@ -405,7 +405,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 			}
 
 			unsigned int flags = MF_STRING;
-			for (int i = 0; i < kNumPingPongSettings; i++)
+			for (int i = 0; i < GennyExtParam::kNumPingPongSettings; i++)
 			{
 				AppendMenuA((HMENU)ContextMenu, flags, i + 1, GennyExtParam::kDefaultPingPongSettings[i]);
 			}
@@ -415,7 +415,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 			std::string setting = "";
 			if (listIndex >= 0)
 			{
-				if (r == kNumPingPongSettings)
+				if (r == GennyExtParam::kNumPingPongSettings)
 				{
 					LPWSTR str = MAKEINTRESOURCEW(IDD_DIALOG3);
 
@@ -532,9 +532,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 			std::vector<int> indexes;
 			for(int i = 0; i < kMaxInstruments; i++)
 			{
-				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
-				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
-				indexes.push_back(idx);
+				indexes.push_back(static_cast<GennyPatch*>(getVst()->getPatch(0))->Instruments[i]);
 			}
 
 
@@ -583,9 +581,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 			std::vector<int> indexes;
 			for(int i = 0; i < kMaxInstruments; i++)
 			{
-				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
-				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
-				indexes.push_back(idx);
+				indexes.push_back(static_cast<GennyPatch*>(getVst()->getPatch(0))->Instruments[i]);
 			}
 
 
@@ -642,9 +638,7 @@ void UIPESelectedInstrument::valueChanged (CControl* control)
 			std::vector<int> indexes;
 			for(int i = 0; i < kMaxInstruments; i++)
 			{
-				int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
-				int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
-				indexes.push_back(idx);
+				indexes.push_back(static_cast<GennyPatch*>(getVst()->getPatch(0))->Instruments[i]);
 			}
 
 
@@ -711,9 +705,7 @@ void UIPESelectedInstrument::setPatchLink(GennyPatch* patch)
 		std::vector<int> indexes;
 		for(int i = 0; i < kMaxInstruments; i++)
 		{
-			int index = baron->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + i));
-			int idx = (int)getVst()->getPatch(0)->getFromBaron(baron->getIndex(index));
-			indexes.push_back(idx);
+			indexes.push_back(static_cast<GennyPatch*>(getVst()->getPatch(0))->Instruments[i]);
 		}
 	}
 }

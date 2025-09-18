@@ -87,14 +87,13 @@ typedef void* VSTEditor;
 
 struct FruityPlugInfo
 {
-	int Tag;
+	TPluginTag Tag;
 	TFruityPlugHost* Host;
 };
 
 struct PlugVoice {
-	intptr_t HostTag;
+	TPluginTag HostTag;
 	PVoiceParams Params;
-	//int Pos[nOsc];
 	int State;
 };
 

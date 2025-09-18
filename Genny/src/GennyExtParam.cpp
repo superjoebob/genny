@@ -15,6 +15,10 @@ const char** GennyExtParam::kDefaultPingPongSettings = new const char* [kNumPing
 		"Custom..."
 };
 
+int GennyExtParam::kOriginalParamsEnd = 22770;
+int GennyExtParam::kExtParamsEnd = 32727;
+int GennyExtParam::kNumPingPongSettings = 9;
+
 bool GennyExtParam::isExtParam(int tag)
 {
 	return tag >= kOriginalParamsEnd && tag <= kExtParamsEnd;

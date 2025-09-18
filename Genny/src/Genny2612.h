@@ -514,6 +514,12 @@ struct GennyPatch : VSTPatch
 
 	static unsigned int getNumParameters()
 	{
+		//Removed Instruments for v22 to keep within FL parameter limits
+		return 11 + GennyInstrument::getNumParameters();
+	}
+
+	static unsigned int getNumParametersV21()
+	{
 		return NumInstruments + 11 + GennyInstrument::getNumParameters();
 	}
 
@@ -654,6 +660,8 @@ public:
 	void panningChanged(GennyPatch* instrument, int channel);
 
 	YM2612 _chip;
+
+	void rebuildIndexBaron();
 
 private:
 	//GennyPatch _patches[12];

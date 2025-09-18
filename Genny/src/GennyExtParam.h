@@ -94,9 +94,6 @@ enum class GEParam
 	TOTAL_EXT_PARAMS = 60,
 };
 
-const int kOriginalParamsEnd = 22770;
-const int kExtParamsEnd = 32727;
-const int kNumPingPongSettings = 9;
 enum class ParamDisplayType
 {
 	Integer = 0,
@@ -130,6 +127,9 @@ namespace VSTGUI { class CControl; }
 class GennyExtParam
 {
 public:
+	static int kOriginalParamsEnd;
+	static int kExtParamsEnd;
+	static int kNumPingPongSettings;
 	static bool isExtParam(int tag);
 
 	const GEParam param;

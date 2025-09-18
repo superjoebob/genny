@@ -326,6 +326,19 @@ int GennyVST::getPluginState (void** data, bool isPreset)
 		written += panLength + 1;
 	}
 
+	//Writing instruments manually as of v22 to keep parameters within FL limits.
+	//This means this parameter can't be automated now, but it couldn't really anyway...
+	for (int i = 0; i < 5; i++)
+	{
+		GennyPatch* ins = static_cast<GennyPatch*>(getPatch(i));
+
+		for (int j = 0; j < kMaxInstruments; j++)
+		{
+			stream.write((char*)&ins->Instruments[j], 4);
+			written += 4;
+		}
+	}
+
 	//Seek back to start and write filesize now that we know what it is
 	stream.seekp(0);
 	stream.write((char*)(&written), sizeof(int));
@@ -347,6 +360,10 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 
 	int numPatches = getTotalPatchCount();
 	int numParams = GennyPatch::getNumParameters();
+	_core->rebuildIndexBaron();
+	bool stripped = false;
+
+
 	unsigned long written = 0;
 	_saving = true;
 
@@ -364,7 +381,6 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		_versionTooOld = true;
 		return 0;
 	}
-
 
 	if(isVersionNumber(versionNumber) == false)
 		numPatches = 122;
@@ -386,6 +402,11 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		numParams = GennyPatch::getNumParametersV20();
 		v20Unfuck = true;
 	}
+	else if (checkVersionEqualTo(versionNumber, kVersionIndicator21))
+	{
+		numParams = GennyPatch::getNumParametersV21();
+	}
+
 
 	if (checkVersionGreaterThan(versionNumber, kLatestVersion))
 	{
@@ -408,6 +429,15 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 	}
 
 	_core->legacy(_base->_legacy);
+
+	//v22 doesn't have instruments in the catalogue, god help us...
+	if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator22))
+	{
+		_core->getIndexBaron()->stripInstrumentsFromCatalogue();
+		stripped = true;
+	}
+
+
 
 	int hasFrequencyTable = ((int)((unsigned char*)data)[readPos + 3] << (int)24) +((int)((unsigned char*)data)[readPos + 2] << (int)16) + ((int)((unsigned char*)data)[readPos + 1] << (int)8) + (int)((unsigned char*)data)[readPos];
 	readPos += sizeof(int);
@@ -824,6 +854,23 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 			ins->InstrumentDef.parsePanString(panString);
 			delete[] panString;
 		}
+
+		if (checkVersionGreaterThanOrEqualTo(versionNumber, kVersionIndicator22))
+		{
+			for (int i = 0; i < 5; i++)
+			{
+				GennyPatch* ins = static_cast<GennyPatch*>(getPatch(i));
+
+				for (int j = 0; j < numInstruments; j++)
+				{
+					int instrumentIndex = 0;
+					memcpy(&instrumentIndex, &((char*)data)[readPos], 4);
+					readPos += 4;
+
+					ins->Instruments[j] = instrumentIndex;
+				}
+			}
+		}
 	}
 
 
@@ -854,6 +901,9 @@ int GennyVST::setPluginState (void* data, int size, bool isPreset)
 		}
 	}
 
+	if (stripped == false)
+		_core->getIndexBaron()->stripInstrumentsFromCatalogue();
+
 	rejiggerInstruments(false);
 
 	_saving = false;
@@ -881,7 +931,7 @@ float GennyVST::getParameter(int index, VSTPatch* patch)
 		return param->get();
 	}
 
-	if(index > kExtParamsEnd)
+	if(index > GennyExtParam::kExtParamsEnd)
 	{
 		return 0.0f;
 	}
@@ -1433,8 +1483,9 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 		GennyPatch* firstPatch = static_cast<GennyPatch*>(_patches[0]);
 		int lastInstrument = firstPatch->Instruments[sel];
 
-		int idx = _core->getIndexBaron()->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + sel));
-		_patches[0]->setFromBaron(_core->getIndexBaron()->getIndex(idx), value);
+		firstPatch->Instruments[sel] = value;
+		//int idx = _core->getIndexBaron()->getPatchParamIndex((GennyPatchParam)(GPP_Ins01 + sel));
+		//_patches[0]->setFromBaron(_core->getIndexBaron()->getIndex(idx), value);
 
 		if(_switchingPreset)
 		{	
@@ -1488,13 +1539,13 @@ void GennyVST::setParameter(int index, float value, VSTPatch* patch)
 
 		if(value >= 0 && _currentPatch == _patches[0])
 			_patches[0]->setFromBaron(idx, value);
-		else if(param != nullptr && value >= 0 && (param->getParameter() >= GennyPatchParam::GPP_Ins01 && param->getParameter() <= GennyPatchParam::GPP_Ins32) && _saving)
-		{
-			if(patch != nullptr)
-				patch->setFromBaron(idx, value);
-			else
-				_currentPatch->setFromBaron(idx, value);
-		}
+		//else if(param != nullptr && value >= 0 && (param->getParameter() >= GennyPatchParam::GPP_Ins01 && param->getParameter() <= GennyPatchParam::GPP_Ins32) && _saving)
+		//{
+		//	if(patch != nullptr)
+		//		patch->setFromBaron(idx, value);
+		//	else
+		//		_currentPatch->setFromBaron(idx, value);
+		//}
 	}
 	else
 	{
@@ -2057,7 +2108,7 @@ void GennyVST::onMidiMessage(int channel, int message, int value)
 void GennyVST::showHint(int parameterTag)
 {
 #if !BUILD_VST
-	if(parameterTag < 0 || parameterTag > kExtParamsEnd)
+	if(parameterTag < 0 || parameterTag > GennyExtParam::kExtParamsEnd)
 		_base->PlugHost->OnHint(_base->HostTag, nullptr);
 	else
 	{

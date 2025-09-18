@@ -182,6 +182,9 @@ public:
 	void setCurrentInstrument(int ins) { _currentInstrument = ins; }
 	int getNumParams() const { return _catalogue.size(); }
 
+	void stripInstrumentsFromCatalogue();
+
+
 	bool enableTrueStereo;
 	bool legacy;
 

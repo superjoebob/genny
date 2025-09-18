@@ -415,14 +415,19 @@ Genny2612::Genny2612(GennyVST* owner):
 
 	//_snChip._commandBuffer = _chip._commandBuffer;
 	_snChip._2612 = &_chip;
+	rebuildIndexBaron();
+	_indexBaron->stripInstrumentsFromCatalogue();
+}
+void Genny2612::rebuildIndexBaron()
+{
+	if (_indexBaron != nullptr)
+		delete _indexBaron;
 
 	_indexBaron = new IndexBaron(false);
 	GennyPatch defaultPatch(0);
 	defaultPatch.catalogue(_indexBaron);
-
-
-	//_patches[0].catalogue(_indexBaron);
 }
+
 void Genny2612::legacy(bool legacy)
 {
 	if (_indexBaron != nullptr && _indexBaron->legacy != legacy)

@@ -24,7 +24,8 @@ const long kVersionIndicator18 = 1127443263; //March 13, 2022 - added note contr
 const long kVersionIndicator19 = 1127443264; //March 14, 2022 - changed the way instrument enabled params are saved
 const long kVersionIndicator20 = 1227443200; //May 21, 2022 - increased instrument limit to 32, removed DAC path parameter
 const long kVersionIndicator21 = 1227443201; //July 14, 2024 - added legacy mode for lining up automation when loading 1.16 projects
-const long kLatestVersion = kVersionIndicator21;
+const long kVersionIndicator22 = 1227443202; //July 4, 2025 - stripping Instruments counts past patch 3 out of parameters to reduce max parameters and stay under 32727 (FL limit)
+const long kLatestVersion = kVersionIndicator22;
 
 #ifndef GENNY_VERSION_STRING
 #define GENNY_VERSION_STRING "1.5"

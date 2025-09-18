@@ -530,6 +530,10 @@ VSTBase::VSTBase(VirtualInstrument* parent, void* data)
 	_sampleRate = 44100;
 
 	int patches = parent->getTotalPatchCount();
+	int originalParameterCount = GennyPatch::getNumParameters() * patches;
+	int extendedParameterCount = patches * (int)GEParam::TOTAL_EXT_PARAMS;
+	GennyExtParam::kOriginalParamsEnd = originalParameterCount;
+	GennyExtParam::kExtParamsEnd = originalParameterCount + extendedParameterCount;
 
 	/*if (audioMaster)
 	{
@@ -824,10 +828,10 @@ int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 {
 	if (RECFlags & REC_PlugReserved)
 	{
-		if (Index <= kExtParamsEnd)
+		if (Index <= GennyExtParam::kExtParamsEnd)
 		{
 			int realIndex = Index;
-			if (realIndex < kOriginalParamsEnd)
+			if (realIndex < GennyExtParam::kOriginalParamsEnd)
 				realIndex += GennyPatch::getNumParameters() * ((GennyPatch*)_parent->getPatch(0))->Instruments[((GennyPatch*)_parent->getPatch(0))->SelectedInstrument];
 
 			PlugHost->OnParamChanged(HostTag, realIndex, Value);
@@ -838,7 +842,7 @@ int _stdcall VSTBase::ProcessParam(int Index, int Value, int RECFlags)
 		return 0;
 	}
 
-	if (Index > kExtParamsEnd)
+	if (Index > GennyExtParam::kExtParamsEnd)
 		return 0;
 
 	int ret = _parent->onAutomation(Index, Value, (AutomationTypeFlags)RECFlags);
