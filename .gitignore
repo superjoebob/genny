@@ -12,3 +12,4 @@ VSTGui\bin\
 *.ipch
 /VSTGui/ARM
 /Genny/ARM
+/build/*.zip
