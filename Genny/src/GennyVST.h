@@ -28,7 +28,7 @@ const long kVersionIndicator22 = 1227443202; //July 4, 2025 - stripping Instrume
 const long kLatestVersion = kVersionIndicator22;
 
 #ifndef GENNY_VERSION_STRING
-#define GENNY_VERSION_STRING "1.53"
+#define GENNY_VERSION_STRING "1.54"
 #endif
 
 struct automationMessage
