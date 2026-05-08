@@ -14,7 +14,7 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 	return (AudioEffect*)p->initializeBase(audioMaster);
 }
 #else
-extern "C" TFruityPlug* _stdcall CreatePlugInstance(TFruityPlugHost *Host, int Tag)
+extern "C" TFruityPlug* _stdcall CreatePlugInstance(TFruityPlugHost *Host, TPluginTag Tag)
 {
 	GennyVST* p = new GennyVST();
 

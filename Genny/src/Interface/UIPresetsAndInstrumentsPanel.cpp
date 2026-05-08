@@ -163,12 +163,12 @@ UIPresetsAndInstrumentsPanel::UIPresetsAndInstrumentsPanel(const CRect& size, Ge
 		"Tiido Priimägi, Maxim - YM2612 Hardware Experts\n"
 		"Aidan Lawrence - MEGA MIDI Hardware\n"
 		"VSTGUI - (c) Steinberg Media Technologies, All Rights Reserved\n"
-		"\n"
 		"Thanks to Howard Drossin, John Baker, Matt Furniss,\n"
 		"Masato Nakamura, Masaru Setsumaru, Yuzo Koshiro and many more for composing\n"
 		"some of the great YM2612 music that GENNY's presets come from.\n"
 		"GENNY is and will always be freeware.\n"
 		"If it's crashing, please email me at superjoebob@gmail.com!\n"
+		"If you can't load old projects, send the project files if you can!"
 	));
 
 	_infoLabel->setFont(kNormalFont); 

@@ -94,7 +94,7 @@ void VSTBase::processReplacing (float** inputs, float** outputs, VstInt32 sample
 		//Note off and log notes first
 		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
 		{
-			if ((*it).velocity < 0)
+			if ((*it).velocity <= 0)
 				_parent->noteOff((*it).note, (*it).channel);
 			else if ((*it).note < 3)
 				_parent->noteOn((*it).note, (*it).velocity, (*it).channel, 0);
@@ -103,7 +103,7 @@ void VSTBase::processReplacing (float** inputs, float** outputs, VstInt32 sample
 		//Now note on events
 		for (auto it = _midiNotes.begin(); it != _midiNotes.end(); it++)
 		{
-			if ((*it).velocity >= 0 && (*it).note >= 3)
+			if ((*it).velocity > 0 && (*it).note >= 3)
 			{
 				(*it).velocity += 27;
 				if ((*it).velocity > 127)
