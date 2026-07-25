@@ -345,7 +345,7 @@ void VSTBase::MidiFlush()
 
 VstInt32 VSTBase::getNumMidiInputChannels()
 {
-	return 1;
+	return 16;
 }
 
 VstInt32 VSTBase::getNumMidiOutputChannels()
